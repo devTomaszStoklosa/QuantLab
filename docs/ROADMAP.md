@@ -1,0 +1,83 @@
+# Roadmap
+
+Platforma badawcza budowana epikami. Epik `lab-foundation` jest fundamentem; `q1-momentum-research-mvp` domyka pełny pipeline na jednej hipotezie (granica MVP); `q2`–`q7` to rozszerzenia, kolejność wśród nich może się zmienić w zależności od wniosków z MVP.
+
+## Kolejność i zależności
+
+```
+lab-foundation
+  -> q1-momentum-research-mvp   (MVP: koniec tu)
+       -> q2-event-driven-engine
+       -> q3-mean-reversion-hypothesis
+       -> q4-pairs-trading-stat-arb
+       -> q5-equities-cross-section
+       -> q6-advanced-validation-cpcv
+       -> q7-dotnet-react-presentation
+```
+
+q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
+
+## Epiki
+
+### lab-foundation
+
+Szkielet repo, dostęp do danych, testy środowiska. Bez tego nic innego się nie zaczyna. Pełna specyfikacja: [specs/lab-foundation/](specs/lab-foundation/).
+
+Slice'y: F-1 szkielet (uv, ruff, pytest, CLI, test środowiska) · F-2 `core.data` z jednym adapterem (Stooq) i cache · F-3 `core.universe` statyczne · F-4 `core.storage` (DuckDB/Parquet I/O).
+
+### q1-momentum-research-mvp
+
+Pełny pipeline na jednej hipotezie (time-series momentum, Moskowitz/Ooi/Pedersen 2012): sygnał, silnik wektorowy, koszty, walidacja out-of-sample, ryzyko/reżimy, atrybucja transakcji, tear-sheet, wpis w dzienniku badawczym. **Granica MVP.** Pełna specyfikacja: [specs/q1-momentum-research-mvp/](specs/q1-momentum-research-mvp/).
+
+Slice'y: S1 rejestr `Hypothesis` · S2 sygnał momentum · S3 `Strategy` implementacja · S4 silnik wektorowy + `BacktestRun` · S5 metryki własnym kodem + testy golden-master · S6 pierwszy pełny przebieg end-to-end · S7 `NaiveCostModel` · S8 `RealisticCostModel` + porównanie wrażliwości · S9 `WalkForwardValidator` · S10 zamrożony holdout · S11 `PermutationTestValidator` · S12 `RegimeClassifier` + metryki warunkowe · S13 stress test scenariuszowy · S14 `TradeLedger` + cięcia P&L · S15 tear-sheet · S16 wpis w `docs/RESEARCH_LOG.md`.
+
+### q2-event-driven-engine (rozszerzenie, nierozpisane)
+
+Realistyczna egzekucja: kolejka zdarzeń, symulacja zleceń i częściowych wypełnień, brak look-ahead bias z konstrukcji. Porównanie wyniku z silnikiem wektorowym na tej samej hipotezie.
+
+### q3-mean-reversion-hypothesis (rozszerzenie, nierozpisane)
+
+Druga rodzina hipotez — short-term mean reversion — jako kontrast do momentum na tym samym pipeline'ie.
+
+### q4-pairs-trading-stat-arb (rozszerzenie, nierozpisane)
+
+Kointegracja (Engle-Granger/Johansen), spread trading, rozszerzenie silnika na multi-asset.
+
+### q5-equities-cross-section (rozszerzenie, nierozpisane)
+
+Point-in-time uniwersum, `CorporateAction` i korekta cen, obsługa survivorship bias.
+
+### q6-advanced-validation-cpcv (rozszerzenie, nierozpisane)
+
+Purged k-fold / CPCV, Deflated Sharpe Ratio, Probability of Backtest Overfitting po przetestowaniu kilku hipotez.
+
+### q7-dotnet-react-presentation (rozszerzenie, nierozpisane)
+
+ASP.NET Core Web API nad wynikami w DuckDB/Parquet, React: eksplorator strategii i blotter transakcji.
+
+## Zakres MVP
+
+Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
+
+- Jedna hipoteza (momentum) przetestowana pełnym pipeline'em, z wynikiem zapisanym w dzienniku badawczym niezależnie od tego, czy się potwierdziła.
+- Silnik backtestu z testami golden-master na syntetycznych danych.
+- Co najmniej dwa modele kosztów z jawnym porównaniem wpływu na wynik.
+- Walk-forward + zamrożony holdout + test permutacyjny.
+- Metryki warunkowe na co najmniej dwóch reżimach zmienności.
+- Rejestr transakcji z cięciami P&L.
+- Jeden pełny tear-sheet z realnego przebiegu.
+
+Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momentum-research-mvp` 5–8 tygodni. Rozszerzenia q2–q7: 2–4 miesiące przyrostowo, po ustaleniu priorytetu.
+
+## Stan ticketów
+
+| Epik | 01-story | 02-spec | 03-design | Kod |
+|---|---|---|---|---|
+| lab-foundation | Ready for dev | Ready for dev | Ready for dev | nie zaczęty |
+| q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | nie zaczęty |
+| q2-event-driven-engine | nie napisany | nie napisany | nie napisany | — |
+| q3-mean-reversion-hypothesis | nie napisany | nie napisany | nie napisany | — |
+| q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
+| q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
+| q6-advanced-validation-cpcv | nie napisany | nie napisany | nie napisany | — |
+| q7-dotnet-react-presentation | nie napisany | nie napisany | nie napisany | — |
