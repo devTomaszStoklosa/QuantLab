@@ -4,6 +4,8 @@ import pytest
 
 from quantlab.backtest.vectorized.engine import run
 from quantlab.core.data.provider import PriceBar
+from quantlab.costs.naive import NaiveCostModel
+from quantlab.costs.zero import ZeroCostModel
 from quantlab.strategy.signal import Signal
 
 _DAY1 = date(2026, 1, 1)
@@ -55,6 +57,7 @@ def test_equal_weight_signed_positions_compound_correctly() -> None:
 
     result = run(
         strategy=strategy,
+        cost_model=ZeroCostModel(),
         bars=bars,
         universe_name="test-universe",
         start=_DAY1,
@@ -97,6 +100,7 @@ def test_all_flat_signals_leave_equity_unchanged() -> None:
 
     result = run(
         strategy=strategy,
+        cost_model=ZeroCostModel(),
         bars=bars,
         universe_name="u",
         start=_DAY1,
@@ -120,6 +124,7 @@ def test_one_snapshot_per_date_with_no_gaps() -> None:
 
     result = run(
         strategy=strategy,
+        cost_model=ZeroCostModel(),
         bars=bars,
         universe_name="u",
         start=_DAY1,
@@ -144,6 +149,7 @@ def test_instrument_missing_bar_excluded_from_period_without_crashing() -> None:
 
     result = run(
         strategy=strategy,
+        cost_model=ZeroCostModel(),
         bars=bars,
         universe_name="u",
         start=_DAY1,
@@ -159,10 +165,89 @@ def test_instrument_missing_bar_excluded_from_period_without_crashing() -> None:
     assert result.snapshots[2].equity == pytest.approx(1.0)
 
 
+class _RecordingCostModel:
+    """Test double: records every cost() call, charges nothing."""
+
+    name = "recording"
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[date, float]] = []
+
+    def cost(self, instrument_bars: list[PriceBar], as_of: date, traded_weight: float) -> float:
+        self.calls.append((as_of, traded_weight))
+        return 0.0
+
+
+def _run_with(cost_model, bars, strategy, end=_DAY3):
+    return run(
+        strategy=strategy,
+        cost_model=cost_model,
+        bars=bars,
+        universe_name="u",
+        start=_DAY1,
+        end=end,
+        seed=1,
+        git_sha="x",
+        strategy_name="fixed",
+        strategy_params={},
+    )
+
+
+def test_entry_and_exit_are_charged_on_traded_weight() -> None:
+    bars = {"a": [_bar("a", _DAY1, 100.0), _bar("a", _DAY2, 110.0), _bar("a", _DAY3, 110.0)]}
+    strategy = _FixedSignalsStrategy(
+        {
+            _DAY1: [Signal(instrument_id="a", ts=_DAY1, direction="long", strength=0.0)],
+            _DAY2: [Signal(instrument_id="a", ts=_DAY2, direction="flat", strength=0.0)],
+        }
+    )
+
+    result = _run_with(NaiveCostModel(bps=100), bars, strategy)
+
+    assert result.cost_model_name == "naive-100bps"
+    # Entry: buy weight 1.0 at 1% -> 0.01; +10% gross -> equity 1.09.
+    assert result.snapshots[1].equity == pytest.approx(1.09)
+    # Exit: position is worth 1.10 of the original equity, 1% of that -> 0.011.
+    assert result.snapshots[2].equity == pytest.approx(1.079)
+
+
+def test_rebalancing_price_drift_is_charged_even_when_targets_do_not_change() -> None:
+    bars = {
+        "a": [_bar("a", _DAY1, 100.0), _bar("a", _DAY2, 110.0), _bar("a", _DAY3, 110.0)],
+        "b": [_bar("b", _DAY1, 100.0), _bar("b", _DAY2, 90.0), _bar("b", _DAY3, 90.0)],
+    }
+    long_a_short_b = [
+        Signal(instrument_id="a", ts=_DAY1, direction="long", strength=0.0),
+        Signal(instrument_id="b", ts=_DAY1, direction="short", strength=0.0),
+    ]
+    strategy = _FixedSignalsStrategy({_DAY1: long_a_short_b, _DAY2: long_a_short_b})
+
+    result = _run_with(NaiveCostModel(bps=100), bars, strategy)
+
+    # Entry: traded 0.5 + 0.5 at 1% -> 0.01; both legs +5% gross -> equity 1.09.
+    assert result.snapshots[1].equity == pytest.approx(1.09)
+    # Held weights drifted to 0.55/1.09 and -0.45/1.09; trading back to +-0.5 is
+    # 0.1/1.09 of equity, costing 0.001 of the original equity -> 1.089.
+    assert result.snapshots[2].equity == pytest.approx(1.089)
+
+
+def test_cost_model_is_asked_at_the_rebalance_date() -> None:
+    bars = {"a": [_bar("a", _DAY1, 100.0), _bar("a", _DAY2, 110.0), _bar("a", _DAY3, 110.0)]}
+    strategy = _FixedSignalsStrategy(
+        {_DAY2: [Signal(instrument_id="a", ts=_DAY2, direction="long", strength=0.0)]}
+    )
+    cost_model = _RecordingCostModel()
+
+    _run_with(cost_model, bars, strategy)
+
+    assert cost_model.calls == [(_DAY2, 1.0)]
+
+
 def test_raises_when_no_price_data_in_range() -> None:
     with pytest.raises(ValueError, match="No price data available"):
         run(
             strategy=_FixedSignalsStrategy({}),
+            cost_model=ZeroCostModel(),
             bars={},
             universe_name="u",
             start=_DAY1,

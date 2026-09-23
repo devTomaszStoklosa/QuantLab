@@ -120,8 +120,10 @@ class Signal(BaseModel):
 class Strategy(Protocol):
     def generate_signals(self, bars: dict[str, list[PriceBar]], as_of: date) -> list[Signal]: ...
 
-class CostModel(Protocol):
-    def apply(self, trade_intent: TradeIntent) -> Trade: ...
+class CostModel(Protocol):  # S7: silnik rebalansuje wagi dziennie, nie ma transakcji
+    name: str
+    def cost(self, instrument_bars: list[PriceBar], as_of: date, traded_weight: float) -> float: ...
+    # koszt jako ułamek equity; tylko dane <= as_of; turnover liczony od wag po dryfie cen
 
 class BacktestRun(BaseModel):
     id: str
