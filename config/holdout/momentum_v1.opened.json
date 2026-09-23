@@ -1,0 +1,31 @@
+{
+  "hypothesis": "momentum_v1",
+  "frozen_at_commit": "a9cb0b085249e67b9b4e06f108bcf580e4fd3362",
+  "opened_at": "2026-09-23T14:01:27.618977Z",
+  "opened_at_commit": "ea7be8c6c0a2389c2692a182886c88a2dc5936f6",
+  "start": "2024-01-01",
+  "end": "2025-12-31",
+  "cost_model_name": "realistic-10bps-k0.05-vol30d",
+  "cagr": 0.06454649391708722,
+  "sharpe": 0.3715236079630926,
+  "sortino": 0.5444583378356829,
+  "calmar": 0.13348495707715316,
+  "max_drawdown": -0.48354882325639065,
+  "p_value": 0.6135386461353864,
+  "permutation": {
+    "statistic": "annualized Sharpe of gross daily returns",
+    "n_permutations": 10000,
+    "seed": 0,
+    "alpha": 0.1,
+    "active_days": 730,
+    "low_confidence": false,
+    "actual": 0.4175734760908978,
+    "null_mean": 0.5618139275150696,
+    "null_std": 0.5087068586214153,
+    "percentile": 0.3865,
+    "p_value": 0.6135386461353864,
+    "n_valid": 10000
+  },
+  "criterion": "Holdout net Sharpe under the realistic cost model > 0 and permutation-test p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 -> inconclusive; Sharpe > 0 and p < 0.1 -> passed.",
+  "verdict": "inconclusive"
+}
