@@ -15,6 +15,7 @@ from quantlab.costs.realistic import RealisticCostModel
 from quantlab.costs.zero import ZeroCostModel
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
+from quantlab.validation.walk_forward import WalkForwardValidator
 
 app = typer.Typer()
 
@@ -175,4 +176,31 @@ def run() -> None:
         f"Sharpe difference {sensitivity.sharpe_difference:.2f}"
         f"{', CAGR changes sign' if sensitivity.cagr_sign_flip else ''} "
         f"-> {sensitivity.verdict}: {meaning}"
+    )
+
+    walk_forward = WalkForwardValidator(_PERIODS_PER_YEAR).validate(runs[2])
+    typer.echo("")
+    typer.echo(f"Walk-forward ({runs[2].cost_model_name}), calendar-year windows:")
+    typer.echo(f"{'Window':<26}{'CAGR':>10}{'Sharpe':>10}{'Max DD':>10}")
+
+    def _row(label: str, window: dict) -> str:
+        def fmt(value: float | None, pattern: str) -> str:
+            return "n/a" if value is None else format(value, pattern)
+
+        return (
+            f"{label:<26}{fmt(window['cagr'], '.2%'):>10}"
+            f"{fmt(window['sharpe'], '.2f'):>10}{fmt(window['max_drawdown'], '.2%'):>10}"
+        )
+
+    for window in walk_forward.detail["windows"]:
+        marker = "*" if window["partial"] else ""
+        typer.echo(_row(f"{window['start']}..{window['end']}{marker}", window))
+    if walk_forward.detail["aggregate"] is not None:
+        typer.echo(_row("Aggregate", walk_forward.detail["aggregate"]))
+    typer.echo("* partial year")
+    typer.echo(f"Rule: {walk_forward.detail['rule']}")
+    outcome = {True: "passed", False: "failed", None: "inconclusive"}[walk_forward.passed]
+    typer.echo(
+        f"Result: {outcome} ({walk_forward.detail.get('positive_windows', 0)} of "
+        f"{walk_forward.detail.get('windows_with_sharpe', 0)} windows with Sharpe > 0)"
     )
