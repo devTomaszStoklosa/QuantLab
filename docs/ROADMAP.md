@@ -73,7 +73,7 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 
 | Epik | 01-story | 02-spec | 03-design | Kod |
 |---|---|---|---|---|
-| lab-foundation | Ready for dev | Ready for dev | Ready for dev | nie zaczęty |
+| lab-foundation | Ready for dev | Ready for dev | Ready for dev | gotowe (F-1..F-4) |
 | q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | nie zaczęty |
 | q2-event-driven-engine | nie napisany | nie napisany | nie napisany | — |
 | q3-mean-reversion-hypothesis | nie napisany | nie napisany | nie napisany | — |
