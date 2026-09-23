@@ -1,0 +1,21 @@
+<!-- @dsCard group="Validation" height=290 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ChecksList — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 520}}, h(Q.ChecksList, {items: [
+  {state: 'pass', label: 'No look-ahead', detail: 'Signals lagged one bar; verified by shift test', value: 'shift=1'},
+  {state: 'pass', label: 'Costs applied', detail: 'RealisticCostModel on every fill', value: '24.6 bps avg'},
+  {state: 'pass', label: 'Universe fixed before test', detail: 'Committed with the hypothesis', value: '7 assets'},
+  {state: 'warn', label: 'Trials logged', detail: 'Six variants tried; deflated Sharpe applied', value: 'n=6 · DSR 0.41'},
+  {state: 'na', label: 'Survivorship', detail: 'Static crypto universe, no delistings in window', value: 'n/a'},
+  {state: 'fail', label: 'Minimum trade count', detail: 'Fold 3 below 50 trades', value: '38'}
+]})));
+</script>
+</body>
+</html>

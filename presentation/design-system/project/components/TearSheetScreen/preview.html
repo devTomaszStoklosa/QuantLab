@@ -1,0 +1,59 @@
+<!-- @dsCard group="Screens" height=1540 width=1440 page subtitle="Tear sheet of a rejected hypothesis: the verdict first, then the evidence" -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>TearSheetScreen — QuantForge</title>
+<style>html,body{margin:0} #root{padding:0}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+var N = 520, OOS = 300, HOLD = 430;
+var eq = S.series(7, N, 0.0011, 0.021, 100, [{from: OOS, to: HOLD, mu: 0.0004, sigma: 0.024}, {from: HOLD, to: N, mu: 0.0001, sigma: 0.026}]);
+var bh = S.series(11, N, 0.0007, 0.032, 100);
+var xt = [{i: 0, label: '2019'}, {i: 104, label: '2020'}, {i: 208, label: '2021'}, {i: 312, label: '2022'}, {i: 416, label: '2023'}, {i: 519, label: '2024'}];
+var H1 = {
+  id: 'H-001', title: 'Time-series momentum on crypto majors', status: 'testing',
+  statement: 'Instruments whose trailing 12-week return is positive keep outperforming cash over the following week, after realistic trading costs.',
+  rationale: 'Investors under-react to slow-moving information, so trends persist for weeks (Moskowitz, Ooi & Pedersen, 2012).',
+  criteria: [
+    {label: 'Walk-forward Sharpe, net of costs', threshold: '≥ 0.50', result: '0.64', pass: true},
+    {label: 'Permutation test p-value', threshold: '< 0.05', result: '0.031', pass: true},
+    {label: 'Max drawdown, walk-forward', threshold: '> −35%', result: '−28.9%', pass: true},
+    {label: 'Holdout Sharpe, net of costs', threshold: '≥ 0.30', locked: true}
+  ],
+  frozen: {sha: '3f9a2c1', date: '14 Aug 2026'}, owner: 'T. Stokłosa', updated: 'Updated 2 h ago'
+};
+
+var eq2 = S.series(31, N, 0.0012, 0.018, 100, [{from: OOS, to: N, mu: -0.0003, sigma: 0.018}]);
+var r = S.rng(8); function yr(y, k, hf) { var m = []; for (var i = 0; i < 12; i++) m.push(i < k ? (r() - (y > 2022 ? 0.56 : 0.45)) * 0.12 : null); return {year: y, months: m, holdoutFrom: hf}; }
+var body = h(F, null,
+  h('div', {className: 'qf-pagehead'},
+    h('div', {className: 'qf-pagehead__titles'},
+      h('div', {className: 'qf-eyebrow'}, 'Tear sheet · H-002 · run 8be41d0-r14'),
+      h('h1', {className: 'qf-pagehead__title', style: {fontSize: 32, lineHeight: '38px', letterSpacing: '-0.02em'}}, 'One-day reversal'),
+      h('div', {className: 'qf-pagehead__sub'}, h('span', null, 'BTC, ETH, SOL, BNB, XRP, ADA, DOGE vs USDT'), h('span', null, 'Daily · 2019-01-01 → 2023-12-31'), h('span', null, 'RealisticCostModel'))),
+    h(Q.Button, {icon: 'download'}, 'Export PDF'), h(Q.Button, {icon: 'book'}, 'Open log entry')),
+  h(Q.Verdict, {verdict: 'rejected', meta: 'Decided 19 Sep 2026 against criteria frozen at 8be41d0 · holdout never opened: the hypothesis failed the cost gate first', side: ['Gross SR  0.91', h('br', {key: 1}), 'Net SR  −0.22', h('br', {key: 2}), 'p  0.40']},
+    'Yesterday’s losers do bounce the next day, but the bounce is smaller than the cost of trading it. The effect is real before costs and gone after them.'),
+  h(Q.MetricStrip, {columns: 6, items: [
+    {label: 'Sharpe, gross', value: '0.91', struck: true, hint: 'before costs'}, {label: 'Sharpe, net', value: '−0.22', hint: 'after costs'},
+    {label: 'CAGR, net', value: '−4.8', unit: '%'}, {label: 'Max drawdown', value: '−57.1', unit: '%'},
+    {label: 'Turnover', value: '184', unit: '×/yr'}, {label: 'Avg cost / trade', value: '27.3', unit: 'bps'}]}),
+  h('div', {style: {display: 'grid', gridTemplateColumns: 'minmax(0, 1.6fr) minmax(0, 1fr)', gap: 24}},
+    h(Q.Panel, {title: 'Equity, net of costs', subtitle: 'Gross equity rose; net equity decayed from the first OOS month'},
+      h(Q.EquityChart, {series: eq2, benchmark: bh, xTicks: xt, height: 280, partitions: [{kind: 'is', from: 0, to: OOS}, {kind: 'oos', from: OOS, to: N - 1}]})),
+    h(Q.Panel, {title: 'Where the edge went', icon: 'costs', subtitle: 'Sharpe, walk-forward window'},
+      h(Q.CostWaterfall, {width: 460, steps: [{label: 'Gross Sharpe', value: 0.91, kind: 'total'}, {label: 'Spread', value: -0.47}, {label: 'Fees', value: -0.29}, {label: 'Slippage', value: -0.37}, {label: 'Net Sharpe', kind: 'total'}]}),
+      h('p', {className: 'qf-muted', style: {margin: '12px 0 0', fontSize: 12.5}}, 'Spread alone removes half the edge. A cheaper venue, not a better signal, is the only route to retest.'))),
+  h('div', {style: {display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 24}},
+    h(Q.Panel, {title: 'Conditional on volatility regime', icon: 'regime', subtitle: 'Terciles of 20-day realized volatility', flush: true},
+      h(Q.RegimeTable, {rows: [{regime: 'low', share: 0.33, sharpe: -0.61, ret: -0.094, maxdd: -0.214, hit: 0.47}, {regime: 'mid', share: 0.34, sharpe: -0.28, ret: -0.052, maxdd: -0.198, hit: 0.49}, {regime: 'high', share: 0.33, sharpe: 0.19, ret: 0.041, maxdd: -0.412, hit: 0.51}]})),
+    h(Q.Panel, {title: 'Is it luck?', icon: 'shuffle', subtitle: 'Net Sharpe vs 1,000 runs with the signal shuffled in time'},
+      h(Q.PermutationTest, {nullDist: S.draws(4, 1000, -0.29, 0.3), observed: -0.22, height: 150}))),
+  h(Q.Panel, {title: 'Monthly net returns, %', subtitle: 'Blue gains, red losses; intensity scales to ±8%'}, h(Q.MonthlyHeatmap, {years: [yr(2019, 12), yr(2020, 12), yr(2021, 12), yr(2022, 12), yr(2023, 12)]})),
+  h('div', {className: 'qf-disclaimer'}, 'Historical simulation on Binance daily data, net of RealisticCostModel. Metrics computed by quantlab.reporting at 8be41d0. Past behaviour does not predict future results; nothing here is a recommendation to trade.'));
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 1540}}, h(Q.AppShell, {active: 'reports', crumbs: ['Crypto majors', 'Tear sheets', 'H-002'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}}, body)));
+</script>
+</body>
+</html>

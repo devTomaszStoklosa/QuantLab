@@ -1,0 +1,16 @@
+<!-- @dsCard group="Validation" height=250 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>HoldoutSeal — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16}},
+  h(Q.HoldoutSeal, {range: '1 Mar 2023 → 31 Dec 2023', sha: '3f9a2c1', frozenAt: '14 Aug 2026, 09:12', criterion: 'Sharpe, net ≥ 0.30'}),
+  h(Q.HoldoutSeal, {state: 'unsealed', range: '1 Mar 2023 → 31 Dec 2023', sha: '3f9a2c1', frozenAt: '14 Aug 2026, 09:12', criterion: 'Sharpe, net ≥ 0.30', openedAt: '22 Sep 2026 by T. Stokłosa'})));
+</script>
+</body>
+</html>

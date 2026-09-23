@@ -8,3 +8,7 @@ __pycache__/
 
 data/raw/
 data/cache/
+
+# design system render checks
+presentation/design-system/test/
+presentation/design-system/shots/

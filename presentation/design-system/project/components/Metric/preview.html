@@ -1,0 +1,20 @@
+<!-- @dsCard group="Data display" height=132 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Metric — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(Q.MetricStrip, {items: [
+  {label: 'Sharpe, net', partition: 'oos', value: '0.64', ci: ['0.21', '1.05'], size: 'lg'},
+  {label: 'Sharpe, net', partition: 'is', value: '1.12', delta: '−0.48', deltaLabel: 'IS → OOS decay', size: 'lg'},
+  {label: 'Max drawdown', value: '−28.9', unit: '%', hint: '41 days to recover'},
+  {label: 'CAGR', value: '+14.2', unit: '%', delta: '+3.1 pp', deltaTone: 'gain', deltaLabel: 'vs buy & hold'},
+  {label: 'Holdout Sharpe', partition: 'holdout', value: '—', hint: 'sealed'}
+]}));
+</script>
+</body>
+</html>

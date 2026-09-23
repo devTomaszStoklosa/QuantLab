@@ -1,0 +1,18 @@
+<!-- @dsCard group="Feedback" height=250 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Callout — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 10}},
+  h(Q.Callout, {tone: 'danger', title: 'Look-ahead detected in signal mom_12w_v2'}, 'The signal on 2021-03-04 reads the close of 2021-03-05. Runs using this signal are quarantined until it is fixed.'),
+  h(Q.Callout, {tone: 'warning', title: 'Only 38 trades in fold 3'}, 'Fold Sharpe estimates below ~50 trades have wide confidence intervals. Read fold 3 with care.'),
+  h(Q.Callout, {tone: 'frozen', title: 'Parameters frozen'}, 'lookback, rebalance and universe were committed at 3f9a2c1 before any walk-forward run. Editing them registers a new hypothesis.'),
+  h(Q.Callout, {tone: 'info', title: 'This is a historical simulation'}, 'Results describe past behaviour under the stated costs. They are not a forecast or a recommendation.')));
+</script>
+</body>
+</html>

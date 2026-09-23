@@ -1,0 +1,16 @@
+<!-- @dsCard group="Status" height=64 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>PartitionTag — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-row'},
+  h(Q.PartitionTag, {partition: 'is'}), h(Q.PartitionTag, {partition: 'oos'}), h(Q.PartitionTag, {partition: 'holdout'}), h(Q.PartitionTag, {partition: 'holdout', sealed: false}, 'Holdout · opened'),
+  h('span', {style: {width: 16}}), h(Q.PartitionTag, {partition: 'is', short: true}), h(Q.PartitionTag, {partition: 'oos', short: true})));
+</script>
+</body>
+</html>

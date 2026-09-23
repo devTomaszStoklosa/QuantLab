@@ -1,0 +1,15 @@
+<!-- @dsCard group="Layout" height=190 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Panel — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Panel, {title: 'Transaction costs', icon: 'costs', subtitle: 'RealisticCostModel · spread + 10 bps fee + vol-scaled slippage', actions: h(Q.Button, {size: 'sm', variant: 'ghost'}, 'Compare models'), footer: h('span', null, 'Computed by ', h('code', null, 'quantlab.costs'), ' at ', h('code', null, '3f9a2c1'))},
+  h('p', {style: {margin: 0}}, 'Costs remove 0.48 of the 1.12 gross Sharpe. The edge survives, narrowly.')));
+</script>
+</body>
+</html>

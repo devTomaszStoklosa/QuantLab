@@ -1,0 +1,59 @@
+<!-- @dsCard group="Screens" height=1400 width=1440 page subtitle="Hypothesis workspace: pipeline rail, partitioned evidence, the sealed holdout" -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>WorkspaceScreen — QuantForge</title>
+<style>html,body{margin:0} #root{padding:0}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+var N = 520, OOS = 300, HOLD = 430;
+var eq = S.series(7, N, 0.0011, 0.021, 100, [{from: OOS, to: HOLD, mu: 0.0004, sigma: 0.024}, {from: HOLD, to: N, mu: 0.0001, sigma: 0.026}]);
+var bh = S.series(11, N, 0.0007, 0.032, 100);
+var xt = [{i: 0, label: '2019'}, {i: 104, label: '2020'}, {i: 208, label: '2021'}, {i: 312, label: '2022'}, {i: 416, label: '2023'}, {i: 519, label: '2024'}];
+var H1 = {
+  id: 'H-001', title: 'Time-series momentum on crypto majors', status: 'testing',
+  statement: 'Instruments whose trailing 12-week return is positive keep outperforming cash over the following week, after realistic trading costs.',
+  rationale: 'Investors under-react to slow-moving information, so trends persist for weeks (Moskowitz, Ooi & Pedersen, 2012).',
+  criteria: [
+    {label: 'Walk-forward Sharpe, net of costs', threshold: '≥ 0.50', result: '0.64', pass: true},
+    {label: 'Permutation test p-value', threshold: '< 0.05', result: '0.031', pass: true},
+    {label: 'Max drawdown, walk-forward', threshold: '> −35%', result: '−28.9%', pass: true},
+    {label: 'Holdout Sharpe, net of costs', threshold: '≥ 0.30', locked: true}
+  ],
+  frozen: {sha: '3f9a2c1', date: '14 Aug 2026'}, owner: 'T. Stokłosa', updated: 'Updated 2 h ago'
+};
+
+var st = ['passed','passed','passed','passed','passed','active','locked','pending','pending','pending'];
+var meta = ['frozen 14 Aug', '7 assets · 1D', 'mom_12w', 'SR 1.12 IS', 'SR 0.64 net', 'fold 6 of 6', 'sealed', '', '', ''];
+var body = h(F, null,
+  h('div', {className: 'qf-pagehead'},
+    h('div', {className: 'qf-pagehead__titles'},
+      h('div', {className: 'qf-row'}, h('span', {className: 'qf-num', style: {fontWeight: 600, color: 'var(--ink-muted)'}}, 'H-001'), h(Q.StatusBadge, {status: 'testing'}), h(Q.PartitionTag, {partition: 'holdout'}, 'Holdout sealed')),
+      h('h1', {className: 'qf-pagehead__title'}, 'Time-series momentum on crypto majors'),
+      h('div', {className: 'qf-pagehead__sub'}, h('span', null, 'Owner T. Stokłosa'), h('span', null, 'Registered 14 Aug 2026'), h('span', null, 'Frozen at ', h('code', null, '3f9a2c1')), h('span', null, '6 variants tried'))),
+    h(Q.Button, {icon: 'report'}, 'Draft tear sheet'), h(Q.Button, {variant: 'seal', icon: 'lock', disabled: true, title: 'Unlocks when walk-forward completes'}, 'Open holdout'), h(Q.Button, {variant: 'primary', icon: 'repeat'}, 'Run fold 6')),
+  h(Q.Panel, null, h(Q.StageRail, {current: 'walkforward', stages: Q.StageRail.STAGES.map(function (s, i) { return {key: s[0], label: s[1], state: st[i], meta: meta[i]}; })})),
+  h('div', {style: {display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 24, alignItems: 'start'}},
+    h('div', {className: 'qf-stack'},
+      h(Q.MetricStrip, {columns: 4, items: [
+        {label: 'Sharpe, net', partition: 'is', value: '1.12', hint: 'fitted here'},
+        {label: 'Sharpe, net', partition: 'oos', value: '0.64', ci: ['0.21', '1.05'], delta: '−43%', deltaLabel: 'decay'},
+        {label: 'Max drawdown', partition: 'oos', value: '−28.9', unit: '%'},
+        {label: 'Sharpe, net', partition: 'holdout', value: '—', hint: 'sealed until gates pass'}]}),
+      h(Q.Panel, {title: 'Equity, net of costs', subtitle: 'Weekly rebalance · RealisticCostModel · index = 100', actions: h(Q.Tabs, {items: [{value: 'net', label: 'Net'}, {value: 'gross', label: 'Gross'}, {value: 'both', label: 'Both'}]})},
+        h(Q.EquityChart, {series: eq, benchmark: bh, xTicks: xt, height: 300, partitions: [{kind: 'is', from: 0, to: OOS}, {kind: 'oos', from: OOS, to: HOLD}, {kind: 'holdout', from: HOLD, to: N - 1, sealed: true}]})),
+      h(Q.Panel, {title: 'Walk-forward folds', icon: 'repeat', subtitle: 'Expanding train window · 4-month test windows · no refit inside a test window'},
+        h(Q.WalkForward, {span: [0, 60], holdout: [50, 60], ticks: [{t: 0, label: '2019'}, {t: 12, label: '2020'}, {t: 24, label: '2021'}, {t: 36, label: '2022'}, {t: 48, label: '2023'}, {t: 60, label: '2024'}],
+          folds: [{train: [0, 24], test: [24, 28], sharpe: 1.21}, {train: [0, 28], test: [28, 32], sharpe: 0.44}, {train: [0, 32], test: [32, 36], sharpe: -0.37}, {train: [0, 36], test: [36, 41], sharpe: 0.92}, {train: [0, 41], test: [41, 46], sharpe: 0.58}, {train: [0, 46], test: [46, 50], sharpe: 0.71}]}))),
+    h('div', {className: 'qf-stack'},
+      h(Q.HypothesisCard, Object.assign({}, H1, {title: null, owner: null, updated: null})),
+      h(Q.HoldoutSeal, {range: '1 Mar 2023 → 31 Dec 2023', sha: '3f9a2c1', frozenAt: '14 Aug 2026, 09:12', criterion: 'Sharpe, net ≥ 0.30'}),
+      h(Q.Panel, {title: 'Integrity checks', icon: 'validate'}, h(Q.ChecksList, {items: [
+        {state: 'pass', label: 'No look-ahead', value: 'shift=1'}, {state: 'pass', label: 'Costs on every fill', value: '24.6 bps'},
+        {state: 'warn', label: 'Six variants tried', detail: 'Deflated Sharpe applied', value: 'DSR 0.41'}, {state: 'fail', label: 'Fold 3 trade count', detail: 'Below the 50-trade floor', value: '38'}]})))));
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 1400}}, h(Q.AppShell, {active: 'registry', crumbs: ['Crypto majors', 'Hypothesis registry', 'H-001'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}}, body)));
+</script>
+</body>
+</html>

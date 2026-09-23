@@ -1,0 +1,30 @@
+<!-- @dsCard group="Screens" height=860 width=1360 page subtitle="Research log: rejected results recorded as carefully as confirmed ones" -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>ResearchLogScreen — QuantForge</title>
+<style>html,body{margin:0} #root{padding:0}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+var body = h(F, null,
+  h('div', {className: 'qf-pagehead'},
+    h('div', {className: 'qf-pagehead__titles'}, h('div', {className: 'qf-eyebrow'}, 'Institutional memory'), h('h1', {className: 'qf-pagehead__title', style: {fontSize: 32, lineHeight: '38px', letterSpacing: '-0.02em'}}, 'Research log'),
+      h('div', {className: 'qf-pagehead__sub'}, 'One entry per finished hypothesis, written the day it is decided. What failed and why is the part that saves next year’s time.')),
+    h(Q.Button, {icon: 'download'}, 'Export Markdown')),
+  h('div', {style: {display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 32, alignItems: 'start'}},
+    h('div', {style: {maxWidth: 820}},
+      h(Q.LogEntry, {date: '19 Sep 2026', id: 'H-002', title: 'One-day reversal', verdict: 'rejected', conclusion: 'Real before costs, gone after them. Spread and slippage absorb the whole edge; retesting needs a cheaper venue, not a better signal.', facts: [['gross SR', '0.91'], ['net SR', '−0.22'], ['p', '0.40'], ['trades', '2,184']]}),
+      h(Q.LogEntry, {date: '2 Sep 2026', id: 'H-004', title: 'Volatility targeting', verdict: 'confirmed', conclusion: 'Scaling exposure to 20-day volatility shortened drawdowns in every walk-forward fold and in the one-look holdout.', facts: [['holdout SR', '0.58'], ['p', '0.012'], ['max DD', '−14.1%']]}),
+      h(Q.LogEntry, {date: '28 Aug 2026', id: 'H-003', title: 'ETH/BTC spread reversion', verdict: 'inconclusive', conclusion: 'The spread mean-reverts, but 23 trades in the holdout cannot separate the effect from noise. Revisit with hourly data.', facts: [['holdout SR', '0.21'], ['p', '0.14'], ['trades', '23']]}),
+      h(Q.LogEntry, {date: '11 Aug 2026', id: 'H-005', title: 'Weekend effect', verdict: 'rejected', conclusion: 'Weekend returns are no different from weekday returns once the 2020–21 bull run is split into its own regime.', facts: [['OOS SR', '0.05'], ['p', '0.62']]})),
+    h('div', {className: 'qf-stack'},
+      h(Q.Panel, {title: 'What we know so far'}, h(Q.ChecksList, {items: [
+        {state: 'pass', label: 'Volatility scaling helps', value: 'H-004'}, {state: 'fail', label: 'Short-horizon reversal is too costly', value: 'H-002'},
+        {state: 'fail', label: 'No calendar effect at weekly scale', value: 'H-005'}, {state: 'warn', label: 'Pairs need more data', value: 'H-003'}]})),
+      h(Q.Callout, {tone: 'info', title: 'Why log rejections?'}, 'An undocumented failure gets tested again next year, at the same cost. A documented one is a finding.'))));
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 860}}, h(Q.AppShell, {active: 'log', crumbs: ['Crypto majors', 'Research log'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}}, body)));
+</script>
+</body>
+</html>

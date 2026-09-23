@@ -1,0 +1,22 @@
+<!-- @dsCard group="Overlays" height=600 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Dialog — QuantForge</title>
+<style>html,body{margin:0} #root{padding:0}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {position: 'relative', height: 568}}, 
+h(Q.Dialog, {tone: 'holdout', icon: 'lock', title: 'Open the holdout for H-001?', subtitle: 'You get one look. The result is final and goes to the research log whatever it is.',
+  footer: h(F, null, h(Q.Button, {variant: 'ghost'}, 'Not yet'), h(Q.Button, {variant: 'seal', icon: 'unlock'}, 'Open holdout and evaluate'))},
+  h(Q.HoldoutSeal, {range: '1 Mar 2023 → 31 Dec 2023 (218 days)', sha: '3f9a2c1', frozenAt: '14 Aug 2026, 09:12', criterion: 'Sharpe, net ≥ 0.30'}),
+  h(Q.ChecksList, {items: [
+    {state: 'pass', label: 'Walk-forward passed', value: 'SR 0.64'}, {state: 'pass', label: 'Permutation test passed', value: 'p 0.031'},
+    {state: 'pass', label: 'No parameter edits since the freeze', value: '0 diffs'}]}),
+  h(Q.Field, {label: 'Type H-001 to confirm'}, h(Q.TextInput, {mono: true, defaultValue: 'H-001'})))
+));
+</script>
+</body>
+</html>

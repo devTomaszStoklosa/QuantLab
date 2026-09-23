@@ -1,0 +1,17 @@
+<!-- @dsCard group="Charts" height=200 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>RegimeTable — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Panel, {flush: true}, h(Q.RegimeTable, {rows: [
+  {regime: 'low', share: 0.33, sharpe: 0.94, ret: 0.121, maxdd: -0.112, hit: 0.54},
+  {regime: 'mid', share: 0.34, sharpe: 0.71, ret: 0.162, maxdd: -0.187, hit: 0.52},
+  {regime: 'high', share: 0.33, sharpe: -0.18, ret: -0.061, maxdd: -0.289, hit: 0.46}]})));
+</script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+<!-- @dsCard group="Screens" height=900 width=1360 page subtitle="Hypothesis registry: every idea, its pipeline position and its verdict" -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>RegistryScreen — QuantForge</title>
+<style>html,body{margin:0} #root{padding:0}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+var N = 520, OOS = 300, HOLD = 430;
+var eq = S.series(7, N, 0.0011, 0.021, 100, [{from: OOS, to: HOLD, mu: 0.0004, sigma: 0.024}, {from: HOLD, to: N, mu: 0.0001, sigma: 0.026}]);
+var bh = S.series(11, N, 0.0007, 0.032, 100);
+var xt = [{i: 0, label: '2019'}, {i: 104, label: '2020'}, {i: 208, label: '2021'}, {i: 312, label: '2022'}, {i: 416, label: '2023'}, {i: 519, label: '2024'}];
+var H1 = {
+  id: 'H-001', title: 'Time-series momentum on crypto majors', status: 'testing',
+  statement: 'Instruments whose trailing 12-week return is positive keep outperforming cash over the following week, after realistic trading costs.',
+  rationale: 'Investors under-react to slow-moving information, so trends persist for weeks (Moskowitz, Ooi & Pedersen, 2012).',
+  criteria: [
+    {label: 'Walk-forward Sharpe, net of costs', threshold: '≥ 0.50', result: '0.64', pass: true},
+    {label: 'Permutation test p-value', threshold: '< 0.05', result: '0.031', pass: true},
+    {label: 'Max drawdown, walk-forward', threshold: '> −35%', result: '−28.9%', pass: true},
+    {label: 'Holdout Sharpe, net of costs', threshold: '≥ 0.30', locked: true}
+  ],
+  frozen: {sha: '3f9a2c1', date: '14 Aug 2026'}, owner: 'T. Stokłosa', updated: 'Updated 2 h ago'
+};
+
+var hyps = [
+  {id: 'H-001', title: 'Time-series momentum, 12-week', fam: 'Momentum', st: 'testing', meter: ['passed','passed','passed','passed','passed','active','locked','pending','pending','pending'], sr: 0.64, hold: 'sealed', upd: '2 h ago', seed: 7},
+  {id: 'H-002', title: 'One-day reversal', fam: 'Mean reversion', st: 'rejected', meter: ['passed','passed','passed','passed','failed','pending','locked','pending','pending','passed'], sr: -0.22, hold: 'never opened', upd: '19 Sep', seed: 21},
+  {id: 'H-003', title: 'ETH/BTC spread reversion', fam: 'Stat-arb', st: 'inconclusive', meter: ['passed','passed','passed','passed','passed','passed','passed','passed','passed','passed'], sr: 0.47, hold: 'opened', upd: '28 Aug', seed: 5},
+  {id: 'H-004', title: 'Volatility targeting', fam: 'Risk', st: 'confirmed', meter: ['passed','passed','passed','passed','passed','passed','passed','passed','passed','passed'], sr: 0.81, hold: 'opened', upd: '2 Sep', seed: 3},
+  {id: 'H-005', title: 'Weekend effect', fam: 'Calendar', st: 'rejected', meter: ['passed','passed','passed','passed','passed','failed','locked','pending','pending','passed'], sr: 0.05, hold: 'never opened', upd: '11 Aug', seed: 9},
+  {id: 'H-006', title: 'Funding-rate carry', fam: 'Carry', st: 'proposed', meter: ['passed','pending','pending','pending','pending','pending','locked','pending','pending','pending'], sr: null, hold: 'sealed', upd: 'today', seed: 13},
+  {id: 'H-007', title: 'Breakout after vol compression', fam: 'Momentum', st: 'testing', meter: ['passed','passed','passed','active','pending','pending','locked','pending','pending','pending'], sr: null, hold: 'sealed', upd: '5 h ago', seed: 17}
+];
+var body = h(F, null,
+  h('div', {className: 'qf-pagehead'},
+    h('div', {className: 'qf-pagehead__titles'}, h('div', {className: 'qf-eyebrow'}, 'Crypto majors · Binance daily · 7 instruments'), h('h1', {className: 'qf-pagehead__title', style: {fontSize: 32, lineHeight: '38px', letterSpacing: '-0.02em'}}, 'Hypothesis registry'),
+      h('div', {className: 'qf-pagehead__sub'}, 'Every idea is registered before it touches data. Rejected and inconclusive results count as findings too.')),
+    h(Q.Button, {icon: 'filter'}, 'Filter'), h(Q.Button, {variant: 'primary', icon: 'plus'}, 'Register hypothesis')),
+  h(Q.MetricStrip, {columns: 5, items: [
+    {label: 'Registered', value: '12', hint: '3 this month'}, {label: 'Confirmed', value: '2', hint: 'passed holdout'},
+    {label: 'Rejected', value: '5', hint: 'all documented'}, {label: 'Inconclusive', value: '2', hint: '1 queued for retest'},
+    {label: 'Median time to verdict', value: '19', unit: 'days'}]}),
+  h(Q.Panel, {flush: true},
+    h('div', {style: {padding: '0 16px'}}, h(Q.Tabs, {items: [{value: 'all', label: 'All', count: 12}, {value: 'testing', label: 'Testing', count: 3}, {value: 'confirmed', label: 'Confirmed', count: 2}, {value: 'rejected', label: 'Rejected', count: 5}, {value: 'inconclusive', label: 'Inconclusive', count: 2}]})),
+    h(Q.DataTable, {selected: 'H-001', rows: hyps, columns: [
+      {key: 'id', label: 'ID', width: 72, render: function (v) { return h('span', {className: 'qf-num', style: {fontWeight: 600}}, v); }},
+      {key: 'title', label: 'Hypothesis', render: function (v, r) { return h('div', null, h('div', {style: {fontWeight: 600}}, v), h('div', {className: 'qf-muted', style: {fontSize: 12}}, r.fam)); }},
+      {key: 'meter', label: 'Pipeline', render: function (v) { return h(Q.StageMeter, {states: v}); }},
+      {key: 'st', label: 'Status', render: function (v) { return h(Q.StatusBadge, {status: v}); }},
+      {key: 'spark', label: 'Equity (OOS in blue)', render: function (v, r) { return r.sr == null ? h('span', {className: 'qf-muted', style: {fontSize: 12}}, 'no runs yet') : h(Q.Sparkline, {series: S.series(r.seed, 120, r.sr > 0 ? 0.002 : -0.0004, 0.02), oosFrom: 70, holdoutFrom: 100, sealed: r.hold === 'sealed' || r.hold === 'never opened', width: 104, height: 22}); }},
+      {key: 'sr', label: 'OOS Sharpe', numeric: true, format: function (v) { return fmt.num(v, 2); }, tone: function (v) { return v == null ? 'dim' : (v < 0 ? 'loss' : null); }},
+      {key: 'hold', label: 'Holdout', render: function (v) { return v === 'opened' ? h(Q.PartitionTag, {partition: 'holdout', sealed: false}, 'Opened') : (v === 'sealed' ? h(Q.PartitionTag, {partition: 'holdout'}, 'Sealed') : h('span', {className: 'qf-muted', style: {fontSize: 12}}, 'Never opened')); }},
+      {key: 'upd', label: 'Updated', numeric: true, tone: function () { return 'dim'; }}]})),
+  h('div', {className: 'qf-disclaimer'}, 'All figures are historical simulations net of the stated cost model. QuantForge describes past behaviour; it does not recommend trades.'));
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 900}}, h(Q.AppShell, {active: 'registry', crumbs: ['Crypto majors', 'Hypothesis registry'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}}, body)));
+</script>
+</body>
+</html>

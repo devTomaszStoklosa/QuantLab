@@ -1,0 +1,31 @@
+<!-- @dsCard group="Research flow" height=470 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>HypothesisCard — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+var N = 520, OOS = 300, HOLD = 430;
+var eq = S.series(7, N, 0.0011, 0.021, 100, [{from: OOS, to: HOLD, mu: 0.0004, sigma: 0.024}, {from: HOLD, to: N, mu: 0.0001, sigma: 0.026}]);
+var bh = S.series(11, N, 0.0007, 0.032, 100);
+var xt = [{i: 0, label: '2019'}, {i: 104, label: '2020'}, {i: 208, label: '2021'}, {i: 312, label: '2022'}, {i: 416, label: '2023'}, {i: 519, label: '2024'}];
+var H1 = {
+  id: 'H-001', title: 'Time-series momentum on crypto majors', status: 'testing',
+  statement: 'Instruments whose trailing 12-week return is positive keep outperforming cash over the following week, after realistic trading costs.',
+  rationale: 'Investors under-react to slow-moving information, so trends persist for weeks (Moskowitz, Ooi & Pedersen, 2012).',
+  criteria: [
+    {label: 'Walk-forward Sharpe, net of costs', threshold: '≥ 0.50', result: '0.64', pass: true},
+    {label: 'Permutation test p-value', threshold: '< 0.05', result: '0.031', pass: true},
+    {label: 'Max drawdown, walk-forward', threshold: '> −35%', result: '−28.9%', pass: true},
+    {label: 'Holdout Sharpe, net of costs', threshold: '≥ 0.30', locked: true}
+  ],
+  frozen: {sha: '3f9a2c1', date: '14 Aug 2026'}, owner: 'T. Stokłosa', updated: 'Updated 2 h ago'
+};
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 720}}, h(Q.HypothesisCard, H1)));
+</script>
+</body>
+</html>
