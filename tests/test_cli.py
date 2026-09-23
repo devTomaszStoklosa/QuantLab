@@ -6,6 +6,7 @@ from typer.testing import CliRunner
 from quantlab.cli import app, run_momentum_study
 from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument, Universe
+from quantlab.costs.zero import ZeroCostModel
 
 runner = CliRunner()
 
@@ -64,6 +65,7 @@ def test_run_momentum_study_fetches_warm_up_history_and_nothing_after_end() -> N
 
     run_momentum_study(
         provider=provider,
+        cost_model=ZeroCostModel(),
         universe=_UNIVERSE,
         lookback_days=2,
         start=start,
@@ -80,6 +82,7 @@ def test_run_momentum_study_uses_warm_up_history_for_first_window_signal() -> No
 
     result = run_momentum_study(
         provider=_FixtureProvider(),
+        cost_model=ZeroCostModel(),
         universe=_UNIVERSE,
         lookback_days=2,
         start=start,
@@ -100,6 +103,7 @@ def test_run_momentum_study_uses_warm_up_history_for_first_window_signal() -> No
 def test_run_momentum_study_records_run_metadata() -> None:
     result = run_momentum_study(
         provider=_FixtureProvider(),
+        cost_model=ZeroCostModel(),
         universe=_UNIVERSE,
         lookback_days=2,
         start=date(2026, 1, 3),

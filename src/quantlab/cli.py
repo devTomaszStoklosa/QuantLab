@@ -9,6 +9,8 @@ from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core.data.binance import BinanceProvider
 from quantlab.core.data.provider import DataProvider
 from quantlab.core.universe import Universe
+from quantlab.costs.base import CostModel
+from quantlab.costs.naive import NaiveCostModel
 from quantlab.reporting.metrics import cagr, calmar, max_drawdown, sharpe, sortino
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 
@@ -20,6 +22,7 @@ _UNIVERSE_NAME = "mvp-crypto"
 _TRAINING_START = date(2018, 1, 1)
 _TRAINING_END = date(2023, 12, 31)
 _LOOKBACK_DAYS = 365  # ~12-month formation period, Moskowitz/Ooi/Pedersen (2012)
+_COST_BPS = 10  # Binance spot default maker/taker fee for regular users: 0.1%
 _SEED = 0  # placeholder: nothing in the vectorized engine is random until S11
 _PERIODS_PER_YEAR = 365  # crypto trades every calendar day
 
@@ -41,6 +44,7 @@ def main(
 
 def run_momentum_study(
     provider: DataProvider,
+    cost_model: CostModel,
     universe: Universe,
     lookback_days: int,
     start: date,
@@ -61,6 +65,7 @@ def run_momentum_study(
     }
     return run_backtest(
         strategy=TimeSeriesMomentum(lookback_days=lookback_days),
+        cost_model=cost_model,
         bars=bars,
         universe_name=universe.name,
         start=start,
@@ -84,6 +89,7 @@ def run() -> None:
     """Run the momentum study on the MVP basket, training period only."""
     result = run_momentum_study(
         provider=BinanceProvider(),
+        cost_model=NaiveCostModel(bps=_COST_BPS),
         universe=Universe.load(_UNIVERSE_NAME),
         lookback_days=_LOOKBACK_DAYS,
         start=_TRAINING_START,

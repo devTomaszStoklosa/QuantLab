@@ -6,6 +6,7 @@ import pytest
 
 from quantlab.backtest.vectorized.engine import run
 from quantlab.core.data.provider import PriceBar
+from quantlab.costs.zero import ZeroCostModel
 from quantlab.reporting.metrics import sharpe
 from quantlab.strategy.signal import Signal
 
@@ -52,6 +53,7 @@ def test_buy_and_hold_sharpe_matches_analytically_expected_value() -> None:
 
     result = run(
         strategy=strategy,
+        cost_model=ZeroCostModel(),
         bars=bars,
         universe_name="golden-master",
         start=_START,
