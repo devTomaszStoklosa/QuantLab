@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import Mock, patch
 
 import pytest
@@ -23,6 +23,30 @@ _RECORDED_KLINES = [
 ]
 
 _BTC_USDT = Instrument(id="btc-usdt", symbol="BTCUSDT", asset_class="crypto", quote_asset="USDT")
+
+
+def _ms(day: date) -> int:
+    return int(datetime(day.year, day.month, day.day, tzinfo=UTC).timestamp() * 1000)
+
+
+def _synthetic_klines(start_day: date, count: int) -> list[list]:
+    return [
+        [
+            _ms(start_day + timedelta(days=i)),
+            "100.0",
+            "101.0",
+            "99.0",
+            "100.0",
+            "1.0",
+            _ms(start_day + timedelta(days=i + 1)) - 1,
+            "100.0",
+            1,
+            "1.0",
+            "100.0",
+            "0",
+        ]
+        for i in range(count)
+    ]
 
 
 def _mock_response(status_code: int, json_body: object) -> Mock:
@@ -66,3 +90,23 @@ def test_unknown_symbol_raises_data_not_found_error(mock_get, tmp_path, monkeypa
 
     with pytest.raises(DataNotFoundError):
         BinanceProvider().fetch(_BTC_USDT, date(2026, 9, 20), date(2026, 9, 22))
+
+
+@patch("quantlab.core.data.binance.requests.get")
+def test_fetch_pages_through_ranges_longer_than_a_thousand_bars(mock_get, tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    start = date(2018, 1, 1)
+    second_page_start = start + timedelta(days=1000)
+    requested_end = second_page_start + timedelta(days=2)
+    mock_get.side_effect = [
+        _mock_response(200, _synthetic_klines(start, 1000)),
+        _mock_response(200, _synthetic_klines(second_page_start, 3)),
+    ]
+
+    bars = BinanceProvider().fetch(_BTC_USDT, start, requested_end)
+
+    assert mock_get.call_count == 2
+    assert len(bars) == 1003
+    assert [bar.ts for bar in bars] == sorted(bar.ts for bar in bars)
+    assert bars[0].ts == start
+    assert bars[-1].ts == requested_end
