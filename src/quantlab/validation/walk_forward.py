@@ -1,176 +1,120 @@
+from collections.abc import Callable
 from datetime import date
+from fractions import Fraction
+from itertools import groupby
 
-import numpy as np
 from pydantic import BaseModel
 
 from quantlab.backtest.vectorized.engine import BacktestRun
 from quantlab.reporting.metrics import cagr, max_drawdown, sharpe
 from quantlab.validation.base import ValidationResult
 
+# Pass rule, pre-registered (agreed with Tomasz and committed) before any
+# per-window result was computed.
+MIN_POSITIVE_WINDOW_FRACTION = Fraction(2, 3)
+MIN_WINDOWS_WITH_SHARPE = 3
+PASS_RULE = (
+    "Sharpe > 0 in at least 2/3 of windows with a defined Sharpe, and aggregate "
+    "Sharpe > 0; inconclusive if fewer than 3 windows have a defined Sharpe"
+)
+
 
 class WindowMetrics(BaseModel):
-    start: date  # date of the first return in the window
-    end: date  # date of the last return in the window
-    periods: int
-    total_return: float
-    cagr: float | None  # None when the window loses everything
-    sharpe: float | None  # None when returns have zero variance (e.g. never invested)
-    max_drawdown: float
+    start: date
+    end: date
+    partial: bool
+    cagr: float | None
+    sharpe: float | None
+    max_drawdown: float | None
 
 
-class WalkForwardFold(BaseModel):
-    index: int
-    train: WindowMetrics
-    test: WindowMetrics
-
-
-class WalkForwardReport(BaseModel):
-    folds: list[WalkForwardFold]
-    aggregate_test: WindowMetrics | None  # all test windows stitched in order
-    positive_test_fraction: float | None
-    unused_trailing_periods: int
-
-
-def _window_metrics(dates: list[date], returns: np.ndarray, periods_per_year: int) -> WindowMetrics:
-    equity = np.concatenate(([1.0], np.cumprod(1.0 + returns))).tolist()
+def _defined(metric: Callable[[], float]) -> float | None:
     try:
-        window_cagr = cagr(equity, periods_per_year)
+        return metric()
     except ValueError:
-        window_cagr = None
-    try:
-        window_sharpe = sharpe(returns.tolist(), periods_per_year)
-    except ValueError:
-        window_sharpe = None
+        return None
+
+
+def _window_metrics(
+    equity: list[float], start: date, end: date, partial: bool, periods_per_year: int
+) -> WindowMetrics:
+    returns = [equity[i] / equity[i - 1] - 1.0 for i in range(1, len(equity))]
     return WindowMetrics(
-        start=dates[0],
-        end=dates[-1],
-        periods=len(returns),
-        total_return=equity[-1] - 1.0,
-        cagr=window_cagr,
-        sharpe=window_sharpe,
-        max_drawdown=max_drawdown(equity),
+        start=start,
+        end=end,
+        partial=partial,
+        cagr=_defined(lambda: cagr(equity, periods_per_year)),
+        sharpe=_defined(lambda: sharpe(returns, periods_per_year)),
+        max_drawdown=_defined(lambda: max_drawdown(equity)),
     )
 
 
 class WalkForwardValidator:
-    """Rolling walk-forward over a completed run, reported fold by fold (REQ-040).
+    """Performance per non-overlapping calendar-year window (REQ-040).
 
-    Periods are the run's return periods (one per snapshot after the first).
-    Fold k tests `test_periods` returns starting at `train_periods + k * step_periods`
-    and pairs them with the `train_periods` returns immediately before. Test
-    windows never overlap when `step_periods >= test_periods` (the default), and
-    a trailing stretch too short for a full test window is reported, not used.
+    The strategy's only parameter comes from the literature rather than being
+    fitted to this data, so there is nothing to re-fit between windows: every
+    window is already out-of-sample for that choice, and walk-forward reduces to
+    checking whether performance holds up year by year, not just on average.
 
-    Nothing is refitted per fold: the strategies in this epic have parameters
-    fixed a priori (e.g. a 12-month lookback from the literature), so the train
-    window is what an in-sample reading looked like just before each test
-    window. Setting the two side by side exposes IS -> OOS decay and whether the
-    result holds up across time or rests on one lucky stretch.
-
-    The pass rule is set in the constructor, before looking at any result:
-    the stitched out-of-sample Sharpe must exceed `min_test_sharpe` and at least
-    `min_positive_fraction` of test windows must have a positive Sharpe (a
-    zero-variance window counts as not positive). With fewer than `min_folds`
-    folds the result is inconclusive (`passed=None`), not a pass or a fail.
+    Windows start at the first held position, so the warm-up (no signal yet)
+    is not counted. Each window's first return is measured from the previous
+    day's equity, so no day is lost at a boundary. A metric that is undefined
+    in a window (e.g. zero variance) is recorded as None.
     """
 
-    def __init__(
-        self,
-        train_periods: int,
-        test_periods: int,
-        periods_per_year: int,
-        step_periods: int | None = None,
-        min_test_sharpe: float = 0.0,
-        min_positive_fraction: float = 0.5,
-        min_folds: int = 3,
-    ) -> None:
-        step = test_periods if step_periods is None else step_periods
-        if min(train_periods, test_periods, step, periods_per_year, min_folds) <= 0:
-            raise ValueError("window lengths, step, periods_per_year and min_folds must be positive")
-        if test_periods < 2:
-            raise ValueError("test_periods must be at least 2 to compute a Sharpe ratio")
-        if not 0.0 <= min_positive_fraction <= 1.0:
-            raise ValueError("min_positive_fraction must be between 0 and 1")
-        self.train_periods = train_periods
-        self.test_periods = test_periods
-        self.step_periods = step
+    def __init__(self, periods_per_year: int) -> None:
         self.periods_per_year = periods_per_year
-        self.min_test_sharpe = min_test_sharpe
-        self.min_positive_fraction = min_positive_fraction
-        self.min_folds = min_folds
-
-    def report(self, run: BacktestRun) -> WalkForwardReport:
-        equity = np.asarray([snapshot.equity for snapshot in run.snapshots], dtype=np.float64)
-        returns = equity[1:] / equity[:-1] - 1.0
-        dates = [snapshot.ts for snapshot in run.snapshots[1:]]
-
-        folds: list[WalkForwardFold] = []
-        test_start = self.train_periods
-        used_until = 0
-        while test_start + self.test_periods <= len(returns):
-            train = slice(test_start - self.train_periods, test_start)
-            test = slice(test_start, test_start + self.test_periods)
-            folds.append(
-                WalkForwardFold(
-                    index=len(folds),
-                    train=_window_metrics(dates[train], returns[train], self.periods_per_year),
-                    test=_window_metrics(dates[test], returns[test], self.periods_per_year),
-                )
-            )
-            used_until = test.stop
-            test_start += self.step_periods
-
-        if not folds:
-            return WalkForwardReport(
-                folds=[], aggregate_test=None, positive_test_fraction=None,
-                unused_trailing_periods=len(returns),
-            )
-
-        # Overlapping test windows (step < test) would count some returns twice.
-        test_indices = sorted(
-            {i for fold in range(len(folds)) for i in self._test_range(fold)}
-        )
-        positive = sum(1 for fold in folds if fold.test.sharpe is not None and fold.test.sharpe > 0)
-        return WalkForwardReport(
-            folds=folds,
-            aggregate_test=_window_metrics(
-                [dates[i] for i in test_indices], returns[test_indices], self.periods_per_year
-            ),
-            positive_test_fraction=positive / len(folds),
-            unused_trailing_periods=len(returns) - used_until,
-        )
-
-    def _test_range(self, fold: int) -> range:
-        start = self.train_periods + fold * self.step_periods
-        return range(start, start + self.test_periods)
 
     def validate(self, run: BacktestRun) -> ValidationResult:
-        report = self.report(run)
-        criterion = {
-            "min_test_sharpe": self.min_test_sharpe,
-            "min_positive_fraction": self.min_positive_fraction,
-            "min_folds": self.min_folds,
-        }
-        if len(report.folds) < self.min_folds:
-            passed = None
-            reason = f"only {len(report.folds)} full folds, need {self.min_folds}"
-        else:
-            aggregate_sharpe = report.aggregate_test.sharpe
-            passed = (
-                aggregate_sharpe is not None
-                and aggregate_sharpe > self.min_test_sharpe
-                and report.positive_test_fraction >= self.min_positive_fraction
+        snapshots = run.snapshots
+        # A snapshot's positions were held over the day ending at its ts, so the
+        # first snapshot (no previous day to measure from) can't start a window.
+        first = next((i for i in range(1, len(snapshots)) if snapshots[i].positions), None)
+        if first is None:
+            return ValidationResult(
+                method="walk_forward",
+                passed=None,
+                detail={"rule": PASS_RULE, "windows": [], "aggregate": None},
             )
-            reason = "criterion met" if passed else "criterion not met"
+
+        windows = []
+        for year, group in groupby(range(first, len(snapshots)), key=lambda i: snapshots[i].ts.year):
+            indices = list(group)
+            window_start, window_end = snapshots[indices[0]].ts, snapshots[indices[-1]].ts
+            equity = [snapshots[indices[0] - 1].equity] + [snapshots[i].equity for i in indices]
+            partial = window_start != date(year, 1, 1) or window_end != date(year, 12, 31)
+            windows.append(
+                _window_metrics(equity, window_start, window_end, partial, self.periods_per_year)
+            )
+
+        aggregate = _window_metrics(
+            [snapshot.equity for snapshot in snapshots[first - 1 :]],
+            snapshots[first].ts,
+            snapshots[-1].ts,
+            False,
+            self.periods_per_year,
+        )
+
+        sharpes = [window.sharpe for window in windows if window.sharpe is not None]
+        positive = sum(1 for value in sharpes if value > 0)
+        if len(sharpes) < MIN_WINDOWS_WITH_SHARPE:
+            passed = None
+        else:
+            passed = (
+                Fraction(positive, len(sharpes)) >= MIN_POSITIVE_WINDOW_FRACTION
+                and aggregate.sharpe is not None
+                and aggregate.sharpe > 0
+            )
+
         return ValidationResult(
             method="walk_forward",
             passed=passed,
             detail={
-                "train_periods": self.train_periods,
-                "test_periods": self.test_periods,
-                "step_periods": self.step_periods,
-                "criterion": criterion,
-                "reason": reason,
-                **report.model_dump(mode="json"),
+                "rule": PASS_RULE,
+                "windows": [window.model_dump(mode="json") for window in windows],
+                "aggregate": aggregate.model_dump(mode="json"),
+                "positive_windows": positive,
+                "windows_with_sharpe": len(sharpes),
             },
         )

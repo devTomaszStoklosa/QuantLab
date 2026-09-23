@@ -32,11 +32,6 @@ _SLIPPAGE_K = 0.05
 _VOL_WINDOW_DAYS = 30
 _SEED = 0  # placeholder: nothing in the vectorized engine is random until S11
 _PERIODS_PER_YEAR = 365  # crypto trades every calendar day
-# Walk-forward (S9), fixed before the first walk-forward run: one year of in-sample
-# context before each half-year test window, test windows back to back. Pass rule:
-# stitched out-of-sample Sharpe > 0 and at least half of the test windows positive.
-_WF_TRAIN_DAYS = 365
-_WF_TEST_DAYS = 182
 
 
 def _version_callback(show_version: bool) -> None:
@@ -183,37 +178,29 @@ def run() -> None:
         f"-> {sensitivity.verdict}: {meaning}"
     )
 
-    _print_walk_forward(runs[2])
-
-
-def _fmt_sharpe(value: float | None) -> str:
-    return "n/a" if value is None else f"{value:.2f}"
-
-
-def _print_walk_forward(run: BacktestRun) -> None:
-    """Walk-forward on the realistic-cost run: the conservative one decides."""
-    validator = WalkForwardValidator(
-        train_periods=_WF_TRAIN_DAYS, test_periods=_WF_TEST_DAYS, periods_per_year=_PERIODS_PER_YEAR
-    )
-    report = validator.report(run)
-    result = validator.validate(run)
-
+    walk_forward = WalkForwardValidator(_PERIODS_PER_YEAR).validate(runs[2])
     typer.echo("")
+    typer.echo(f"Walk-forward ({runs[2].cost_model_name}), calendar-year windows:")
+    typer.echo(f"{'Window':<26}{'CAGR':>10}{'Sharpe':>10}{'Max DD':>10}")
+
+    def _row(label: str, window: dict) -> str:
+        def fmt(value: float | None, pattern: str) -> str:
+            return "n/a" if value is None else format(value, pattern)
+
+        return (
+            f"{label:<26}{fmt(window['cagr'], '.2%'):>10}"
+            f"{fmt(window['sharpe'], '.2f'):>10}{fmt(window['max_drawdown'], '.2%'):>10}"
+        )
+
+    for window in walk_forward.detail["windows"]:
+        marker = "*" if window["partial"] else ""
+        typer.echo(_row(f"{window['start']}..{window['end']}{marker}", window))
+    if walk_forward.detail["aggregate"] is not None:
+        typer.echo(_row("Aggregate", walk_forward.detail["aggregate"]))
+    typer.echo("* partial year")
+    typer.echo(f"Rule: {walk_forward.detail['rule']}")
+    outcome = {True: "passed", False: "failed", None: "inconclusive"}[walk_forward.passed]
     typer.echo(
-        f"Walk-forward ({run.cost_model_name}): {_WF_TRAIN_DAYS}-day train, "
-        f"{_WF_TEST_DAYS}-day test windows"
+        f"Result: {outcome} ({walk_forward.detail.get('positive_windows', 0)} of "
+        f"{walk_forward.detail.get('windows_with_sharpe', 0)} windows with Sharpe > 0)"
     )
-    typer.echo(f"{'Fold':<6}{'Test window':<26}{'Train SR':>10}{'Test SR':>10}{'Test return':>13}")
-    for fold in report.folds:
-        typer.echo(
-            f"{fold.index + 1:<6}{f'{fold.test.start} .. {fold.test.end}':<26}"
-            f"{_fmt_sharpe(fold.train.sharpe):>10}{_fmt_sharpe(fold.test.sharpe):>10}"
-            f"{fold.test.total_return:>13.2%}"
-        )
-    if report.aggregate_test is not None:
-        typer.echo(
-            f"Out-of-sample, stitched: Sharpe {_fmt_sharpe(report.aggregate_test.sharpe)}, "
-            f"{report.positive_test_fraction:.0%} of test windows positive"
-        )
-    verdict = {True: "passed", False: "failed", None: "inconclusive"}[result.passed]
-    typer.echo(f"Walk-forward: {verdict} ({result.detail['reason']})")

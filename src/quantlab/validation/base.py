@@ -7,7 +7,7 @@ from quantlab.backtest.vectorized.engine import BacktestRun
 
 class ValidationResult(BaseModel):
     method: Literal["walk_forward", "permutation", "holdout"]
-    passed: bool | None  # None = inconclusive: too little evidence to pass or fail
+    passed: bool | None  # None = inconclusive
     detail: dict
 
 
