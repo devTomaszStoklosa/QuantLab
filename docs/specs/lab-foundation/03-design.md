@@ -127,7 +127,7 @@ Format Binance zweryfikowany na żywo 2026-09-23 (`GET https://api.binance.com/a
 
 ### Zależności
 
-Runtime: `duckdb`, `pandas`, `numpy`, `pyarrow` (Parquet), `requests`, `typer`, `pydantic`. Dev: `pytest`, `ruff`. Każda z częścią natywną trafia do `tests/test_environment.py`.
+Runtime: `duckdb`, `pandas`, `numpy`, `pyarrow` (Parquet), `requests`, `typer`, `pydantic`, `pyyaml` (config uniwersum, F-3). Dev: `pytest`, `ruff`. Każda z częścią natywną trafia do `tests/test_environment.py`.
 
 ## Rollout and rollback
 
