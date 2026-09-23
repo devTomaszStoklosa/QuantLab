@@ -1,5 +1,5 @@
 import subprocess
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Literal, Self
 
@@ -8,6 +8,10 @@ from pydantic import BaseModel, model_validator
 
 
 class HoldoutNotFrozenError(Exception):
+    pass
+
+
+class HoldoutAlreadyOpenedError(Exception):
     pass
 
 
@@ -57,6 +61,37 @@ class FrozenHoldout(BaseModel):
 
 
 HoldoutVerdict = Literal["passed", "inconclusive", "rejected"]
+
+
+class HoldoutRecord(BaseModel):
+    """Result of the one-time holdout opening, committed next to the frozen file."""
+
+    hypothesis: str
+    frozen_at_commit: str
+    opened_at: datetime
+    opened_at_commit: str
+    start: date
+    end: date
+    cost_model_name: str
+    cagr: float
+    sharpe: float
+    sortino: float
+    calmar: float
+    max_drawdown: float
+    p_value: float
+    permutation: dict
+    criterion: str
+    verdict: HoldoutVerdict
+
+
+def write_holdout_record(path: Path, record: HoldoutRecord) -> None:
+    # Exclusive create: an existing record is never overwritten.
+    with path.open("x", encoding="utf-8") as file:
+        file.write(record.model_dump_json(indent=2) + "\n")
+
+
+def read_holdout_record(path: Path) -> HoldoutRecord:
+    return HoldoutRecord.model_validate_json(path.read_text(encoding="utf-8"))
 
 
 def parse_holdout_config(path: Path) -> HoldoutConfig:
