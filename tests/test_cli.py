@@ -3,9 +3,10 @@ from datetime import date, timedelta
 
 from typer.testing import CliRunner
 
-from quantlab.cli import app, run_momentum_study
+from quantlab.cli import app, run_cost_comparison, run_momentum_study
 from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument, Universe
+from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.zero import ZeroCostModel
 
 runner = CliRunner()
@@ -117,3 +118,23 @@ def test_run_momentum_study_records_run_metadata() -> None:
     assert result.strategy_params == {"lookback_days": 2}
     assert result.seed == 7
     assert result.git_sha == "abc123"
+
+
+def test_run_cost_comparison_fetches_once_and_runs_each_model() -> None:
+    provider = _FixtureProvider()
+
+    runs = run_cost_comparison(
+        provider=provider,
+        cost_models=[ZeroCostModel(), NaiveCostModel(bps=100)],
+        universe=_UNIVERSE,
+        lookback_days=2,
+        start=date(2026, 1, 3),
+        end=date(2026, 1, 5),
+        seed=0,
+        git_sha="abc123",
+    )
+
+    assert [instrument_id for instrument_id, _, _ in provider.requests] == ["a", "b"]
+    assert [run.cost_model_name for run in runs] == ["zero-cost", "naive-100bps"]
+    # Same signals and prices; only costs differ, so the costlier run ends lower.
+    assert runs[1].snapshots[-1].equity < runs[0].snapshots[-1].equity
