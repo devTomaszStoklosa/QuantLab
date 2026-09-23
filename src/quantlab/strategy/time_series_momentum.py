@@ -41,3 +41,24 @@ def compute_momentum_signal(
         direction=direction,
         strength=lookback_return,
     )
+
+
+class TimeSeriesMomentum:
+    """`Strategy` implementation wrapping `compute_momentum_signal` for a universe.
+
+    Instruments with too little history simply produce no signal for `as_of`
+    (per-instrument None from the pure function) rather than failing the
+    whole run - a shorter-lived instrument shouldn't block signals for the
+    rest of the universe.
+    """
+
+    def __init__(self, lookback_days: int) -> None:
+        self.lookback_days = lookback_days
+
+    def generate_signals(self, bars: dict[str, list[PriceBar]], as_of: date) -> list[Signal]:
+        signals = []
+        for instrument_id in sorted(bars):
+            signal = compute_momentum_signal(bars[instrument_id], as_of, self.lookback_days)
+            if signal is not None:
+                signals.append(signal)
+        return signals

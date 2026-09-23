@@ -1,15 +1,15 @@
 from datetime import date, timedelta
 
 from quantlab.core.data.provider import PriceBar
-from quantlab.strategy.time_series_momentum import compute_momentum_signal
+from quantlab.strategy.time_series_momentum import TimeSeriesMomentum, compute_momentum_signal
 
 _INSTRUMENT_ID = "btc-usdt"
 
 
-def _bars(start: date, closes: list[float]) -> list[PriceBar]:
+def _bars(start: date, closes: list[float], instrument_id: str = _INSTRUMENT_ID) -> list[PriceBar]:
     return [
         PriceBar(
-            instrument_id=_INSTRUMENT_ID,
+            instrument_id=instrument_id,
             ts=start + timedelta(days=i),
             open=close,
             high=close,
@@ -77,3 +77,32 @@ def test_signal_ignores_data_after_as_of() -> None:
 
     assert signal_without_future == signal_with_future
     assert signal_without_future.direction == "long"
+
+
+def test_generate_signals_covers_every_instrument_with_enough_history() -> None:
+    as_of = date(2026, 1, 6)
+    bars = {
+        "btc-usdt": _bars(date(2026, 1, 1), [100.0, 101.0, 102.0, 103.0, 104.0, 110.0], "btc-usdt"),
+        "eth-usdt": _bars(date(2026, 1, 1), [50.0, 49.0, 48.0, 47.0, 46.0, 40.0], "eth-usdt"),
+    }
+    strategy = TimeSeriesMomentum(lookback_days=5)
+
+    signals = strategy.generate_signals(bars, as_of)
+
+    assert {s.instrument_id: s.direction for s in signals} == {
+        "btc-usdt": "long",
+        "eth-usdt": "short",
+    }
+
+
+def test_generate_signals_skips_instrument_with_too_little_history() -> None:
+    as_of = date(2026, 1, 6)
+    bars = {
+        "btc-usdt": _bars(date(2026, 1, 1), [100.0, 101.0, 102.0, 103.0, 104.0, 110.0], "btc-usdt"),
+        "new-listing": _bars(date(2026, 1, 5), [10.0, 11.0], "new-listing"),
+    }
+    strategy = TimeSeriesMomentum(lookback_days=5)
+
+    signals = strategy.generate_signals(bars, as_of)
+
+    assert [s.instrument_id for s in signals] == ["btc-usdt"]
