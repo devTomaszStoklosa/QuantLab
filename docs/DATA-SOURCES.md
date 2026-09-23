@@ -12,8 +12,7 @@
 
 | Źródło | Co daje | Klucz | Limit | Licencja / redystrybucja | Epik |
 |---|---|---|---|---|---|
-| Stooq (`stooq.com/q/d/l/`) | dzienne OHLCV, indeksy/ETF-y/FX, bulk CSV | nie | zachowaj umiar, nieoficjalne | do zweryfikowania przed pierwszym pobraniem — sprawdzić regulamin serwisu pod kątem użycia badawczego i ewentualnej publikacji wykresów/wyników (nie surowych danych) | lab-foundation, q1 |
-| Binance public REST (`api.binance.com/api/v3/klines`) | historyczne świece krypto, bez klucza dla danych publicznych | nie | limity wagowe per endpoint, patrz dokumentacja Binance | dane historyczne klines zwykle bez ograniczeń redystrybucji dla non-trading use — do potwierdzenia w aktualnym Terms of Use przed użyciem | rozszerzenie (krypto) |
+| Binance public REST (`api.binance.com/api/v3/klines`) | historyczne świece krypto (OHLCV + timestampy ms), bez klucza dla danych publicznych. Format zweryfikowany na żywo 2026-09-23, patrz [ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md) | nie | limity wagowe per endpoint, patrz dokumentacja Binance | dane historyczne klines zwykle bez ograniczeń redystrybucji dla non-trading use — do potwierdzenia w aktualnym Terms of Use przed użyciem | lab-foundation, q1 |
 
 Przed pierwszym użyciem źródła: sprawdzić aktualne warunki na stronie dostawcy (ten dokument nie jest źródłem prawdy dla licencji — zmieniają się bez ostrzeżenia), zapisać datę weryfikacji w tej tabeli.
 
@@ -28,3 +27,7 @@ Przed pierwszym użyciem źródła: sprawdzić aktualne warunki na stronie dosta
 ## Wykluczone
 
 Źródła wymagające płatnej licencji na dane rynkowe (np. bezpośrednie feedy giełdowe) — poza zakresem projektu portfolio.
+
+| Źródło | Powód |
+|---|---|
+| Stooq (`stooq.com/q/d/l/`) | endpoint CSV blokuje zapytania programistyczne (wyzwanie proof-of-work, potem „Access denied" nawet po jego przejściu) — zweryfikowane na żywo 2026-09-23, patrz [ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md). Wraca jako opcja, jeśli kiedyś potrzebne equities/FX (`q5`) i znajdzie się inny sposób dostępu. |

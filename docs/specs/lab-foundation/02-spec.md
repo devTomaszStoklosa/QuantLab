@@ -8,7 +8,7 @@ Upstream: 01-story.md
 
 | Term | Meaning |
 |---|---|
-| Instrument | pojedynczy aktyw handlowy (ETF, para walutowa...) z tożsamością (symbol, klasa aktywów, waluta) |
+| Instrument | pojedynczy aktyw handlowy (para kryptowalutowa na Binance...) z tożsamością (symbol, klasa aktywów, aktyw kwotowania) |
 | PriceBar | jeden słupek OHLCV dla instrumentu i znacznika czasu |
 | Kanoniczny schemat | wspólny kształt `PriceBar` niezależny od źródła danych |
 | Uniwersum | nazwana lista instrumentów używana w przebiegu |
@@ -40,7 +40,7 @@ Storage
 
 Uniwersum
 
-- REQ-020 (AC-6): When `Universe.load(name)` is called for a statically configured universe, the system shall return the list of instruments with symbol, asset class and currency.
+- REQ-020 (AC-6): When `Universe.load(name)` is called for a statically configured universe, the system shall return the list of instruments with symbol, asset class and quote asset.
 - REQ-021: If the universe configuration references an unknown instrument, then loading shall fail with an error naming the missing instrument.
 
 Środowisko i CLI
@@ -91,7 +91,7 @@ Cache
 ## Non-functional requirements
 
 - Performance: `uv run pytest -q` poniżej 30 s bez sieci.
-- Security and privacy: brak kluczy API wymaganych w tym epiku (Stooq bez klucza); jeśli źródło z kluczem dojdzie później, klucz tylko w `.env`, nigdy w kodzie.
+- Security and privacy: brak kluczy API wymaganych w tym epiku (Binance public REST bez klucza); jeśli źródło z kluczem dojdzie później, klucz tylko w `.env`, nigdy w kodzie.
 - Audit and logging: każde pobranie z sieci (nie z cache) loguje źródło, instrument i zakres dat.
 
 ## Traceability
@@ -111,4 +111,4 @@ Cache
 
 | # | Question | Owner |
 |---|---|---|
-| 1 | Format i endpoint dokładny Stooq dla koszyka ETF/FX — zweryfikować przed implementacją REQ-001 | Tomasz |
+| 1 | ~~Format i endpoint dokładny dla pierwszego adaptera~~ Odpowiedź: Binance REST `api.binance.com/api/v3/klines`, format zweryfikowany na żywo 2026-09-23 (patrz 03-design.md Contracts) | Tomasz |

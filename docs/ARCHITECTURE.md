@@ -35,7 +35,7 @@ QuantLab/
 ├── src/quantlab/
 │   ├── cli.py                   # komenda `quantlab`
 │   ├── core/
-│   │   ├── data/                 # DataProvider, adaptery (Stooq, Binance), kanoniczny schemat
+│   │   ├── data/                 # DataProvider, adapter Binance, kanoniczny schemat
 │   │   ├── universe.py           # point-in-time uniwersum
 │   │   └── storage.py            # DuckDB/Parquet I/O
 │   ├── research/                 # Hypothesis, rejestr
@@ -75,7 +75,7 @@ presentation (.NET + React, rozszerzenie q7)
 
 ### `core.data`
 
-- `DataProvider` (interfejs): `fetch(instrument, start, end) -> list[PriceBar]`. Implementacje: `StooqProvider`, docelowo `BinanceProvider`.
+- `DataProvider` (interfejs): `fetch(instrument, start, end) -> list[PriceBar]`. Implementacja: `BinanceProvider` ([ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md) — Stooq odrzucony, blokuje dostęp programistyczny).
 - Kanoniczny schemat `PriceBar`: instrument_id, ts, open, high, low, close, volume, adj_close, source.
 - Cache na dysku (`data/cache/`), throttling po stronie klienta, nigdy retry-on-429 jako jedyna ochrona.
 
