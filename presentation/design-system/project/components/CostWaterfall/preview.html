@@ -1,0 +1,16 @@
+<!-- @dsCard group="Charts" height=240 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>CostWaterfall — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 620}}, h(Q.CostWaterfall, {steps: [
+  {label: 'Gross Sharpe', value: 1.12, kind: 'total'}, {label: 'Bid–ask spread', value: -0.21}, {label: 'Exchange fees', value: -0.12},
+  {label: 'Slippage', value: -0.15}, {label: 'Net Sharpe', kind: 'total'}]})));
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!-- @dsCard group="Research flow" height=330 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>LogEntry — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 760}},
+  h(Q.LogEntry, {date: '19 Sep 2026', id: 'H-002', title: 'One-day reversal', verdict: 'rejected', conclusion: 'Real before costs, gone after them. Spread and slippage absorb the whole edge; retesting needs a cheaper venue, not a better signal.', facts: [['gross SR', '0.91'], ['net SR', '−0.22'], ['p', '0.40'], ['trades', '2,184']]}),
+  h(Q.LogEntry, {date: '2 Sep 2026', id: 'H-004', title: 'Volatility targeting', verdict: 'confirmed', conclusion: 'Scaling exposure to 20-day volatility shortened drawdowns in every fold and in the holdout.', facts: [['holdout SR', '0.58'], ['p', '0.012'], ['max DD', '−14.1%']]}),
+  h(Q.LogEntry, {date: '28 Aug 2026', id: 'H-003', title: 'ETH/BTC spread reversion', verdict: 'inconclusive', conclusion: '23 trades in the holdout cannot separate the effect from noise. Revisit with hourly data.', facts: [['holdout SR', '0.21'], ['p', '0.14']]})));
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+<!-- @dsCard group="Charts" height=200 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>MonthlyHeatmap — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+var r = S.rng(5); function yr(y, k, hf) { var m = []; for (var i = 0; i < 12; i++) m.push(i < k ? (r() - 0.44) * 0.16 : null); return {year: y, months: m, holdoutFrom: hf}; }
+ReactDOM.createRoot(document.getElementById('root')).render(h(Q.MonthlyHeatmap, {years: [yr(2020, 12), yr(2021, 12), yr(2022, 12), yr(2023, 12, 2)]}));
+</script>
+</body>
+</html>

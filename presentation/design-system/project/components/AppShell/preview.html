@@ -1,0 +1,15 @@
+<!-- @dsCard group="Layout" height=360 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>AppShell — QuantForge</title>
+<style>html,body{margin:0} #root{padding:0}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 360}}, h(Q.AppShell, {active: 'registry', crumbs: ['Crypto majors', 'Hypothesis registry'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}},
+  h('div', {className: 'qf-panel', style: {height: 160, display: 'grid', placeItems: 'center', color: 'var(--ink-muted)'}}, 'Page content'))));
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!-- @dsCard group="Forms" height=64 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Select — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 280}}, h(Q.Select, {options: ['Walk-forward (expanding)', 'Walk-forward (rolling)', 'Permutation test']})));
+</script>
+</body>
+</html>

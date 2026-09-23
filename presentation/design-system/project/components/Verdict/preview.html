@@ -1,0 +1,17 @@
+<!-- @dsCard group="Validation" height=300 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Verdict — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 12}},
+  h(Q.Verdict, {verdict: 'rejected', meta: 'Decided 19 Sep 2026 · criteria frozen at 8be41d0', side: ['Gross SR 0.91', h('br', {key: 1}), 'Net SR −0.22']}, 'The one-day reversal is real before costs and gone after them: spread and slippage absorb the whole edge.'),
+  h(Q.Verdict, {verdict: 'confirmed', meta: 'Decided 2 Sep 2026 · criteria frozen at a71c0e3', side: ['Holdout SR 0.58', h('br', {key: 1}), 'p = 0.012']}, 'Scaling exposure to 20-day volatility shortened drawdowns in every fold and in the holdout.'),
+  h(Q.Verdict, {verdict: 'inconclusive', meta: 'Decided 28 Aug 2026 · criteria frozen at 51d9e20', side: ['Holdout SR 0.21', h('br', {key: 1}), 'p = 0.14']}, 'The spread mean-reverts, but 23 trades in the holdout cannot separate the effect from noise.')));
+</script>
+</body>
+</html>

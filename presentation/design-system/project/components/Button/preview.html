@@ -1,0 +1,23 @@
+<!-- @dsCard group="Actions" height=96 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Button — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 12}},
+  h('div', {className: 'qf-row'},
+    h(Q.Button, {variant: 'primary', icon: 'run'}, 'Run walk-forward'),
+    h(Q.Button, {icon: 'plus'}, 'Register hypothesis'),
+    h(Q.Button, {variant: 'ghost', icon: 'download'}, 'Export'),
+    h(Q.Button, {variant: 'seal', icon: 'unlock'}, 'Open holdout…'),
+    h(Q.Button, {variant: 'danger', icon: 'x'}, 'Reject hypothesis'),
+    h(Q.Button, {variant: 'seal', icon: 'lock', disabled: true}, 'Open holdout')),
+  h('div', {className: 'qf-row'},
+    h(Q.Button, {variant: 'primary', size: 'sm'}, 'Run'), h(Q.Button, {size: 'sm', icon: 'filter'}, 'Filter'), h(Q.Button, {variant: 'ghost', size: 'sm', iconRight: 'arrow'}, 'Open tear sheet'))));
+</script>
+</body>
+</html>

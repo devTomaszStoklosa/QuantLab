@@ -1,0 +1,68 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>QuantForge</title>
+<style>
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--font-sans); overflow: hidden; }
+  .cover { position: relative; width: 960px; height: 288px; overflow: hidden; }
+  .art { position: absolute; top: 0; left: 480px; width: 480px; height: 288px; overflow: hidden; }
+  .art svg { display: block; }
+  .ink { fill: var(--ink); }
+  .oos { fill: var(--partition-oos); }
+  .is { fill: var(--partition-is-soft); stroke: var(--line); stroke-width: 1; }
+  .hold { fill: var(--partition-holdout-soft); stroke: var(--partition-holdout); stroke-width: 1.5; }
+  .hatch { stroke: var(--partition-holdout); stroke-width: 1.5; }
+  .forge { fill: var(--forge); }
+  .blk { rx: var(--radius-md); }
+  .spark { rx: var(--radius-xs); }
+  .words { position: absolute; left: var(--space-6); bottom: var(--space-6); max-width: 440px; }
+  .name { margin: 0; font-size: 72px; line-height: .92; font-weight: 600; letter-spacing: -0.03em; color: var(--ink); }
+  .name span { font-weight: 400; color: var(--ink-muted); }
+  .tag { margin: var(--space-3) 0 0 3px; font-size: 14px; line-height: 20px; color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      ink 112x264 bled off the top (the graphite slab, largest) · partition-is-soft 96x128 (in-sample, the tint) · partition-oos 112x176 · partition-holdout-soft 160x216 bled off the right with its violet edge · forge 24x24 once (the logo spark)
+  arrangement a strip of unequal bands read left to right like a chart's time axis, IS then OOS then the sealed holdout; bottoms on one line space-6 above the edge, space-3 gutters
+  pattern     45-degree hatch at a space-3 pitch clipped inside the holdout block, from "The holdout is sealed": the one motif no other system has
+  scales      sides in space-2 multiples; gutters space-3; pitch space-3; corners radius-md, spark radius-xs
+-->
+<defs><clipPath id="hc"><rect x="360" y="40" width="160" height="216" rx="6"/></clipPath></defs>
+<rect class="ink blk" x="0" y="-16" width="112" height="272" rx="6"/>
+<rect class="is blk" x="124" y="128" width="96" height="128" rx="6"/>
+<rect class="oos blk" x="232" y="80" width="116" height="176" rx="6"/>
+<rect class="forge spark" x="232" y="44" width="24" height="24" rx="2"/>
+<g clip-path="url(#hc)">
+<rect class="hold" x="360" y="40" width="160" height="216" rx="6"/>
+<line class="hatch" x1="360" y1="64" x2="384" y2="40"/>
+<line class="hatch" x1="360" y1="88" x2="408" y2="40"/>
+<line class="hatch" x1="360" y1="112" x2="432" y2="40"/>
+<line class="hatch" x1="360" y1="136" x2="456" y2="40"/>
+<line class="hatch" x1="360" y1="160" x2="480" y2="40"/>
+<line class="hatch" x1="360" y1="184" x2="504" y2="40"/>
+<line class="hatch" x1="360" y1="208" x2="528" y2="40"/>
+<line class="hatch" x1="360" y1="232" x2="552" y2="40"/>
+<line class="hatch" x1="360" y1="256" x2="576" y2="40"/>
+<line class="hatch" x1="376" y1="264" x2="600" y2="40"/>
+<line class="hatch" x1="400" y1="264" x2="624" y2="40"/>
+<line class="hatch" x1="424" y1="264" x2="648" y2="40"/>
+<line class="hatch" x1="448" y1="264" x2="672" y2="40"/>
+<line class="hatch" x1="472" y1="264" x2="696" y2="40"/>
+</g>
+<rect x="360" y="40" width="160" height="216" rx="6" fill="none" class="hatch"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Quant<span>Forge</span></h1>
+<p class="tag">Where investment hypotheses are tested, challenged and validated.</p>
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!-- @dsCard group="Data display" height=250 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>DataTable — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+var rows = [
+  {id: 't1', entry: '2022-11-04', asset: 'ETH-USDT', side: 'Long', days: 21, gross: 0.084, cost: -0.0031, regime: 'mid'},
+  {id: 't2', entry: '2022-11-25', asset: 'SOL-USDT', side: 'Long', days: 7, gross: -0.061, cost: -0.0042, regime: 'high'},
+  {id: 't3', entry: '2022-12-09', asset: 'BTC-USDT', side: 'Flat', days: 14, gross: 0, cost: 0, regime: 'low'},
+  {id: 't4', entry: '2023-01-13', asset: 'BTC-USDT', side: 'Long', days: 35, gross: 0.212, cost: -0.0024, regime: 'mid'},
+  {id: 't5', entry: '2023-02-17', asset: 'ADA-USDT', side: 'Long', days: 7, gross: -0.023, cost: -0.0051, regime: 'high'}];
+function tone(v) { return v > 0 ? 'gain' : (v < 0 ? 'loss' : 'dim'); }
+ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Panel, {flush: true, title: 'Trade ledger', subtitle: '412 trades · walk-forward window'}, h(Q.DataTable, {dense: true, selected: 't4', rows: rows, columns: [
+  {key: 'entry', label: 'Entry', render: function (v) { return h('span', {className: 'qf-num'}, v); }},
+  {key: 'asset', label: 'Instrument'}, {key: 'side', label: 'Side'},
+  {key: 'regime', label: 'Regime at entry', render: function (v) { return h('span', null, h('span', {className: 'qf-regime-sw is-' + v}), v); }},
+  {key: 'days', label: 'Held', numeric: true, format: function (v) { return v + 'd'; }},
+  {key: 'gross', label: 'Gross', numeric: true, format: function (v) { return fmt.pct(v, 2, true); }, tone: tone},
+  {key: 'cost', label: 'Costs', numeric: true, format: function (v) { return fmt.pct(v, 2, true); }, tone: function (v) { return v ? 'dim' : 'dim'; }},
+  {key: 'net', label: 'Net', numeric: true, render: function (v, r) { return fmt.pct(r.gross + r.cost, 2, true); }, tone: function (v, r) { return tone(r.gross + r.cost); }}]})));
+</script>
+</body>
+</html>

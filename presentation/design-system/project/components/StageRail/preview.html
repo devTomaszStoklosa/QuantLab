@@ -1,0 +1,16 @@
+<!-- @dsCard group="Research flow" height=96 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>StageRail — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px 16px 8px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+var st = ['passed','passed','passed','passed','passed','active','locked','pending','pending','pending'];
+var meta = ['frozen 14 Aug', '7 assets · daily', 'mom_12w', 'SR 1.12 IS', 'SR 0.64 net', 'fold 5 of 6', 'sealed', '', '', ''];
+ReactDOM.createRoot(document.getElementById('root')).render(h(Q.StageRail, {current: 'walkforward', stages: Q.StageRail.STAGES.map(function (s, i) { return {key: s[0], label: s[1], state: st[i], meta: meta[i]}; })}));
+</script>
+</body>
+</html>

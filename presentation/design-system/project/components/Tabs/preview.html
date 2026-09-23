@@ -1,0 +1,16 @@
+<!-- @dsCard group="Navigation" height=64 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Tabs — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Tabs, {items: [
+  {value: 'all', label: 'All', count: 12}, {value: 'testing', label: 'Testing', count: 3}, {value: 'confirmed', label: 'Confirmed', count: 2},
+  {value: 'rejected', label: 'Rejected', count: 5}, {value: 'inconclusive', label: 'Inconclusive', count: 2}]}));
+</script>
+</body>
+</html>

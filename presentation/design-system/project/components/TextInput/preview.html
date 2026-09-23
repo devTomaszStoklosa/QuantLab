@@ -1,0 +1,15 @@
+<!-- @dsCard group="Forms" height=64 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>TextInput — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, maxWidth: 560}},
+  h(Q.TextInput, {placeholder: 'Name the hypothesis in one line'}), h(Q.TextInput, {mono: true, defaultValue: 'lookback=12w, rebalance=W-FRI'})));
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+<!-- @dsCard group="Charts" height=240 -->
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>WalkForward — QuantForge</title>
+<style>html,body{margin:0} #root{padding:16px}</style></head>
+<body>
+<div id="root" class="qf-root"></div>
+<script>
+var Q = window.QuantForge, h = React.createElement, F = React.Fragment, S = Q.sample, fmt = Q.format;
+
+ReactDOM.createRoot(document.getElementById('root')).render(h(Q.WalkForward, {span: [0, 60], holdout: [50, 60],
+  ticks: [{t: 0, label: '2019'}, {t: 12, label: '2020'}, {t: 24, label: '2021'}, {t: 36, label: '2022'}, {t: 48, label: '2023'}, {t: 60, label: '2024'}],
+  folds: [{train: [0, 24], test: [24, 28], sharpe: 1.21}, {train: [0, 28], test: [28, 32], sharpe: 0.44}, {train: [0, 32], test: [32, 36], sharpe: -0.37},
+          {train: [0, 36], test: [36, 41], sharpe: 0.92}, {train: [0, 41], test: [41, 46], sharpe: 0.58}, {train: [0, 46], test: [46, 50], sharpe: 0.71}]}));
+</script>
+</body>
+</html>
