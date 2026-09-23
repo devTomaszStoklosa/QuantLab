@@ -1,0 +1,29 @@
+# Frozen holdout for the time-series momentum hypothesis (REQ-041).
+# Committed before any run reads data from the holdout range. Do not edit:
+# any change after the holdout is opened invalidates the validation.
+# frozen_at_commit is read from git (the last commit touching this file),
+# since a file can't contain the hash of the commit that adds it.
+hypothesis: momentum_v1
+
+training_start: 2018-01-01
+training_end: 2023-12-31
+start: 2024-01-01
+end: 2025-12-31
+
+parameters:
+  strategy: time_series_momentum
+  lookback_days: 365
+  universe: mvp-crypto
+  cost_model:
+    name: realistic
+    fee_bps: 10
+    k: 0.05
+    vol_window: 30
+
+success_criterion:
+  description: >-
+    Holdout net Sharpe under the realistic cost model > 0 and permutation-test
+    p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 ->
+    inconclusive; Sharpe > 0 and p < 0.1 -> passed.
+  min_sharpe: 0.0
+  max_p_value: 0.1
