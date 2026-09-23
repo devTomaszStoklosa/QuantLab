@@ -14,6 +14,7 @@ Python 3.12 + uv, pandas/numpy, DuckDB + Parquet, statsmodels/scipy, pytest. War
 
 ## Dokumentacja
 
+- [docs/PRODUCT.md](docs/PRODUCT.md) — dokumentacja produktowa: czym jest, jakie ma funkcje, jak z nich korzystać.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — warstwy, moduły, model danych, kontrakty.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — epiki, slice'y, zakres MVP, rozszerzenia.
 - [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) — źródła danych i licencje.
