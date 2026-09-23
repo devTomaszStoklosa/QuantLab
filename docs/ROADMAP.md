@@ -23,7 +23,7 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 
 Szkielet repo, dostęp do danych, testy środowiska. Bez tego nic innego się nie zaczyna. Pełna specyfikacja: [specs/lab-foundation/](specs/lab-foundation/).
 
-Slice'y: F-1 szkielet (uv, ruff, pytest, CLI, test środowiska) · F-2 `core.data` z jednym adapterem (Stooq) i cache · F-3 `core.universe` statyczne · F-4 `core.storage` (DuckDB/Parquet I/O).
+Slice'y: F-1 szkielet (uv, ruff, pytest, CLI, test środowiska) · F-2 `core.data` z jednym adapterem (Binance, patrz [ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md)) i cache · F-3 `core.universe` statyczne · F-4 `core.storage` (DuckDB/Parquet I/O).
 
 ### q1-momentum-research-mvp
 

@@ -26,7 +26,7 @@ ADRs: docs/adr/0002-dual-backtest-engine.md, docs/adr/0003-float-not-decimal-cor
 
 ### Option A - Cross-sectional ranking momentum
 
-Ranking instrumentów w koszyku po zwrocie N-okresowym, długo top-decyl / krótko bottom-decyl (albo long-only top-K przy koszyku ETF).
+Ranking instrumentów w koszyku po zwrocie N-okresowym, długo top-decyl / krótko bottom-decyl (albo long-only top-K przy koszyku par kryptowalutowych).
 
 ### Option B - Time-series momentum (per-instrument)
 

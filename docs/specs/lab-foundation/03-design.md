@@ -3,7 +3,7 @@
 Status: Ready for dev
 Owner role: Architect
 Upstream: 02-spec.md
-ADRs: docs/adr/0001-python-uv-single-package.md
+ADRs: docs/adr/0001-python-uv-single-package.md, docs/adr/0007-binance-not-stooq-for-first-adapter.md
 
 ## Context and constraints
 
@@ -23,9 +23,9 @@ ADRs: docs/adr/0001-python-uv-single-package.md
 
 ## Options
 
-### Option A - DuckDB + Parquet, adapter Stooq
+### Option A - DuckDB + Parquet, adapter Binance
 
-`duckdb` jako silnik zapytań i miejsce metadanych przebiegów, pliki Parquet dla surowych serii cenowych, jeden adapter `StooqProvider` na start, `requests` + cache na dysku, CLI na `typer`.
+`duckdb` jako silnik zapytań i miejsce metadanych przebiegów, pliki Parquet dla surowych serii cenowych, jeden adapter `BinanceProvider` na start ([ADR-0007](../../adr/0007-binance-not-stooq-for-first-adapter.md) — Stooq odrzucony, blokuje dostęp programistyczny), `requests` + cache na dysku, CLI na `typer`.
 
 ### Option B - Tylko pliki CSV/Parquet, bez DuckDB
 
@@ -54,8 +54,8 @@ Recommended: **Option A**. Rezygnujemy z: gotowego UI administracyjnego bazy dan
 
 ```
 quantlab CLI
-  -> core.data.StooqProvider --(HTTP, throttled)--> Stooq
-  -> core.data.StooqProvider --(cache)--> data/cache/
+  -> core.data.BinanceProvider --(HTTP, throttled)--> Binance public REST
+  -> core.data.BinanceProvider --(cache)--> data/cache/
   -> core.storage --(write)--> DuckDB (metadane) + Parquet (serie cenowe)
   -> core.universe.Universe --(read config)--> data/universe/*.yaml
 ```
@@ -70,14 +70,14 @@ src/quantlab/
   core/
     data/
       provider.py                  # DataProvider (Protocol), PriceBar, DataNotFoundError
-      stooq.py                     # StooqProvider
+      binance.py                   # BinanceProvider
       cache.py                     # cache na dysku, klucz (source, instrument, start, end)
     universe.py                    # Universe, Instrument, load()
     storage.py                     # write_price_bars, read_price_bars (DuckDB/Parquet)
   config/
     universe.yaml                  # definicja uniwersum MVP
 tests/
-  core/data/test_stooq.py          # na nagranym CSV, bez sieci
+  core/data/test_binance.py        # na nagranej odpowiedzi JSON, bez sieci
   core/test_storage.py
   test_environment.py              # import numpy, pandas, duckdb + jedna operacja
 ```
@@ -98,9 +98,9 @@ class PriceBar(BaseModel):
 
 class Instrument(BaseModel):
     id: str
-    symbol: str
-    asset_class: Literal["equity_etf", "fx"]
-    currency: str  # ISO 4217
+    symbol: str              # symbol Binance, np. "BTCUSDT"
+    asset_class: Literal["crypto"]
+    quote_asset: str         # np. "USDT" — nie ISO 4217, patrz ADR-0007
 
 class DataProvider(Protocol):
     def fetch(self, instrument: Instrument, start: date, end: date) -> list[PriceBar]: ...
@@ -119,7 +119,11 @@ def write_price_bars(bars: list[PriceBar]) -> None: ...
 def read_price_bars(instrument_id: str, start: date, end: date) -> list[PriceBar]: ...
 ```
 
-Dokładny endpoint i format CSV Stooq (parametry URL, nazwy kolumn) sprawdzić w dokumentacji/na żywo przed implementacją `StooqProvider` — nie zgadywać z pamięci.
+Format Binance zweryfikowany na żywo 2026-09-23 (`GET https://api.binance.com/api/v3/klines?symbol=<SYMBOL>&interval=1d&limit=<N>`, opcjonalnie `startTime`/`endTime` w ms epoch — parametry zakresu dat do potwierdzenia przy implementacji, reszta kształtu odpowiedzi potwierdzona):
+
+- Odpowiedź: tablica świec, każda jako tablica pozycyjna: `[open_time_ms, open, high, low, close, volume, close_time_ms, quote_asset_volume, num_trades, taker_buy_base_volume, taker_buy_quote_volume, ignore]`. Ceny/wolumen jako stringi — rzutować na `float`.
+- Błąd nieznanego symbolu: HTTP 400, ciało `{"code": -1121, "msg": "Invalid symbol."}` — to jest sygnał do `DataNotFoundError`, nie ogólny wyjątek HTTP.
+- `adj_close` zawsze `None` dla tego źródła (krypto nie ma corporate actions).
 
 ### Zależności
 
@@ -128,7 +132,7 @@ Runtime: `duckdb`, `pandas`, `numpy`, `pyarrow` (Parquet), `requests`, `typer`, 
 ## Rollout and rollback
 
 1. **F-1** `uv init --package`, `uv python pin 3.12`, ruff, pytest, `tests/test_environment.py`, pusty CLI z `--version`.
-2. **F-2** `core.data`: `PriceBar`, `Instrument`, `DataProvider`, `StooqProvider`, cache na dysku; testy na nagranej odpowiedzi.
+2. **F-2** `core.data`: `PriceBar`, `Instrument`, `DataProvider`, `BinanceProvider`, cache na dysku; testy na nagranej odpowiedzi.
 3. **F-3** `core.universe`: `Universe.load` ze statycznego YAML.
 4. **F-4** `core.storage`: zapis/odczyt DuckDB + Parquet.
 
@@ -141,11 +145,12 @@ Rollback: `git revert` — brak migracji, brak stanu zewnętrznego poza cache (b
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
 | `duckdb`/`numpy`/`pandas` nie działają bez AVX2 | niska | wysoki | test środowiska jako pierwszy krok F-1 |
-| Stooq zmienia format CSV bez ostrzeżenia | średnia | średni | adapter za interfejsem, test na nagranej odpowiedzi wykryje regresję |
+| Binance zmienia format odpowiedzi bez ostrzeżenia | niska | średni | adapter za interfejsem, test na nagranej odpowiedzi wykryje regresję |
+| Binance zaostrza rate-limit/blokuje IP | niska | średni | throttling po naszej stronie (REQ-004), cache na dysku ogranicza liczbę żądań |
 | Przeinżynierowanie fundamentu | średnia | średni | tylko to, co wymaga `q1-momentum-research-mvp`; reszta rośnie z kolejnymi epikami |
 
 ## Handoff notes
 
 - Zacznij od F-1 i `tests/test_environment.py` — pierwsze ryzyko na tej maszynie to paczki natywne bez AVX2, nawet jeśli inne repo właściciela już to sprawdziło (inne środowisko `uv`, powtórz test).
-- Format CSV Stooq (albo wybranego ostatecznie dostawcy) zweryfikuj na żywo przed pisaniem parsera — nie zgaduj kolumn z pamięci.
+- Format Binance już zweryfikowany na żywo (patrz Contracts powyżej) — parametry zakresu dat (`startTime`/`endTime`) i limit paginacji (max świec per żądanie) potwierdź przy pisaniu `BinanceProvider`, nie zgaduj z pamięci.
 - Nie commituj bez prośby właściciela.

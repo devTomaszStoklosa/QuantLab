@@ -11,7 +11,7 @@ Cel platformy nie jest jedna działająca strategia, tylko dowód, że proces ba
 
 ## Outcome
 
-Primary metric: hipoteza „time-series momentum działa na koszyku ETF-ów" ma jednoznaczny status (`confirmed` / `rejected` / `inconclusive`) w `docs/RESEARCH_LOG.md`, poparty walidacją out-of-sample i zamrożonym holdout — nie tylko wynikiem na danych treningowych.
+Primary metric: hipoteza „time-series momentum działa na koszyku par kryptowalutowych" ma jednoznaczny status (`confirmed` / `rejected` / `inconclusive`) w `docs/RESEARCH_LOG.md`, poparty walidacją out-of-sample i zamrożonym holdout — nie tylko wynikiem na danych treningowych.
 Guardrail metric: 0 wniosków „confirmed" bez przejścia walk-forward i zamrożonego holdout (patrz [ADR-0004](../../adr/0004-validation-first-frozen-holdout.md)); silnik backtestu ma testy golden-master zanim jakikolwiek wynik na realnych danych jest uznany za wiarygodny.
 
 ## User story
@@ -22,7 +22,7 @@ Jako budujący platformę chcę przeprowadzić jedną hipotezę (momentum) przez
 
 - AC-1: Given rejestr hipotez, when dodaję nową hipotezę, then zapisuje się z tytułem, tezą i statusem początkowym `proposed`.
 - AC-2: Given syntetyczne dane ze stałym trendem, when uruchamiam silnik backtestu na strategii kupna i trzymania, then otrzymany Sharpe ratio zgadza się z wartością policzoną z góry analitycznie (test golden-master), z tolerancją numeryczną.
-- AC-3: Given koszyk ETF-ów i sygnał momentum (zwrot N-okresowy), when uruchamiam `Strategy.generate_signals`, then dostaję sygnał długi/krótki/neutralny per instrument i data, bez wykorzystania danych z przyszłości względem daty sygnału (brak look-ahead).
+- AC-3: Given koszyk par kryptowalutowych i sygnał momentum (zwrot N-okresowy), when uruchamiam `Strategy.generate_signals`, then dostaję sygnał długi/krótki/neutralny per instrument i data, bez wykorzystania danych z przyszłości względem daty sygnału (brak look-ahead).
 - AC-4: Given sygnał i dane, when uruchamiam silnik wektorowy, then otrzymuję `BacktestRun` z `PortfolioSnapshot` per okres i metrykami CAGR, Sharpe, Sortino, Calmar, max drawdown liczonymi własnym kodem.
 - AC-5: Given ten sam `BacktestRun`, when porównuję `NaiveCostModel` i `RealisticCostModel`, then raport pokazuje różnicę w wyniku netto przypisaną kosztom, nie szum.
 - AC-6: Given szereg dat, when uruchamiam `WalkForwardValidator`, then wynik pokazuje metryki per rolling okno, nie tylko zagregowane za cały zakres.
@@ -59,5 +59,5 @@ Must have — to jest granica MVP całego projektu portfolio.
 
 | # | Question | Owner | Due |
 |---|---|---|---|
-| 1 | Dokładny koszyk instrumentów (które ETF-y/FX) i zakres dat treningowych vs holdout | Tomasz | przed slice S6 |
+| 1 | Dokładny koszyk instrumentów (które pary kryptowalutowe na Binance) i zakres dat treningowych vs holdout | Tomasz | przed slice S6 |
 | 2 | Parametr N (okres lookback) dla sygnału momentum — z literatury (Moskowitz/Ooi/Pedersen) czy dobrany empirycznie na danych treningowych | Tomasz | przed slice S3 |
