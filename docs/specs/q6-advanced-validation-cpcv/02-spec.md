@@ -90,7 +90,8 @@ Interpretacja w raporcie (opisowa, poza regułami statusu)
 | `hypothesis` | string | tak | identyfikator z definicji; unikalny w rejestrze |
 | `universe` | string | tak | nazwa uniwersum z definicji |
 | `training_start`, `training_end` | date | tak | z definicji |
-| `last_commit` | string | tak | SHA ostatniego commita, w którym plik istniał |
+| `registered_at` | datetime | tak | czas commita, który pierwszy dodał definicję; porządek prób |
+| `last_commit` | string | tak | SHA ostatniego commita, który dodał lub zmienił definicję (jej obowiązująca wersja) |
 | `deleted` | bool | tak | plik nie istnieje w bieżącym commicie |
 
 ## Edge and error cases
