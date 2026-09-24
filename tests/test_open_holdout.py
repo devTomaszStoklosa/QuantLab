@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from quantlab.cli import _print_holdout, open_frozen_holdout
-from quantlab.core.data.provider import PriceBar
+from quantlab.core.data.provider import PriceBar, WithoutEvents
 from quantlab.core.universe import Instrument
 from quantlab.research.definition import PairsSpreadParameters
 from quantlab.validation.holdout import (
@@ -26,7 +26,7 @@ _FROZEN = FrozenHoldout(
 _OPENED_AT = datetime(2026, 9, 23, 12, 0, tzinfo=UTC)
 
 
-class _SyntheticProvider:
+class _SyntheticProvider(WithoutEvents):
     """DataProvider test double: a seeded random walk per instrument, records requests."""
 
     def __init__(self) -> None:

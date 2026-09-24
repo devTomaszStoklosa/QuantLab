@@ -4,7 +4,7 @@ from datetime import UTC, date, datetime, timedelta
 import requests
 
 from quantlab.core.data.cache import read_cached_bars, write_cached_bars
-from quantlab.core.data.provider import DataNotFoundError, PriceBar
+from quantlab.core.data.provider import DataNotFoundError, PriceBar, WithoutEvents
 from quantlab.core.universe import Instrument
 
 _BASE_URL = "https://api.binance.com/api/v3/klines"
@@ -32,7 +32,7 @@ def _from_open_time_ms(ms: int) -> date:
     return datetime.fromtimestamp(ms / 1000, tz=UTC).date()
 
 
-class BinanceProvider:
+class BinanceProvider(WithoutEvents):
     """DataProvider backed by Binance public REST klines. No API key required."""
 
     def fetch(self, instrument: Instrument, start: date, end: date) -> list[PriceBar]:

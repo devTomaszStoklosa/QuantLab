@@ -82,7 +82,8 @@ presentation (.NET + React, rozszerzenie q7)
 ### `core.data`
 
 - `DataProvider` (interfejs): `fetch(instrument, start, end) -> list[PriceBar]`. Implementacja: `BinanceProvider` ([ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md) — Stooq odrzucony, blokuje dostęp programistyczny).
-- Kanoniczny schemat `PriceBar`: instrument_id, ts, open, high, low, close, volume, adj_close, source.
+- Kanoniczny schemat `PriceBar`: instrument_id, ts, open, high, low, close, volume, adj_close, source, `unadjusted_close` (surowe zamknięcie baru skorygowanego; `raw_close` do reguł na poziomie ceny).
+- `DataProvider.events` podaje corporate actions (`Split`, `CashDividend`, `core.data.events`; krypto: brak), a runner koryguje nimi każde pobrane bary (`core.data.corporate_actions.with_events`): ceny wstecz, tak że zwrot przez ex-date jest zwrotem całkowitym.
 - Cache na dysku (`data/cache/`), throttling po stronie klienta, nigdy retry-on-429 jako jedyna ochrona.
 
 ### `core.universe`

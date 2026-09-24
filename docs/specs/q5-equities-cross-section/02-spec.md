@@ -11,7 +11,7 @@ Upstream: 01-story.md
 | Członkostwo | okres, w którym instrument należy do uniwersum: `start` włącznie, `end` włącznie albo otwarty |
 | Uniwersum statyczne | uniwersum bez okresów członkostwa: każdy instrument jest członkiem każdego dnia (dzisiejsze `mvp-crypto`) |
 | Ex-date | pierwszy dzień notowań bez prawa do dywidendy albo po splicie |
-| Czynnik korekty | mnożnik cen sprzed ex-date: split `1 / ratio`, dywidenda `1 − D / C₋₁` (C₋₁ — surowe zamknięcie z ostatniego dnia notowań przed ex-date; metoda CRSP) |
+| Czynnik korekty | mnożnik cen sprzed ex-date: split `1 / ratio`, dywidenda `C₀ / (C₀ + D)` (C₀ — surowe zamknięcie z pierwszego dnia notowań od ex-date). Dzięki temu zwrot przez ex-date jest dokładnie zwrotem całkowitym `(C₀ + D) / C₋₁ − 1`; popularny czynnik `1 − D / C₋₁` daje `C₀ / (C₋₁ − D) − 1`, z błędem drugiego rzędu |
 | Bar skorygowany | bar z cenami OHLC przemnożonymi przez iloczyn czynników wszystkich późniejszych ex-date; `unadjusted_close` trzyma surowe zamknięcie |
 | Zwrot z delistingu | zwrot od ostatniego zamknięcia do wartości, którą akcjonariusz dostał przy zdjęciu z obrotu (odpowiednik DLRET w CRSP) |
 | Miesiąc formacji | dla dnia t: ostatni dzień notowań poprzedniego miesiąca kalendarzowego, znany w dniu t bez patrzenia w przyszłość |
@@ -40,7 +40,8 @@ Corporate actions
 - REQ-510 (AC-2): A corporate action shall be a split (ratio of new to old shares) or a cash dividend (amount per share), with its instrument and ex-date.
 - REQ-511 (AC-2): Adjusting an instrument's bars shall multiply open, high, low and close of every bar dated before an ex-date by that action's factor, compounding across actions; volume shall be multiplied by the inverse of the split factors only; `unadjusted_close` shall keep the raw close; bars on or after the last ex-date shall keep their raw prices.
 - REQ-512 (AC-2): The close-to-close return of adjusted bars across an ex-date shall equal the total return: `C₀ · ratio / C₋₁ − 1` for a split, `(C₀ + D) / C₋₁ − 1` for a dividend.
-- REQ-513 (AC-2): An action with no bar before its ex-date, or with an ex-date after the last bar, shall adjust nothing.
+- REQ-513 (AC-2): An action with no bar before its ex-date, or with no bar on or after it, shall adjust nothing.
+- REQ-514 (AC-2): Every data provider shall report its instruments' corporate actions (none for crypto), and every run shall adjust the bars it fetched with them; bars of an instrument without actions shall pass through unchanged.
 
 Delisting
 
@@ -141,7 +142,7 @@ Pre-rejestracja i wynik
 | AC | REQ |
 |---|---|
 | AC-1 | REQ-501, REQ-502, REQ-503, REQ-504 |
-| AC-2 | REQ-510, REQ-511, REQ-512, REQ-513 |
+| AC-2 | REQ-510, REQ-511, REQ-512, REQ-513, REQ-514 |
 | AC-3 | REQ-520, REQ-521, REQ-522, REQ-523, REQ-524 |
 | AC-4 | REQ-530, REQ-531, REQ-532 |
 | AC-5 | REQ-540, REQ-541, REQ-542, REQ-543 |

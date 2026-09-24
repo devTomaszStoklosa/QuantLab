@@ -23,7 +23,7 @@ import pyarrow.parquet as pq
 from typer.testing import CliRunner
 
 from quantlab import cli
-from quantlab.core.data.provider import PriceBar
+from quantlab.core.data.provider import PriceBar, WithoutEvents
 from quantlab.core.universe import Instrument
 
 FIXTURE = Path(__file__).parents[1] / "presentation" / "fixtures" / "results"
@@ -72,7 +72,7 @@ _HYPOTHESES = {
 }
 
 
-class _SyntheticProvider:
+class _SyntheticProvider(WithoutEvents):
     """One fixed price path per instrument from 2019 to 2024, whatever range is asked:
     BTC a random walk, ETH cointegrated with it (log-linear plus a mean-reverting spread)."""
 

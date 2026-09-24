@@ -102,6 +102,6 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q2-event-driven-engine | Ready for dev | Ready for dev | Ready for dev | E1–E5 gotowe; E6 wymaga lokalnego przebiegu (Binance) |
 | q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
 | q4-pairs-trading-stat-arb | Ready for dev | Ready for dev | Ready for dev | P1–P5 gotowe (`pairs_v1` zamrożona); P6 wymaga lokalnego przebiegu (Binance) |
-| q5-equities-cross-section | Ready for dev | Ready for dev | Ready for dev | X1 gotowe (point-in-time uniwersum) |
+| q5-equities-cross-section | Ready for dev | Ready for dev | Ready for dev | X1–X2 gotowe (point-in-time uniwersum, corporate actions) |
 | q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
 | q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | W1–W5 gotowe (magazyn wyników, API .NET, aplikacja React); W6 wymaga weryfikacji na maszynie deweloperskiej |
