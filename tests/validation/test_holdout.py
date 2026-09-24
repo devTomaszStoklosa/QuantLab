@@ -114,10 +114,14 @@ def test_holdout_overlapping_training_is_rejected(tmp_path: Path) -> None:
         (0.5, 0.30, "inconclusive"),
         (0.5, 0.10, "inconclusive"),
         (1.2, 0.05, "passed"),
+        # No positions: no Sharpe and nothing to permute - no evidence either way.
+        (None, None, "inconclusive"),
+        (-0.2, None, "rejected"),
+        (0.5, None, "inconclusive"),
     ],
 )
 def test_holdout_verdict_follows_the_frozen_criterion(
-    sharpe: float, p_value: float, expected: str
+    sharpe: float | None, p_value: float | None, expected: str
 ) -> None:
     assert holdout_verdict(_CRITERION, sharpe, p_value) == expected
 

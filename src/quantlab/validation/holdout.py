@@ -61,12 +61,12 @@ class HoldoutRecord(BaseModel):
     start: date
     end: date
     cost_model_name: str
-    cagr: float
-    sharpe: float
-    sortino: float
-    calmar: float
-    max_drawdown: float
-    p_value: float
+    cagr: float | None  # None where undefined, e.g. a holdout without positions
+    sharpe: float | None
+    sortino: float | None
+    calmar: float | None
+    max_drawdown: float | None
+    p_value: float | None  # None when the permutation test had nothing to test
     permutation: dict
     criterion: str
     verdict: HoldoutVerdict
@@ -114,9 +114,20 @@ def holdout_passed(verdict: HoldoutVerdict) -> bool | None:
     return {"passed": True, "rejected": False, "inconclusive": None}[verdict]
 
 
-def holdout_verdict(criterion: SuccessCriterion, sharpe: float, p_value: float) -> HoldoutVerdict:
+def holdout_verdict(
+    criterion: SuccessCriterion, sharpe: float | None, p_value: float | None
+) -> HoldoutVerdict:
+    """The frozen criterion applied to the holdout result.
+
+    A Sharpe that cannot be computed (no positions, so no variance) is no
+    evidence either way: inconclusive, like a positive Sharpe without a
+    significant p-value. Every case with a defined Sharpe is exactly the
+    frozen rule.
+    """
+    if sharpe is None:
+        return "inconclusive"
     if sharpe <= criterion.min_sharpe:
         return "rejected"
-    if p_value >= criterion.max_p_value:
+    if p_value is None or p_value >= criterion.max_p_value:
         return "inconclusive"
     return "passed"

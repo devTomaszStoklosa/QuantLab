@@ -4,9 +4,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from quantlab.cli import open_frozen_holdout
+from quantlab.cli import _print_holdout, open_frozen_holdout
 from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument
+from quantlab.research.definition import PairsSpreadParameters
 from quantlab.validation.holdout import (
     FrozenHoldout,
     HoldoutAlreadyOpenedError,
@@ -102,3 +103,39 @@ def test_record_is_never_overwritten(tmp_path: Path) -> None:
 
     with pytest.raises(FileExistsError):
         write_holdout_record(record_path, record)
+
+
+def test_a_holdout_without_positions_is_recorded_as_inconclusive(tmp_path: Path, capsys) -> None:
+    # A pair whose cointegration filter never lets it trade on unrelated random walks.
+    config = _FROZEN.config.model_copy(
+        update={
+            "hypothesis": "idle_v1",
+            "parameters": PairsSpreadParameters(
+                strategy="pairs_spread",
+                dependent="eth-usdt",
+                explanatory="btc-usdt",
+                formation_days=365,
+                entry_z=2.0,
+                exit_z=0.0,
+                max_coint_p_value=1e-12,
+                universe="mvp-crypto",
+                cost_model=_FROZEN.config.parameters.cost_model,
+            ),
+        }
+    )
+    record = open_frozen_holdout(
+        provider=_SyntheticProvider(),
+        frozen=FrozenHoldout(config=config, frozen_at_commit="abc123"),
+        record_path=tmp_path / "idle_v1.opened.json",
+        n_permutations=50,
+        seed=0,
+        git_sha="def456",
+        opened_at=_OPENED_AT,
+    )
+
+    assert (record.sharpe, record.p_value, record.verdict) == (None, None, "inconclusive")
+    assert "reason" in record.permutation
+    _print_holdout(record)
+    shown = capsys.readouterr().out
+    assert "Sharpe (net):        n/a" in shown
+    assert "Verdict:        INCONCLUSIVE" in shown

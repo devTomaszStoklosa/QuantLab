@@ -350,7 +350,7 @@ def open_frozen_holdout(
         alpha=config.success_criterion.max_p_value,
         periods_per_year=_PERIODS_PER_YEAR,
     ).validate(run)
-    p_value = permutation.detail["p_value"]
+    p_value = permutation.detail.get("p_value")  # absent when there was nothing to test
 
     record = HoldoutRecord(
         hypothesis=config.hypothesis,
@@ -385,6 +385,10 @@ def _load_definition(hypothesis: str) -> FrozenHoldout:
 
 def _fmt_ratio(value: float | None) -> str:
     return "n/a" if value is None else f"{value:.2f}"
+
+
+def _fmt_pct(value: float | None, pattern: str = ".2%") -> str:
+    return "n/a" if value is None else format(value, pattern)
 
 
 def _current_git_sha() -> str:
@@ -456,25 +460,25 @@ def run(
     width = max(len(m.cost_model_name) for m in metrics) + 2
     typer.echo(" " * 14 + "".join(f"{m.cost_model_name:>{width}}" for m in metrics))
     rows = [
-        ("CAGR", lambda m: f"{m.cagr:.2%}"),
-        ("Sharpe", lambda m: f"{m.sharpe:.2f}"),
-        ("Sortino", lambda m: f"{m.sortino:.2f}"),
-        ("Calmar", lambda m: f"{m.calmar:.2f}"),
-        ("Max drawdown", lambda m: f"{m.max_drawdown:.2%}"),
+        ("CAGR", lambda m: _fmt_pct(m.cagr)),
+        ("Sharpe", lambda m: _fmt_ratio(m.sharpe)),
+        ("Sortino", lambda m: _fmt_ratio(m.sortino)),
+        ("Calmar", lambda m: _fmt_ratio(m.calmar)),
+        ("Max drawdown", lambda m: _fmt_pct(m.max_drawdown)),
         ("Turnover", lambda m: f"{m.turnover:.1f}x/yr"),
     ]
     for label, fmt in rows:
         typer.echo(f"{label:<14}" + "".join(f"{fmt(m):>{width}}" for m in metrics))
 
     typer.echo("")
-    meaning = (
-        "result is robust to cost assumptions"
-        if sensitivity.verdict == "robust"
-        else "result depends on cost assumptions - report as a limitation"
-    )
+    meaning = {
+        "robust": "result is robust to cost assumptions",
+        "cost-dependent": "result depends on cost assumptions - report as a limitation",
+        "undefined": "no Sharpe to compare (no variance: no positions held?)",
+    }[sensitivity.verdict]
     typer.echo(
         f"Cost sensitivity ({sensitivity.lower_cost_model} vs {sensitivity.higher_cost_model}): "
-        f"Sharpe difference {sensitivity.sharpe_difference:.2f}"
+        f"Sharpe difference {_fmt_ratio(sensitivity.sharpe_difference)}"
         f"{', CAGR changes sign' if sensitivity.cagr_sign_flip else ''} "
         f"-> {sensitivity.verdict}: {meaning}"
     )
@@ -601,27 +605,31 @@ def run(
         ),
         worst_day_scenario("worst-btc-day", bars, _REGIME_INSTRUMENT, runs[2].start, runs[2].end),
     ]
-    stress = [stress_run(runs[2], scenario) for scenario in scenarios]
     typer.echo("")
     typer.echo(
         f"Stress test ({runs[2].cost_model_name}): instantaneous shock, "
         "impact = sum of weight x shock, costs of reacting not included"
     )
-    typer.echo(
-        f"{'Scenario':<16}{'Last day':>10}{'Worst':>10}{'Worst held on':>15}{'Losing days':>13}"
-    )
-    for result in stress:
+    if first_position is None:
+        typer.echo("n/a: no positions were held")
+    else:
+        stress = [stress_run(runs[2], scenario) for scenario in scenarios]
         typer.echo(
-            f"{result.scenario.name:<16}{result.last_impact:>10.2%}{result.worst_impact:>10.2%}"
-            f"{result.worst_held_on!s:>15}{result.losing_share:>13.1%}"
+            f"{'Scenario':<16}{'Last day':>10}{'Worst':>10}{'Worst held on':>15}{'Losing days':>13}"
         )
-    typer.echo(f"Last day = positions held on {stress[0].last_held_on}.")
-    for result in stress:
-        shocks = ", ".join(
-            f"{instrument_id} {shock:+.1%}"
-            for instrument_id, shock in result.scenario.shocks.items()
-        )
-        typer.echo(f"{result.scenario.name}: {result.scenario.description} ({shocks})")
+        for result in stress:
+            typer.echo(
+                f"{result.scenario.name:<16}{result.last_impact:>10.2%}"
+                f"{result.worst_impact:>10.2%}{result.worst_held_on!s:>15}"
+                f"{result.losing_share:>13.1%}"
+            )
+        typer.echo(f"Last day = positions held on {stress[0].last_held_on}.")
+        for result in stress:
+            shocks = ", ".join(
+                f"{instrument_id} {shock:+.1%}"
+                for instrument_id, shock in result.scenario.shocks.items()
+            )
+            typer.echo(f"{result.scenario.name}: {result.scenario.description} ({shocks})")
 
     trades = build_trade_ledger(runs[2], bars, labels)
     open_at_end = sum(1 for trade in trades if trade.open_at_end)
@@ -630,7 +638,8 @@ def run(
     typer.echo("")
     typer.echo(
         f"Trade ledger ({runs[2].cost_model_name}): {len(trades)} trades "
-        f"({open_at_end} open at the end), {winners / len(trades):.1%} with net P&L > 0"
+        f"({open_at_end} open at the end), "
+        f"{_fmt_pct(winners / len(trades) if trades else None, '.1%')} with net P&L > 0"
     )
     typer.echo(
         f"Net P&L of all trades {sum(trade.net_pnl for trade in trades):+.4f} "
@@ -765,8 +774,8 @@ def compare_engines(
         metrics = row.metrics
         limited = "n/a" if row.limited_orders is None else str(row.limited_orders)
         typer.echo(
-            f"{row.label:<36}{metrics.cagr:>9.2%}{metrics.sharpe:>8.2f}"
-            f"{metrics.max_drawdown:>9.2%}{f'{metrics.turnover:.1f}x/yr':>12}"
+            f"{row.label:<36}{_fmt_pct(metrics.cagr):>9}{_fmt_ratio(metrics.sharpe):>8}"
+            f"{_fmt_pct(metrics.max_drawdown):>9}{f'{metrics.turnover:.1f}x/yr':>12}"
             f"{row.total_costs:>8.2%}{limited:>9}"
         )
     typer.echo(
@@ -881,17 +890,20 @@ def _print_holdout(record: HoldoutRecord) -> None:
     typer.echo(f"Opened at:      {record.opened_at:%Y-%m-%d %H:%M} UTC, commit {record.opened_at_commit[:7]}")
     typer.echo(f"Cost model:     {record.cost_model_name}")
     typer.echo("")
-    typer.echo(f"CAGR:           {record.cagr:8.2%}")
-    typer.echo(f"Sharpe (net):   {record.sharpe:8.2f}")
-    typer.echo(f"Sortino:        {record.sortino:8.2f}")
-    typer.echo(f"Calmar:         {record.calmar:8.2f}")
-    typer.echo(f"Max drawdown:   {record.max_drawdown:8.2%}")
+    typer.echo(f"CAGR:           {_fmt_pct(record.cagr):>8}")
+    typer.echo(f"Sharpe (net):   {_fmt_ratio(record.sharpe):>8}")
+    typer.echo(f"Sortino:        {_fmt_ratio(record.sortino):>8}")
+    typer.echo(f"Calmar:         {_fmt_ratio(record.calmar):>8}")
+    typer.echo(f"Max drawdown:   {_fmt_pct(record.max_drawdown):>8}")
     typer.echo("")
-    typer.echo(
-        f"Permutation:    gross Sharpe {permutation['actual']:.2f} vs shuffled mean "
-        f"{permutation['null_mean']:.2f}; p = {record.p_value:.4f} "
-        f"({permutation['n_permutations']:,} shuffles, seed {permutation['seed']})"
-    )
+    if "reason" in permutation:
+        typer.echo(f"Permutation:    inconclusive ({permutation['reason']})")
+    else:
+        typer.echo(
+            f"Permutation:    gross Sharpe {permutation['actual']:.2f} vs shuffled mean "
+            f"{permutation['null_mean']:.2f}; p = {record.p_value:.4f} "
+            f"({permutation['n_permutations']:,} shuffles, seed {permutation['seed']})"
+        )
     if permutation["low_confidence"]:
         typer.echo(f"Low confidence: only {permutation['active_days']} days with a position")
     typer.echo(f"Criterion:      {record.criterion}")

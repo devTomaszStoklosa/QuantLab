@@ -80,6 +80,7 @@ Status hipotezy — jak w `q1` (`concluded_status`). Test kointegracji na okresi
 - β ujemne → wzór wag bez zmian (obie nogi po tej samej stronie); dla BTC/ETH nie oczekiwane, ale nie błąd.
 - Krótka historia (mniej niż okno formacji) → brak sygnału.
 - Test Engle'a-Grangera niemożliwy do policzenia (np. za krótkie okno) → filtr nie pozwala otworzyć pozycji.
+- Przebieg bez żadnej pozycji (filtr kointegracji nigdy nie przepuszcza wejścia) → Sharpe, Sortino i Calmar niezdefiniowane („n/a"), raport i tear-sheet powstają; wrażliwość na koszty „undefined", stress test i rejestr transakcji puste. Holdout bez pozycji → werdykt `inconclusive` (brak dowodu w żadną stronę); reguła dotyczy wszystkich hipotez, bo każdy przypadek ze zdefiniowanym Sharpe rozstrzyga dalej zamrożone kryterium bez zmian.
 
 ## Non-functional requirements
 

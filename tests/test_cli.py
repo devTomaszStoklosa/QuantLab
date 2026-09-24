@@ -514,3 +514,25 @@ def test_trials_refuses_an_edited_trial_before_fetching(tmp_path, monkeypatch) -
     assert result.exit_code == 1
     assert "reversal_v1.yaml has uncommitted changes" in result.output
     assert provider.requests == []
+
+
+_IDLE_PAIRS = (
+    "  strategy: pairs_spread\n  dependent: eth-usdt\n  explanatory: btc-usdt\n"
+    "  formation_days: 365\n  entry_z: 2.0\n  exit_z: 0.0\n  max_coint_p_value: 0.000000000001\n"
+)
+
+
+def test_run_reports_a_hypothesis_that_never_trades(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "definitions"
+    _definition_repo(repo, monkeypatch)
+    _add_definition(repo, "idle_v1", _IDLE_PAIRS)
+    output = tmp_path / "idle.html"
+
+    result = runner.invoke(app, ["run", "idle_v1", "--tear-sheet", str(output)])
+
+    assert result.exit_code == 0, result.output
+    assert "First position: None" in result.output
+    assert "-> undefined: no Sharpe to compare" in result.output
+    assert "n/a: no positions were held" in result.output
+    assert "0 trades (0 open at the end), n/a with net P&L > 0" in result.output
+    assert output.exists()
