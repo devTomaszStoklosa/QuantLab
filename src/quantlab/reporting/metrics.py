@@ -45,14 +45,20 @@ def sortino(returns: list[float], periods_per_year: int, target: float = 0.0) ->
     return float(excess.mean() / downside_deviation * np.sqrt(periods_per_year))
 
 
+def drawdown_series(equity_curve: list[float]) -> list[float]:
+    """Decline from the running peak at each point, as a negative fraction (0.0 at a peak)."""
+    if not equity_curve:
+        raise ValueError("drawdown_series requires at least 1 equity point")
+    curve = np.asarray(equity_curve, dtype=np.float64)
+    running_peak = np.maximum.accumulate(curve)
+    return ((curve - running_peak) / running_peak).tolist()
+
+
 def max_drawdown(equity_curve: list[float]) -> float:
     """Largest peak-to-trough decline, as a negative fraction (or 0.0 if none)."""
     if not equity_curve:
         raise ValueError("max_drawdown requires at least 1 equity point")
-    curve = np.asarray(equity_curve, dtype=np.float64)
-    running_peak = np.maximum.accumulate(curve)
-    drawdowns = (curve - running_peak) / running_peak
-    return float(drawdowns.min())
+    return float(min(drawdown_series(equity_curve)))
 
 
 def calmar(equity_curve: list[float], periods_per_year: int) -> float:

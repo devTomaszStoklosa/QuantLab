@@ -113,7 +113,7 @@ presentation (.NET + React, rozszerzenie q7)
 ### `reporting`
 
 - Metryki własnym kodem: CAGR, Sharpe, Sortino, Calmar, max drawdown, hit rate, profit factor, turnover.
-- Wizualizacja (equity curve, drawdown, rolling Sharpe, heatmapa miesięczna) przez matplotlib/plotly — tylko warstwa rysowania.
+- Tear-sheet (`reporting.tear_sheet`, S15): jeden samowystarczalny plik HTML z wykresami jako inline SVG (equity curve, drawdown) — bez JavaScriptu i bez zależności do rysowania; moduł tylko formatuje i rysuje liczby policzone wcześniej. Wynik treningowy i holdout w osobnych sekcjach (REQ-042); liczby holdoutu wyłącznie z zapisu jego jednorazowego otwarcia. Kolejne wykresy (rolling Sharpe, heatmapa miesięczna) w tym samym trybie albo przez matplotlib/plotly, jeśli inline SVG przestanie wystarczać.
 
 ## Testy
 
