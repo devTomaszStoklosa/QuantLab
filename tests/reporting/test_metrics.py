@@ -4,6 +4,7 @@ import statistics
 import pytest
 
 from quantlab.reporting.metrics import (
+    annualized_turnover,
     cagr,
     calmar,
     drawdown_series,
@@ -97,3 +98,13 @@ def test_calmar_composes_cagr_and_max_drawdown() -> None:
 def test_calmar_raises_when_no_drawdown() -> None:
     with pytest.raises(ValueError, match="no drawdown"):
         calmar([1.0, 1.1, 1.2], periods_per_year=365)
+
+
+def test_annualized_turnover_is_mean_traded_weight_per_year() -> None:
+    # Open a full position, hold, close it: 2.0 traded over 4 periods.
+    assert annualized_turnover([1.0, 0.0, 0.0, 1.0], periods_per_year=365) == pytest.approx(182.5)
+
+
+def test_annualized_turnover_raises_without_periods() -> None:
+    with pytest.raises(ValueError):
+        annualized_turnover([], periods_per_year=365)

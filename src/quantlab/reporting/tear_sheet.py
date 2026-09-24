@@ -41,6 +41,14 @@ _MARGIN_TOP = 12
 _MARGIN_BOTTOM = 28
 
 
+class Contrast(BaseModel):
+    """Correlation of the run's daily net returns with another hypothesis's (REQ-340)."""
+
+    hypothesis: str
+    cost_model_name: str
+    correlation: float | None
+
+
 class TearSheet(BaseModel):
     """Everything one tear-sheet shows, computed before rendering.
 
@@ -59,6 +67,7 @@ class TearSheet(BaseModel):
     permutation: ValidationResult
     holdout: HoldoutRecord | None
     generated_at: datetime
+    contrast: Contrast | None = None
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:
@@ -260,6 +269,7 @@ def _metrics_table(sheet: TearSheet) -> str:
         ("Sortino", lambda m: _ratio(m.sortino)),
         ("Calmar", lambda m: _ratio(m.calmar)),
         ("Max drawdown", lambda m: _pct(m.max_drawdown)),
+        ("Obrót (\u00d7/rok)", lambda m: _number(m.turnover, ".1f") + "\u00d7"),
     ]
     headers = ["Metryka"] + [
         f"<code>{_e(m.cost_model_name)}</code>"
@@ -355,6 +365,20 @@ def _permutation(result: ValidationResult) -> str:
     return header + body + warning
 
 
+def _contrast(contrast: Contrast | None, cost_model_name: str) -> str:
+    if contrast is None:
+        return ""
+    return (
+        f'<h3 id="contrast">Kontrast z <code>{_e(contrast.hypothesis)}</code></h3>'
+        f"<p>Korelacja dziennych zwrotów netto (<code>{_e(cost_model_name)}</code> wobec "
+        f"<code>{_e(contrast.cost_model_name)}</code>) w dniach, w których obie strategie "
+        f"miały pozycję: <strong>{_ratio(contrast.correlation)}</strong>.</p>"
+        '<p class="muted">Silnie ujemna: strategie są w dużej mierze swoim lustrem. Bliska zera: '
+        "reagują na różne ruchy rynku. Silnie dodatnia: wspólna ekspozycja. Opisowe: nie jest "
+        "częścią żadnej reguły zaliczenia ani werdyktu hipotezy.</p>"
+    )
+
+
 def _training_section(sheet: TearSheet) -> str:
     run = sheet.run
     dates = [snapshot.ts for snapshot in run.snapshots]
@@ -404,6 +428,7 @@ def _training_section(sheet: TearSheet) -> str:
         f"{_walk_forward(sheet.walk_forward)}"
         '<h3 id="permutation">Test permutacyjny</h3>'
         f"{_permutation(sheet.permutation)}"
+        f"{_contrast(sheet.contrast, run.cost_model_name)}"
         "</section>"
     )
 

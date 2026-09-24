@@ -17,6 +17,9 @@ class PortfolioSnapshot(BaseModel):
     # Cost charged per instrument in the period ending at ts, as a fraction of
     # the previous snapshot's equity; includes instruments being closed.
     costs: dict[str, float] = Field(default_factory=dict)
+    # Absolute weight traded per instrument at the rebalance opening that period,
+    # measured against the weights held after the previous period's price moves.
+    traded: dict[str, float] = Field(default_factory=dict)
 
 
 class BacktestRun(BaseModel):
@@ -106,9 +109,11 @@ def run(
                 ) / instrument_closes[previous_date]
 
         instrument_costs: dict[str, float] = {}
+        instrument_traded: dict[str, float] = {}
         for instrument_id in held.keys() | weights.keys():
             traded_weight = abs(weights.get(instrument_id, 0.0) - held.get(instrument_id, 0.0))
             if traded_weight > 0.0:
+                instrument_traded[instrument_id] = traded_weight
                 instrument_costs[instrument_id] = cost_model.cost(
                     bars[instrument_id], previous_date, traded_weight
                 )
@@ -132,6 +137,7 @@ def run(
                 positions=weights,
                 equity=equity,
                 costs=instrument_costs,
+                traded=instrument_traded,
             )
         )
 

@@ -336,3 +336,28 @@ def test_run_refuses_an_undefined_hypothesis(tmp_path, monkeypatch) -> None:
     assert result.exit_code == 1
     assert "No frozen holdout file" in result.output
     assert provider.requests == []
+
+
+def test_run_contrasts_with_another_hypothesis(tmp_path, monkeypatch) -> None:
+    _definition_repo(tmp_path / "definitions", monkeypatch)
+    output = tmp_path / "tear-sheet.html"
+
+    result = runner.invoke(
+        app, ["run", "momentum_v1", "--contrast", "momentum_v1", "--tear-sheet", str(output)]
+    )
+
+    assert result.exit_code == 0, result.output
+    # A hypothesis contrasted with itself moves in lockstep.
+    assert "on days both held a position +1.00" in result.output
+    assert "Turnover" in result.output
+    assert '<h3 id="contrast">' in output.read_text(encoding="utf-8")
+
+
+def test_run_refuses_an_undefined_contrast_before_fetching(tmp_path, monkeypatch) -> None:
+    provider = _definition_repo(tmp_path / "definitions", monkeypatch)
+
+    result = runner.invoke(app, ["run", "momentum_v1", "--contrast", "no_such_v1"])
+
+    assert result.exit_code == 1
+    assert "No frozen holdout file" in result.output
+    assert provider.requests == []
