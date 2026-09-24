@@ -3,7 +3,7 @@ from datetime import date, timedelta
 import numpy as np
 import pytest
 
-from quantlab.backtest.vectorized.engine import BacktestRun, PortfolioSnapshot
+from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.reporting.contrast import return_correlation
 
 _FIRST_DAY = date(2020, 1, 1)

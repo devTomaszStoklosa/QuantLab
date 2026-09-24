@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from quantlab.backtest.vectorized.engine import BacktestRun, PortfolioSnapshot
+from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.reporting.metrics import cagr
 from quantlab.validation.walk_forward import WalkForwardValidator
 

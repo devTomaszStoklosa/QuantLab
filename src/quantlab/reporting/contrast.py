@@ -2,7 +2,7 @@ from itertools import pairwise
 
 import numpy as np
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 
 
 def _held_returns(run: BacktestRun) -> dict:

@@ -5,7 +5,7 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, model_validator
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 from quantlab.core.data.provider import PriceBar
 
 Side = Literal["long", "short"]

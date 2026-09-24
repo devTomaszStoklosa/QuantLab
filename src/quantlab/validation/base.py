@@ -2,7 +2,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 
 
 class ValidationResult(BaseModel):

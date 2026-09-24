@@ -5,7 +5,7 @@ from itertools import pairwise
 import numpy as np
 from pydantic import BaseModel
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 from quantlab.reporting.metrics import cagr, sharpe, sortino
 
 

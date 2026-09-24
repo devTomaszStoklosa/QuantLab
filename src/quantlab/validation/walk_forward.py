@@ -5,7 +5,7 @@ from itertools import groupby
 
 from pydantic import BaseModel
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 from quantlab.reporting.metrics import cagr, max_drawdown, sharpe
 from quantlab.validation.base import ValidationResult
 

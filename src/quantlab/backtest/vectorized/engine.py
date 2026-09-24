@@ -2,37 +2,11 @@ import uuid
 from datetime import date
 from itertools import pairwise
 
-from pydantic import BaseModel, Field
-
+from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
+from quantlab.backtest.sizing import equal_weight_by_sign
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.base import CostModel
 from quantlab.strategy.base import Strategy
-
-
-class PortfolioSnapshot(BaseModel):
-    ts: date
-    cash: float
-    positions: dict[str, float]
-    equity: float
-    # Cost charged per instrument in the period ending at ts, as a fraction of
-    # the previous snapshot's equity; includes instruments being closed.
-    costs: dict[str, float] = Field(default_factory=dict)
-    # Absolute weight traded per instrument at the rebalance opening that period,
-    # measured against the weights held after the previous period's price moves.
-    traded: dict[str, float] = Field(default_factory=dict)
-
-
-class BacktestRun(BaseModel):
-    id: str
-    strategy_name: str
-    strategy_params: dict
-    cost_model_name: str
-    universe_name: str
-    start: date
-    end: date
-    seed: int
-    git_sha: str
-    snapshots: list[PortfolioSnapshot]
 
 
 def _trading_dates(bars: dict[str, list[PriceBar]], start: date, end: date) -> list[date]:
@@ -66,9 +40,8 @@ def run(
     A signal computed as-of day t decides the position held from t to t+1; that
     position earns the close-to-close return realized over t..t+1 (REQ-010: no
     look-ahead). Equity starts at 1.0 ("growth of $1") and compounds daily.
-    Weighting is by sign only, not `signal.strength` - that field is an
-    unnormalized per-instrument return (see time_series_momentum.py) and isn't
-    comparable across instruments. An instrument missing a bar on either
+    Weights come from equal_weight_by_sign, shared with the event-driven
+    engine. An instrument missing a bar on either
     endpoint of a period is excluded from that period's weights and return,
     not treated as an error.
 
@@ -96,21 +69,20 @@ def run(
             and current_date in closes[signal.instrument_id]
         ]
 
-        weights: dict[str, float] = {}
-        instrument_returns: dict[str, float] = {}
-        if active:
-            weight_magnitude = 1.0 / len(active)
-            for signal in active:
-                sign = 1.0 if signal.direction == "long" else -1.0
-                weights[signal.instrument_id] = sign * weight_magnitude
-                instrument_closes = closes[signal.instrument_id]
-                instrument_returns[signal.instrument_id] = (
-                    instrument_closes[current_date] - instrument_closes[previous_date]
-                ) / instrument_closes[previous_date]
+        weights = equal_weight_by_sign(active)
+        instrument_returns = {
+            instrument_id: (
+                closes[instrument_id][current_date] - closes[instrument_id][previous_date]
+            )
+            / closes[instrument_id][previous_date]
+            for instrument_id in weights
+        }
 
         instrument_costs: dict[str, float] = {}
         instrument_traded: dict[str, float] = {}
-        for instrument_id in held.keys() | weights.keys():
+        # Sorted, so the cost sum has the same order in every process (set order
+        # depends on string hashing, randomized per interpreter).
+        for instrument_id in sorted(held.keys() | weights.keys()):
             traded_weight = abs(weights.get(instrument_id, 0.0) - held.get(instrument_id, 0.0))
             if traded_weight > 0.0:
                 instrument_traded[instrument_id] = traded_weight

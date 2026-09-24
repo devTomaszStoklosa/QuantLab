@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from quantlab.backtest.vectorized.engine import BacktestRun, PortfolioSnapshot
+from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.core.data.provider import PriceBar
 from quantlab.validation.permutation import PermutationTestValidator
 
