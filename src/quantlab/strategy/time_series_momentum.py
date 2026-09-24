@@ -1,12 +1,10 @@
 from datetime import date
 
 from quantlab.core.data.provider import PriceBar
-from quantlab.strategy.signal import Signal
+from quantlab.strategy.signal import Signal, signals_for_universe, trailing_return
 
 
-def compute_momentum_signal(
-    bars: list[PriceBar], as_of: date, lookback_days: int
-) -> Signal | None:
+def compute_momentum_signal(bars: list[PriceBar], as_of: date, lookback_days: int) -> Signal | None:
     """Time-series momentum (Moskowitz/Ooi/Pedersen 2012): long if the
     lookback-period return is positive, short if negative, flat if exactly zero.
 
@@ -20,13 +18,9 @@ def compute_momentum_signal(
     per-instrument signal doesn't do. Returns None when there isn't enough
     history yet, or no bar exists for as_of itself.
     """
-    history = sorted((bar for bar in bars if bar.ts <= as_of), key=lambda bar: bar.ts)
-    if not history or history[-1].ts != as_of or len(history) <= lookback_days:
+    lookback_return = trailing_return(bars, as_of, lookback_days)
+    if lookback_return is None:
         return None
-
-    current = history[-1]
-    past = history[-1 - lookback_days]
-    lookback_return = (current.close - past.close) / past.close
 
     if lookback_return > 0:
         direction = "long"
@@ -36,7 +30,7 @@ def compute_momentum_signal(
         direction = "flat"
 
     return Signal(
-        instrument_id=current.instrument_id,
+        instrument_id=bars[0].instrument_id,
         ts=as_of,
         direction=direction,
         strength=lookback_return,
@@ -56,9 +50,10 @@ class TimeSeriesMomentum:
         self.lookback_days = lookback_days
 
     def generate_signals(self, bars: dict[str, list[PriceBar]], as_of: date) -> list[Signal]:
-        signals = []
-        for instrument_id in sorted(bars):
-            signal = compute_momentum_signal(bars[instrument_id], as_of, self.lookback_days)
-            if signal is not None:
-                signals.append(signal)
-        return signals
+        return signals_for_universe(
+            bars,
+            as_of,
+            lambda instrument_bars, day: compute_momentum_signal(
+                instrument_bars, day, self.lookback_days
+            ),
+        )

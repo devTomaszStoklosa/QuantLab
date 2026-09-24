@@ -7,12 +7,13 @@ own strategy: the runner never branches on the strategy type (REQ-301).
 """
 
 from abc import ABC, abstractmethod
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.strategy.base import Strategy
+from quantlab.strategy.short_term_reversal import ShortTermReversal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 
 
@@ -68,5 +69,23 @@ class TimeSeriesMomentumParameters(StudyParametersBase):
         return TimeSeriesMomentum(lookback_days=self.lookback_days)
 
 
-# One variant per strategy; M2 turns this into a union keyed on `strategy`.
-StudyParameters = TimeSeriesMomentumParameters
+class ShortTermReversalParameters(StudyParametersBase):
+    strategy: Literal["short_term_reversal"]
+    formation_days: int = Field(ge=1)
+
+    @property
+    def warm_up_days(self) -> int:
+        return self.formation_days
+
+    def strategy_params(self) -> dict:
+        return {"formation_days": self.formation_days}
+
+    def build_strategy(self) -> Strategy:
+        return ShortTermReversal(formation_days=self.formation_days)
+
+
+# A definition's `strategy` field picks the variant; a new strategy is a new
+# variant here, never a branch in the runner.
+StudyParameters = Annotated[
+    TimeSeriesMomentumParameters | ShortTermReversalParameters, Field(discriminator="strategy")
+]
