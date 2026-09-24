@@ -37,9 +37,11 @@ Slice'y: S1 rejestr `Hypothesis` · S2 sygnał momentum · S3 `Strategy` impleme
 
 Realistyczna egzekucja: kolejka zdarzeń, symulacja zleceń i częściowych wypełnień, brak look-ahead bias z konstrukcji. Porównanie wyniku z silnikiem wektorowym na tej samej hipotezie.
 
-### q3-mean-reversion-hypothesis (rozszerzenie, nierozpisane)
+### q3-mean-reversion-hypothesis (rozszerzenie, następne po MVP)
 
-Druga rodzina hipotez — short-term mean reversion — jako kontrast do momentum na tym samym pipeline'ie.
+Druga rodzina hipotez — short-term mean reversion — jako kontrast do momentum na tym samym pipeline'ie. Pełna specyfikacja: [specs/q3-mean-reversion-hypothesis/](specs/q3-mean-reversion-hypothesis/).
+
+Slice'y: M1 uogólniony runner (definicja hipotezy = zamrożony plik) · M2 `ShortTermReversal` · M3 obrót i korelacja z `momentum_v1` · M4 zamrożenie `mean_reversion_v1` · M5 przebieg treningowy · M6 otwarcie holdoutu · M7 wpis w dzienniku.
 
 ### q4-pairs-trading-stat-arb (rozszerzenie, nierozpisane)
 
@@ -78,7 +80,7 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | lab-foundation | Ready for dev | Ready for dev | Ready for dev | gotowe (F-1..F-4) |
 | q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | gotowe (S1..S16), MVP zamknięte: `momentum_v1` inconclusive |
 | q2-event-driven-engine | nie napisany | nie napisany | nie napisany | — |
-| q3-mean-reversion-hypothesis | nie napisany | nie napisany | nie napisany | — |
+| q3-mean-reversion-hypothesis | Draft | Draft | Draft | nie zaczęty |
 | q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
 | q6-advanced-validation-cpcv | nie napisany | nie napisany | nie napisany | — |
