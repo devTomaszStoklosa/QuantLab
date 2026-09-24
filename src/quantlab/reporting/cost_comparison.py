@@ -2,7 +2,7 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 from quantlab.reporting.metrics import (
     annualized_turnover,
     cagr,

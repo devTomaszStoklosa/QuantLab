@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from quantlab.backtest.vectorized.engine import BacktestRun, PortfolioSnapshot
+from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.reporting.cost_comparison import RunMetrics, cost_sensitivity, run_metrics
 from quantlab.reporting.metrics import cagr, calmar, max_drawdown, sharpe, sortino
 

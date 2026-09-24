@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
-from quantlab.backtest.vectorized.engine import BacktestRun, PortfolioSnapshot
+from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.core.data.provider import PriceBar
 from quantlab.reporting.cost_comparison import RunMetrics, run_metrics
 from quantlab.reporting.metrics import drawdown_series

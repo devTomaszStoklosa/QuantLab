@@ -4,7 +4,7 @@ from itertools import pairwise
 
 from pydantic import BaseModel, field_validator
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 from quantlab.core.data.provider import PriceBar
 
 

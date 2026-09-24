@@ -15,7 +15,7 @@ from typing import Self
 
 from pydantic import BaseModel, model_validator
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 from quantlab.reporting.cost_comparison import RunMetrics
 from quantlab.reporting.metrics import drawdown_series
 from quantlab.research.hypothesis import concluded_status

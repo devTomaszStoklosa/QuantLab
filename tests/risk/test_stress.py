@@ -3,7 +3,7 @@ from datetime import date, timedelta
 import pytest
 from pydantic import ValidationError
 
-from quantlab.backtest.vectorized.engine import BacktestRun, PortfolioSnapshot
+from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.core.data.provider import PriceBar
 from quantlab.risk.stress import ShockScenario, stress_impact, stress_run, worst_day_scenario
 

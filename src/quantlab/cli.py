@@ -14,7 +14,7 @@ from quantlab.attribution.trade_ledger import (
     group_pnl,
 )
 from quantlab.attribution.trade_ledger import by_regime as by_regime_at_entry
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core.data.binance import BinanceProvider
 from quantlab.core.data.provider import DataProvider, PriceBar

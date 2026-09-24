@@ -2,7 +2,7 @@ from itertools import pairwise
 
 import numpy as np
 
-from quantlab.backtest.vectorized.engine import BacktestRun
+from quantlab.backtest.run import BacktestRun
 from quantlab.core.data.provider import PriceBar
 from quantlab.reporting.metrics import sharpe
 from quantlab.validation.base import ValidationResult
