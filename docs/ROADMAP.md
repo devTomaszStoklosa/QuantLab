@@ -93,7 +93,7 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | gotowe (S1..S16), MVP zamknięte: `momentum_v1` inconclusive |
 | q2-event-driven-engine | Ready for dev | Ready for dev | Ready for dev | E1–E5 gotowe; E6 wymaga lokalnego przebiegu (Binance) |
 | q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
-| q4-pairs-trading-stat-arb | Ready for dev | Ready for dev | Ready for dev | — |
+| q4-pairs-trading-stat-arb | Ready for dev | Ready for dev | Ready for dev | P1 gotowe (kointegracja) |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
 | q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
 | q7-dotnet-react-presentation | nie napisany | nie napisany | nie napisany | — |

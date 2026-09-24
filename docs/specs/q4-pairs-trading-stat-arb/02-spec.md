@@ -31,7 +31,7 @@ Kointegracja
 
 - REQ-401 (AC-1): The system shall estimate β and α by OLS of log(y) on log(x) with a constant, and return the residual spread.
 - REQ-402 (AC-1): The system shall run the Engle-Granger test on the pair and return its statistic, MacKinnon p-value and 1/5/10% critical values.
-- REQ-403 (AC-1): The system shall estimate the spread's half-life from Δε_t = c + λ·ε_{t−1}; when λ ≥ 0 (no mean reversion) the half-life shall be undefined.
+- REQ-403 (AC-1): The system shall estimate the spread's half-life from Δε_t = c + λ·ε_{t−1}; unless −1 < λ < 0 (λ ≥ 0: no mean reversion; λ ≤ −1: the spread overshoots its mean every period) the half-life shall be undefined.
 
 Kontrakt wag
 
