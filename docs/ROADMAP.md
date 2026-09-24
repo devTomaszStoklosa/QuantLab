@@ -91,5 +91,5 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
 | q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
-| q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1 gotowe (PSR, DSR) |
+| q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V2 gotowe (PSR, DSR, rejestr prób) |
 | q7-dotnet-react-presentation | nie napisany | nie napisany | nie napisany | — |
