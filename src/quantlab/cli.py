@@ -1,4 +1,5 @@
 import importlib.metadata
+import importlib.resources
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -27,8 +28,10 @@ from quantlab.backtest.event_driven.execution import (
 from quantlab.backtest.event_driven.fills import FillPolicy, FullFill, VolumeParticipationFill
 from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
+from quantlab.core import sp500
 from quantlab.core.data.binance import BinanceProvider
 from quantlab.core.data.corporate_actions import MarketData, with_events
+from quantlab.core.data.coverage import price_coverage
 from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
 from quantlab.core.data.tiingo import TiingoProvider
 from quantlab.core.universe import Universe
@@ -98,6 +101,7 @@ def entry() -> None:
         typer.echo(f"Error: {error}", err=True)
         raise SystemExit(1) from error
 
+
 # Lab-wide methodology, the same for every hypothesis. What a hypothesis itself
 # defines - strategy, parameters, universe, cost model, training and holdout
 # dates - comes only from its committed file in _HOLDOUT_DIR (REQ-301).
@@ -120,6 +124,8 @@ _HOLDOUT_DIR = Path("config/holdout")
 # What the presentation layer reads (q7, ADR-0008); gitignored, since the trade
 # ledger carries market prices.
 _RESULTS_DIR = Path("results")
+# Where universe files live; build-universe writes the S&P 500 one here (q5, REQ-553).
+_UNIVERSES_DIR = Path(str(importlib.resources.files("quantlab.config"))) / "universes"
 # Data providers by the source name a universe file gives (REQ-506): a new source
 # is a new entry here, never a branch on the asset class.
 _PROVIDERS: dict[str, Callable[[], DataProvider]] = {
@@ -167,9 +173,7 @@ def _version_callback(show_version: bool) -> None:
 
 @app.callback()
 def main(
-    version: bool = typer.Option(
-        False, "--version", callback=_version_callback, is_eager=True
-    ),
+    version: bool = typer.Option(False, "--version", callback=_version_callback, is_eager=True),
 ) -> None:
     pass
 
@@ -193,8 +197,7 @@ def _fetch_market_data(
         instrument.id: provider.fetch(instrument, fetch_start, end) for instrument in instruments
     }
     events = {
-        instrument.id: provider.events(instrument, fetch_start, end)
-        for instrument in instruments
+        instrument.id: provider.events(instrument, fetch_start, end) for instrument in instruments
     }
     return with_events(bars, events, parameters.missing_delisting_return)
 
@@ -680,6 +683,18 @@ def run(
                 else ", all with the source's delisting return"
             )
         )
+    if not universe.is_static:
+        coverage = price_coverage(universe, bars, config.training_start, config.training_end)
+        typer.echo("")
+        typer.echo(
+            f"Price coverage of the point-in-time universe: {_fmt_pct(coverage.share, '.1%')} "
+            f"of member-days ({coverage.priced_days:,} of {coverage.member_days:,})"
+        )
+        if coverage.without_prices:
+            typer.echo(
+                f"Members without any price in the source ({len(coverage.without_prices)}), "
+                f"invisible to the strategy: {', '.join(coverage.without_prices)}"
+            )
     permutation = _SIGNIFICANCE_TESTS[config.success_criterion.significance_test](
         _TestInputs(bars, parameters, universe, _PERMUTATIONS, _PERMUTATION_ALPHA)
     ).validate(runs[2])
@@ -781,7 +796,11 @@ def run(
             shocks={instrument_id: _STRESS_SHOCK for instrument_id in instrument_ids},
         ),
         worst_day_scenario(
-            f"worst-{market_proxy.split('-')[0]}-day", bars, market_proxy, runs[2].start, runs[2].end
+            f"worst-{market_proxy.split('-')[0]}-day",
+            bars,
+            market_proxy,
+            runs[2].start,
+            runs[2].end,
         ),
     ]
     typer.echo("")
@@ -1090,7 +1109,9 @@ def _print_holdout(record: HoldoutRecord) -> None:
     typer.echo("")
     typer.echo(f"HOLDOUT {record.start} .. {record.end} ({record.hypothesis})")
     typer.echo(f"Frozen at:      {record.frozen_at_commit[:7]}")
-    typer.echo(f"Opened at:      {record.opened_at:%Y-%m-%d %H:%M} UTC, commit {record.opened_at_commit[:7]}")
+    typer.echo(
+        f"Opened at:      {record.opened_at:%Y-%m-%d %H:%M} UTC, commit {record.opened_at_commit[:7]}"
+    )
     typer.echo(f"Cost model:     {record.cost_model_name}")
     typer.echo("")
     typer.echo(f"CAGR:           {_fmt_pct(record.cagr):>8}")
@@ -1140,6 +1161,70 @@ def open_holdout(hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYP
         write_registry(_RESULTS_DIR, _HOLDOUT_DIR)
     except TrialRegistryError as error:
         typer.echo(f"Registry not refreshed: {error}", err=True)
+
+
+def _listed(entries: list, show) -> str:
+    return "; ".join(show(entry) for entry in entries) if entries else "none"
+
+
+@app.command("build-universe")
+def build_universe_command() -> None:
+    """Rebuild the S&P 500 point-in-time universe from its pinned Wikipedia revision.
+
+    Reads today's constituents and the table of changes of the last revision before
+    the pinned instant, walks back through the changes (REQ-553), and writes
+    quantlab/config/universes/sp500.yaml with the attribution CC BY-SA 4.0 asks for.
+    Then lists what the table contradicts: fix tickers in sp500-renames.yaml,
+    rebuild, and commit both files before the hypothesis is frozen.
+    """
+    renames = sp500.load_renames(
+        (_UNIVERSES_DIR / "sp500-renames.yaml").read_text(encoding="utf-8")
+    )
+    revision = sp500.fetch_revision(sp500.PINNED_AS_OF)
+    page = sp500.parse_page(revision.html)
+    as_of = sp500.PINNED_AS_OF.date()
+    reconstruction = sp500.reconstruct(page, renames, sp500.DEFAULT_SINCE, as_of)
+    universe = sp500.universe_from(reconstruction, as_of)
+    target = _UNIVERSES_DIR / f"{sp500.UNIVERSE_NAME}.yaml"
+    target.write_text(
+        sp500.universe_yaml(universe, revision, sp500.DEFAULT_SINCE), encoding="utf-8"
+    )
+
+    typer.echo(
+        f"Wikipedia revision {revision.id} ({revision.timestamp}): "
+        f"{len(page.constituents)} constituents, {len(page.changes)} changes"
+    )
+    typer.echo(
+        f"Universe {universe.name}: {len(universe.instruments) - 1} tickers and "
+        f"{sp500.MARKET_PROXY.symbol}, {len(universe.memberships)} membership periods "
+        f"from {sp500.DEFAULT_SINCE} -> {target}"
+    )
+    typer.echo("")
+    typer.echo("To check (renames go to sp500-renames.yaml; then rebuild):")
+    typer.echo(
+        f"Added but not in the index afterwards ({len(reconstruction.added_but_not_in_index)}): "
+        + _listed(reconstruction.added_but_not_in_index, lambda e: f"{e[0]} {e[1]}")
+    )
+    typer.echo(
+        "Removed but still in the index afterwards "
+        f"({len(reconstruction.removed_but_still_in_index)}): "
+        + _listed(reconstruction.removed_but_still_in_index, lambda e: f"{e[0]} {e[1]}")
+    )
+    typer.echo(
+        "Date added on the page differs from the reconstruction "
+        f"({len(reconstruction.date_added_mismatches)}): "
+        + _listed(
+            reconstruction.date_added_mismatches, lambda e: f"{e[0]} page {e[1]}, rebuilt {e[2]}"
+        )
+    )
+    typer.echo(
+        f"Tickers with more than one period ({len(reconstruction.several_periods)}), "
+        "a reused ticker is two companies: " + _listed(reconstruction.several_periods, str)
+    )
+    typer.echo(
+        f"Rows of the table of changes without a readable date "
+        f"({len(reconstruction.unreadable_rows)}): " + _listed(reconstruction.unreadable_rows, str)
+    )
 
 
 def _holdout_state(row: RegistryRow) -> str:

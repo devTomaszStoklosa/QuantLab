@@ -1,0 +1,10 @@
+# Ticker changes for the S&P 500 universe (q5, REQ-553): the ticker Wikipedia's
+# table of changes used at the time -> the ticker the company trades under today,
+# which is the one Tiingo files its whole price history under.
+#
+# `uv run quantlab build-universe` lists every addition of a ticker that is not
+# in the index afterwards; most are renames missing here. Add them, rebuild, and
+# commit this file with sp500.yaml. A ticker reused by another company must not
+# be mapped: the two are different instruments.
+renames:
+  FB: META  # Facebook -> Meta Platforms, 2022-06-09
