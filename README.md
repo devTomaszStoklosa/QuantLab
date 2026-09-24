@@ -22,6 +22,14 @@ uv run quantlab registry                                     # rejestr hipotez w
 
 `quantlab run` zapisuje też dowody hipotezy do magazynu wyników `results/` (Parquet, ignorowany przez gita), z którego czyta warstwa prezentacji (`q7`, [ADR-0008](docs/adr/0008-results-store-parquet-duckdb.md)).
 
+Warstwa prezentacji (`q7`, w toku) — API ASP.NET Core nad magazynem wyników, wymaga .NET 10 SDK:
+
+```bash
+dotnet test --solution presentation/QuantLab.Presentation.slnx
+dotnet run --project presentation/QuantLab.Api                          # czyta results/ z lokalnych przebiegów; http://localhost:5080/api/hypotheses
+dotnet run --project presentation/QuantLab.Api --launch-profile demo    # syntetyczny magazyn demo_* z presentation/fixtures/results
+```
+
 ## Stack
 
 Python 3.12 + uv, pandas/numpy, DuckDB + Parquet, statsmodels/scipy, pytest. Warstwa prezentacji (późniejsze rozszerzenie, epik `q7`): ASP.NET Core Web API + React, czytająca wyniki zapisane przez silnik Pythona.

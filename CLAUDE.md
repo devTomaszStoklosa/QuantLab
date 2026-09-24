@@ -28,6 +28,8 @@ Platforma do systematycznych badań inwestycyjnych (hipoteza, dane, sygnał, bac
 | Lint | `uv run ruff check .` |
 | Formatowanie | `uv run ruff format .` |
 | CLI | `uv run quantlab <komenda>` |
+| Testy API .NET (`q7`) | `dotnet test --solution presentation/QuantLab.Presentation.slnx` |
+| API na syntetycznym magazynie | `dotnet run --project presentation/QuantLab.Api --launch-profile demo` |
 
 ## Twarde zasady
 

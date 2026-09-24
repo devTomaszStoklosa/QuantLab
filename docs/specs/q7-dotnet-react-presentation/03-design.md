@@ -88,7 +88,7 @@ src/quantlab/cli.py                          # run / open-holdout zapisują; kom
 tests/reporting/test_results_store.py        # zapis = odczyt, NULL-e, podmiana (W1)
 tests/test_results_fixture.py                # generator i test aktualności magazynu syntetycznego (W1)
 presentation/fixtures/results/               # magazyn syntetyczny, commitowany (W1)
-presentation/global.json                     # SDK 10.0.100, rollForward latestFeature (W2)
+global.json                                  # SDK 10.0.100, rollForward latestFeature, runner testów MTP (W2)
 presentation/Directory.Build.props           # net10.0, Nullable, TreatWarningsAsErrors (W2)
 presentation/Directory.Packages.props        # centralne wersje pakietów (W2)
 presentation/QuantLab.Presentation.slnx      # (W2)
@@ -132,7 +132,7 @@ export function getTrades(id: string, query: TradeQuery): Promise<TradePage>;
 
 ## Rollout and rollback
 
-Każdy slice z zielonymi testami przed następnym (`uv run ruff check . && uv run pytest -q`; od W2 także `dotnet test presentation`, od W4 `npm test` w `presentation/web`):
+Każdy slice z zielonymi testami przed następnym (`uv run ruff check . && uv run pytest -q`; od W2 także `dotnet test --solution presentation/QuantLab.Presentation.slnx`, od W4 `npm test` w `presentation/web`):
 
 1. **W1** magazyn wyników w Pythonie: `monthly_returns`, `results_store`, zapis w `run` i `open-holdout`, komenda `registry`, `results/` w `.gitignore`, magazyn syntetyczny z testem aktualności. Wydruk `run` bez zmian (poza linią o zapisie magazynu).
 2. **W2** szkielet .NET: `global.json`, rozwiązanie, `DuckDbResultsStore` z rejestrem i `health`, strażnik wersji schematu, test środowiska DuckDB, testy na magazynie syntetycznym.

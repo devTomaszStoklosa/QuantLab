@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="QuantLab.Api/QuantLab.Api.csproj" />
+  <Project Path="QuantLab.Api.Tests/QuantLab.Api.Tests.csproj" />
+</Solution>
