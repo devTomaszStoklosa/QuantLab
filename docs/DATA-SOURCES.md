@@ -14,16 +14,16 @@
 |---|---|---|---|---|---|
 | Binance public REST (`api.binance.com/api/v3/klines`) | historyczne świece krypto (OHLCV + timestampy ms), bez klucza dla danych publicznych. Format zweryfikowany na żywo 2026-09-23, patrz [ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md) | nie | limity wagowe per endpoint, patrz dokumentacja Binance | dane historyczne klines zwykle bez ograniczeń redystrybucji dla non-trading use — do potwierdzenia w aktualnym Terms of Use przed użyciem | lab-foundation, q1 |
 
-### Akcje (`q5`) — kandydaci, decyzja przed slice'em X7
+### Akcje (`q5`) — wybrane Tiingo i Wikipedia (decyzja 2026-09-24)
 
-Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie dostawcy przed wyborem (środowisko chmurowe nie ma dostępu do tych stron).
+Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie dostawcy przy pierwszym lokalnym użyciu (środowisko chmurowe nie ma dostępu do tych stron), z datą w kolumnie „Uwagi”. Adaptery powstały na nagranych, syntetycznych odpowiedziach.
 
 | Źródło | Co daje | Klucz | Ograniczenia | Uwagi |
 |---|---|---|---|---|
-| Tiingo (`api.tiingo.com`) | ceny dzienne z korektami, dywidendy i splity, także spółki zdjęte z obrotu | tak (darmowy) | limit symboli miesięcznie i zapytań na godzinę w darmowym tierze | propozycja; bez redystrybucji surowych danych |
+| Tiingo (`api.tiingo.com`) | ceny dzienne surowe i skorygowane, dywidendy (`divCash`) i splity (`splitFactor`) w dniu ex-date, metadane z ostatnim dniem notowań (także spółki zdjęte z obrotu); bez zwrotu z delistingu i bez jego przyczyny | tak (darmowy), zmienna `TIINGO_API_KEY` | darmowy tier: limit unikalnych symboli miesięcznie oraz zapytań na godzinę i dzień — przy ok. 1 050 tickerach S&P 500 z lat 2004–2025 pobieranie rozłożone na kilka dni albo miesiąc płatnego tieru | **wybrane**; bez redystrybucji surowych danych (cache i magazyn wyników poza repo); warunki niezweryfikowane |
 | Alpha Vantage | lista spółek zdjętych z obrotu; skorygowane dane dzienne w tierze płatnym | tak | 25 zapytań dziennie w darmowym tierze | za wolne na setki spółek |
 | Nasdaq Data Link (Sharadar) | pełne delistingi, akcje korporacyjne, point-in-time | tak (płatne) | koszt | poza budżetem projektu portfolio |
-| Wikipedia — zmiany składu S&P 500 | historyczny skład indeksu | nie | CC BY-SA 4.0 (atrybucja); kompletność przed ok. 2000 r. niepewna | tylko członkostwo, bez cen |
+| Wikipedia — *List of S&P 500 companies* | bieżący skład i tabela zmian składu, z których odtwarzamy skład wstecz | nie (API MediaWiki, nagłówek `User-Agent`) | CC BY-SA 4.0: plik uniwersum w repo z atrybucją i numerem rewizji; kompletność przed ok. 2000 r. niepewna | **wybrane**; tylko członkostwo, bez cen |
 | Yahoo Finance | ceny | nie | warunki użycia zabraniają dostępu programistycznego; brak spółek zdjętych z obrotu | odrzucone |
 
 Przed pierwszym użyciem źródła: sprawdzić aktualne warunki na stronie dostawcy (ten dokument nie jest źródłem prawdy dla licencji — zmieniają się bez ostrzeżenia), zapisać datę weryfikacji w tej tabeli.

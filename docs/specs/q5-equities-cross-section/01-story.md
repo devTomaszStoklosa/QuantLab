@@ -44,7 +44,7 @@ Jako badacz chcę testować hipotezy przekrojowe na akcjach z uniwersum takim, j
 
 ## Priority
 
-Should have — ostatni nierozpoczęty epik rozszerzeń. Kod (uniwersum, corporate actions, delisting, rebalans, strategia) powstaje na danych syntetycznych; adapter, zamrożenie i przebiegi czekają na decyzje z tabeli poniżej i na lokalny dostęp do sieci.
+Should have — ostatni nierozpoczęty epik rozszerzeń. Kod (uniwersum, corporate actions, delisting, rebalans, strategia) powstaje na danych syntetycznych; adaptery (Tiingo, skład S&P 500) na nagranych, syntetycznych odpowiedziach, bo środowisko chmurowe nie ma dostępu do tych źródeł. Zamrożenie czeka na pytania 6–7 poniżej, przebiegi na lokalny dostęp do sieci.
 
 ## Dependencies and risks
 
@@ -54,14 +54,23 @@ Should have — ostatni nierozpoczęty epik rozszerzeń. Kod (uniwersum, corpora
 - **Ryzyko: limity darmowych tierów** (np. liczba symboli na miesiąc) przy uniwersum rzędu setek spółek i kilkunastu lat — cache na dysku i pobieranie rozłożone w czasie.
 - **Ryzyko: wielokrotne testowanie.** Nowe uniwersum to nowe dane, więc licznik prób zaczyna się od 1 (`q6` liczy próby na tym samym uniwersum i okresie).
 
+## Decisions
+
+Odpowiedzi na pytania 1–5, przyjęte przez Tomasza 2026-09-24 (wszystkie propozycje):
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Źródło danych akcji | **Tiingo** (darmowy klucz; ceny dzienne, dywidendy, splity, spółki zdjęte z obrotu). Warunki i limity do sprawdzenia na stronie dostawcy przy pierwszym lokalnym użyciu, z datą w [DATA-SOURCES](../../DATA-SOURCES.md). Alpha Vantage, Sharadar i Yahoo Finance odrzucone (limity, koszt, warunki użycia) |
+| 2 | Uniwersum i historyczny skład | **S&P 500 point-in-time** ze zmian składu w Wikipedii (CC BY-SA 4.0, z atrybucją), z jednej zapisanej rewizji strony |
+| 3 | Hipoteza i parametry | **Momentum przekrojowe 12-1** (Jegadeesh i Titman 1993): formacja 12 miesięcy z pominięciem ostatniego, rebalans miesięczny, long górny decyl i short dolny decyl, równe wagi, pomijane spółki z ceną poniżej 5 USD na koniec miesiąca formacji |
+| 4 | Zwrot z delistingu, gdy źródło go nie podaje | **−30%** (Shumway 1997) — patrz pytanie 6 |
+| 5 | Okresy i kryterium | Trening **2005-01-01 → 2019-12-31**, holdout **2020-01-01 → 2025-12-31**; kryterium: Sharpe netto > 0 i p < 0.1, gdzie p pochodzi z **testu losowych portfeli** z tego samego przekroju (selekcja), nie z tasowania dni z `q1` (timing) |
+
 ## Open questions
 
-Blokują adapter (X7) i zamrożenie (X8); do tego czasu kod powstaje na danych syntetycznych.
+Blokują zamrożenie (X8). Obie wynikły z decyzji 1–2 po ich przyjęciu.
 
 | # | Question | Owner | Due |
 |---|---|---|---|
-| 1 | Źródło danych akcji. Kandydaci (warunki do sprawdzenia na stronie dostawcy przed użyciem): **Tiingo** (darmowy klucz; ceny dzienne z korektami, dywidendy i splity, także spółki zdjęte z obrotu; limit symboli miesięcznie; bez redystrybucji), **Alpha Vantage** (darmowy tier 25 zapytań dziennie; lista spółek zdjętych z obrotu; skorygowane dane dzienne w płatnym tierze), **Sharadar przez Nasdaq Data Link** (płatne; pełne delistingi i akcje korporacyjne), **Yahoo Finance** (odrzucone: warunki użycia i brak spółek zdjętych z obrotu). Propozycja: Tiingo | Tomasz | przed X7 |
-| 2 | Uniwersum i historyczny skład. Propozycja: S&P 500 point-in-time ze zmian składu publikowanych w Wikipedii (CC BY-SA 4.0, z atrybucją); alternatywa: mniejszy indeks z pełną historią (np. Dow Jones Industrial Average), ale 30 spółek to za mało na kwantyle | Tomasz | przed X7 |
-| 3 | Hipoteza i parametry. Propozycja: momentum przekrojowe 12-1 (Jegadeesh i Titman 1993): formacja 12 miesięcy z pominięciem ostatniego, rebalans miesięczny, long górny decyl i short dolny decyl, równe wagi, pomijane spółki z ceną poniżej 5 USD w dniu formacji | Tomasz | przed X8 |
-| 4 | Zwrot z delistingu, gdy źródło go nie podaje. Propozycja: −30% (Shumway 1997, delistingi z przyczyn wynikowych); alternatywa: 0% (neutralne, zaniża bias) | Tomasz | przed X8 |
-| 5 | Okres treningowy, holdout i kryterium. Propozycja: trening 2005-01-01 → 2019-12-31, holdout 2020-01-01 → 2025-12-31 (dane nieoglądane w tym projekcie), kryterium jak w pozostałych hipotezach (Sharpe netto > 0 i p < 0.1). **Uwaga z X6:** test permutacyjny z `q1` tasuje kolejność dni, więc mierzy timing, nie selekcję przekrojową — na syntetycznej demonstracji `demo_xsmom` (Sharpe treningowy 2.2 z trwałych różnic dryfu) daje p = 0.99. Dla strategii przekrojowej właściwszy null to losowe portfele z tego samego przekroju (tasowanie rankingu w dniu formacji); do rozstrzygnięcia, który test wchodzi do kryterium | Tomasz | przed X8 |
+| 6 | Zwrot z delistingu przy Tiingo i S&P 500. Tiingo nie podaje ani zwrotu z delistingu, ani przyczyny, więc −30% trafiłoby w każdy delisting. Tymczasem spółka zdjęta z obrotu jako członek S&P 500 to prawie zawsze przejęcie: ostatnie zamknięcie leży tuż przy cenie transakcji, zwrot z delistingu ≈ 0. Spółki upadające wypadają z indeksu przed zdjęciem z obrotu, a ich spadek jest w cenach. −30% dopisałoby więc fikcyjną stratę (w nodze long) albo zysk (w nodze short) przy każdym przejęciu. Propozycja: **0%** jako zamrożone założenie, a −30% jako opisowa analiza wrażliwości w wyniku | Tomasz | przed X8 |
+| 7 | Model kosztów dla akcji. Propozycja: `fee_bps` **5** (prowizja i połowa spreadu dużych spółek S&P 500 z zapasem na lata 2005–2009), `k` **0.05** (jak w hipotezach krypto: poślizg względem zamknięcia w jednostkach dziennej zmienności), `vol_window` **21** (miesiąc sesji, odpowiednik 30 dni krypto). Koszt pożyczki akcji do shortu poza modelem (ograniczenie opisane w wyniku, jak w `q1`) | Tomasz | przed X8 |

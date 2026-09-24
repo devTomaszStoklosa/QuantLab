@@ -44,6 +44,30 @@ ADRs: docs/adr/0002-dual-backtest-engine.md, docs/adr/0004-validation-first-froz
 - B. Strategia zwraca „brak zmiany" — protokół `Strategy` się zmienia, a silnik i tak musi odróżnić „trzymaj" od „rebalansuj".
 - C. `Sizer` z pamięcią poprzednich wag — `Sizer` nie zna wag po ruchu cen, więc nie może zwrócić „trzymaj dryf".
 
+### Decyzja 4 — test istotności strategii przekrojowej (po X6)
+
+Test permutacyjny `q1` tasuje kolejność dni wspólnie dla wszystkich instrumentów: pyta o timing. Momentum przekrojowe zarabia na selekcji (które spółki, nie kiedy), więc na `demo_xsmom` daje p = 0.99 przy Sharpe 2.2.
+
+- **A. Losowe portfele z przekroju decyzji, symulowane macierzowo.** W każdej decyzji, w której przebieg handluje do nowych celów, N losowych portfeli dostaje te same wagi na instrumentach wylosowanych z przekroju decyzji i trzyma je z dryfem do następnej takiej decyzji. Wartość portfela w okresie trzymania to `1 + (G − 1) · w`, gdzie `G` to macierz wzrostu cen od dnia decyzji (dni × instrumenty przekroju), a `w` — wagi; dla N portfeli naraz to jedno mnożenie macierzy na okres trzymania. Harmonogram, wagi, dryf, delistingi i filtr ceny (przez przekrój) są wspólne z przebiegiem; losowy jest tylko wybór spółek.
+- B. Tasowanie dni (`q1`) — mierzy timing, nie selekcję (p = 0.99 na `demo_xsmom`).
+- C. Ponowne przebiegi silnika z losowym rankingiem — dokładne łącznie z kosztami, ale 10 000 przebiegów po ok. 12 s to ok. 33 h na maszynie deweloperskiej.
+- D. Test t średniego spreadu long-short miesięcznych zwrotów (Fama-MacBeth) — parametryczny, zakłada normalność i niezależność miesięcy, ignoruje dryf i delistingi w trakcie miesiąca.
+
+Przekrój decyzji to instrumenty, dla których strategia dała sygnał (także flat) — strategia przekrojowa daje więc flat każdemu instrumentowi z rankingu poza nogami. Walidator dostaje strategię, sizer i politykę rebalansu z definicji i odtwarza decyzje tak jak silnik wektorowy (te same wywołania), zamiast zapisywać przekrój w `BacktestRun` (zmiana kontraktu wyniku obu silników). Który test wchodzi do kryterium, zapisuje zamrożona definicja (`success_criterion.significance_test`, domyślnie `day_shuffle`, więc zamrożone definicje krypto nie zmieniają znaczenia).
+
+### Decyzja 5 — kalendarz i źródło danych w pliku uniwersum
+
+- **A. Plik uniwersum nazywa `source` i `periods_per_year`; runner bierze dostawcę z rejestru nazw, a annualizację i okna reżimu z uniwersum.** Rynek (i jego kalendarz) to własność uniwersum, nie hipotezy ani laboratorium.
+- B. Kalendarz z klasy aktywów instrumentów — `if` po klasie aktywów w runnerze.
+- C. Liczba okresów liczona z danych (dni z barami na rok) — zależy od okna i od luk w danych; ta sama hipoteza miałaby inną annualizację w treningu i w holdoucie.
+
+### Decyzja 6 — data delistingu ze źródła bez kalendarza
+
+Tiingo podaje tylko ostatni dzień z ceną. Dzień po nim bywa weekendem albo świętem; bar delistingu na dniu bez notowań innych instrumentów dodałby do przebiegu „dzień", w którym nikt poza nim nie ma ceny, a silnik wyłączyłby z tego okresu cały portfel.
+
+- **A. Adapter podaje dzień po ostatniej cenie, warstwa danych przesuwa bar delistingu na pierwszy dzień notowań przebiegu od tej daty** (`with_events`, kalendarz z barów wszystkich instrumentów). Dane syntetyczne z datą delistingu w dniu notowań — bez zmian.
+- B. Adapter pobiera kalendarz giełdy — zależność od biblioteki kalendarzy albo drugiego źródła.
+
 ## Trade-off matrix (1-5)
 
 | Criterion | 1A | 1B | 1C | 2A | 2B | 2C | 3A | 3B | 3C |
@@ -56,6 +80,8 @@ ADRs: docs/adr/0002-dual-backtest-engine.md, docs/adr/0004-validation-first-froz
 ## Decision
 
 **Korekta po X3 (2026-09-24):** test parytetu pokazał, że silniki nie mogą zostać całkiem bez zmian: silnik event-driven otwierał pozycję na barze delistingu (bar „handlowy" z ceną wartości delistingu), a wektorowy liczył koszt zamknięcia. Bar delistingu ma więc flagę `delisting`; oba silniki traktują go jako wypłatę gotówki bez zlecenia i kosztu, a event-driven nie wypełnia na nim zleceń. Poza tą jedną regułą decyzja 2A bez zmian.
+
+Po decyzjach 1–5 z 01-story (2026-09-24): **4A, 5A, 6A** — uzasadnienia przy opcjach powyżej.
 
 Recommended: **1A, 2A, 3A**. Filtr członków jako dekorator strategii zakładany przez runner, korekty jako czysta funkcja warstwy danych nad protokołem źródła zdarzeń, rebalans jako polityka przekazywana obu silnikom. Rezygnujemy ze zmian w silnikach dla uniwersum i danych (1B, 2B) — każda taka zmiana to ryzyko parytetu — i z rozproszenia odpowiedzialności po strategiach (1C) i dostawcach (2C). Revisit if: pomiar w X5 przekroczy budżet pamięci — wtedy kolumnowe bary (numpy) za tym samym interfejsem strategii, osobny slice.
 
@@ -93,6 +119,11 @@ src/quantlab/backtest/rebalance.py             # RebalancePolicy, Daily, OnSigna
 src/quantlab/strategy/cross_sectional_momentum.py  # CrossSectionalMomentum (X5)
 src/quantlab/research/definition.py            # build_rebalance_policy, CrossSectionalMomentumParameters (X4, X5)
 src/quantlab/cli.py                            # rejestr dostawców, with_events, MembersOnly, polityka (X1–X4)
+src/quantlab/validation/random_portfolio.py    # RandomPortfolioValidator (X7b)
+src/quantlab/core/data/tiingo.py               # TiingoProvider: ceny, dywidendy, splity, delistingi (X7c)
+src/quantlab/core/sp500.py                     # skład S&P 500 z Wikipedii: parser tabel, odtwarzanie wstecz (X7d)
+src/quantlab/config/universes/sp500-renames.yaml  # zmiany tickerów (stary → Tiingo), uzupełniane z raportu budowy (X7d)
+config/holdout/xsmom_v1.yaml                   # zamrożona definicja (X8)
 ```
 
 ### Kontrakty (sygnatury poglądowe)
@@ -136,8 +167,12 @@ Każdy slice z zielonymi bramkami i zrzutem wyników trzech zamrożonych hipotez
 4. **X4** polityka rebalansu w obu silnikach, parytet dla obu polityk.
 5. **X5** `CrossSectionalMomentum` i jej parametry; pomiar czasu i pamięci na syntetycznym uniwersum 500 × 10 lat.
 6. **X6** hipoteza demonstracyjna `demo_xsmom` w syntetycznym magazynie wyników (`q7`), żeby UI pokazał akcje przekrojowo.
-7. **X7** adapter wybranego źródła (decyzje 1–2 z 01-story; lokalnie — środowisko chmurowe nie ma dostępu do źródeł danych).
-8. **X8** zamrożenie definicji (decyzje 3–5) — osobny commit przed jakimkolwiek przebiegiem na danych.
+7. **X7** adapter wybranego źródła (decyzje 1–2), w czterech częściach, wszystkie na danych syntetycznych i nagranych odpowiedziach:
+   - **X7a** `source` i `periods_per_year` w pliku uniwersum, rejestr dostawców, pobieranie tylko członków okna, proxy rynku bez członkostwa, przesunięcie baru delistingu na dzień notowań; zrzut krypto bez zmian.
+   - **X7b** test losowych portfeli, sygnały flat w momentum przekrojowym, `significance_test` w kryterium, magazyn wyników i UI.
+   - **X7c** `TiingoProvider` z cache i throttlingiem, test na nagranej odpowiedzi.
+   - **X7d** budowa uniwersum `sp500` z Wikipedii (`quantlab build-universe`), raport niespójności, pokrycie cenami w `run` (REQ-554); plik uniwersum budowany i commitowany lokalnie.
+8. **X8** zamrożenie definicji (decyzje 3–5 i pytania 6–7) — osobny commit przed jakimkolwiek przebiegiem na danych.
 9. **X9** przebieg treningowy lokalnie, **X10** otwarcie holdoutu, **X11** wpis w dzienniku.
 
 Rollback: `git revert` per slice; żaden slice nie zmienia plików w `config/holdout/`.
@@ -151,8 +186,11 @@ Rollback: `git revert` per slice; żaden slice nie zmienia plików w `config/hol
 | Zmiana wyników krypto przez uniwersum/dane/silniki | niska | wysoki | zrzut bajt w bajt przed i po; bary krypto przechodzą nietknięte (ten sam obiekt) |
 | Look-ahead przez korektę wstecz | niska | wysoki | reguła: poziom ceny tylko z `unadjusted_close`; test, że ranking nie zależy od przyszłej dywidendy |
 | Wolna strategia przekrojowa (ranking co dzień) | wysoka | średni | ranking raz na miesiąc formacji, zapamiętany |
+| Limity darmowego tieru Tiingo przy ok. 1 050 tickerach S&P 500 z lat 2004–2025 | wysoka | średni | cache odpowiedzi, wznawianie pobierania, konfigurowalny odstęp żądań; ewentualnie miesiąc płatnego tieru |
+| Ponownie użyte i zmienione tickery (Wikipedia pisze ticker z dnia zmiany, Tiingo — dzisiejszy) | wysoka | wysoki | mapa zmian tickerów w repo, raport niespójności budowy, raport pokrycia cenami w `run` |
+| Niekompletna tabela zmian w Wikipedii | średnia | średni | raport niespójności (m.in. data dodania bieżących członków vs odtworzona); wynik opisany z tym ograniczeniem |
 
 ## Handoff notes
 
-- X1–X6 nie wymagają odpowiedzi na pytania z 01-story; X7 wymaga 1–2, X8 wymaga 3–5.
+- X1–X6 nie wymagają odpowiedzi na pytania z 01-story; X7 wymaga 1–2, X8 wymaga 3–7.
 - Nie uruchamiaj żadnej hipotezy akcyjnej na danych rynkowych przed X8.
