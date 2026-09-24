@@ -1,9 +1,10 @@
 import subprocess
+from datetime import date
 from pathlib import Path
 
 import pytest
 
-from quantlab import cli
+from quantlab.research.definition import CostModelParameters, TimeSeriesMomentumParameters
 from quantlab.validation.holdout import (
     HoldoutNotFrozenError,
     SuccessCriterion,
@@ -34,16 +35,18 @@ def repo(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_frozen_config_matches_the_training_run_parameters() -> None:
+def test_frozen_momentum_v1_still_reads_as_it_was_frozen() -> None:
+    """REQ-302: the generalized schema reads the unmodified file with the frozen values."""
     config = parse_holdout_config(_FROZEN_CONFIG)
 
-    assert config.training_start == cli._TRAINING_START
-    assert config.training_end == cli._TRAINING_END
-    assert config.parameters.universe == cli._UNIVERSE_NAME
-    assert config.parameters.lookback_days == cli._LOOKBACK_DAYS
-    assert config.parameters.cost_model.fee_bps == cli._COST_BPS
-    assert config.parameters.cost_model.k == cli._SLIPPAGE_K
-    assert config.parameters.cost_model.vol_window == cli._VOL_WINDOW_DAYS
+    assert (config.training_start, config.training_end) == (date(2018, 1, 1), date(2023, 12, 31))
+    assert (config.start, config.end) == (date(2024, 1, 1), date(2025, 12, 31))
+    assert config.parameters == TimeSeriesMomentumParameters(
+        strategy="time_series_momentum",
+        lookback_days=365,
+        universe="mvp-crypto",
+        cost_model=CostModelParameters(name="realistic", fee_bps=10, k=0.05, vol_window=30),
+    )
 
 
 def test_missing_file_is_a_blocking_error(repo: Path) -> None:

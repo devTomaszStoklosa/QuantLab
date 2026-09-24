@@ -80,7 +80,7 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | lab-foundation | Ready for dev | Ready for dev | Ready for dev | gotowe (F-1..F-4) |
 | q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | gotowe (S1..S16), MVP zamknięte: `momentum_v1` inconclusive |
 | q2-event-driven-engine | nie napisany | nie napisany | nie napisany | — |
-| q3-mean-reversion-hypothesis | Draft | Draft | Draft | nie zaczęty |
+| q3-mean-reversion-hypothesis | Draft | Draft | Draft | M1 gotowe |
 | q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
 | q6-advanced-validation-cpcv | nie napisany | nie napisany | nie napisany | — |
