@@ -13,7 +13,11 @@ from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument, Universe
 from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.zero import ZeroCostModel
-from quantlab.research.definition import CostModelParameters, TimeSeriesMomentumParameters
+from quantlab.research.definition import (
+    CostModelParameters,
+    ShortTermReversalParameters,
+    TimeSeriesMomentumParameters,
+)
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 from quantlab.validation.holdout import read_holdout_record, write_holdout_record
 
@@ -162,6 +166,31 @@ def test_run_study_equals_the_engine_run_it_replaced() -> None:
     )
     assert result.snapshots == expected.snapshots
     assert result.model_dump(exclude={"id"}) == expected.model_dump(exclude={"id"})
+
+
+def test_run_study_builds_the_strategy_its_parameters_name() -> None:
+    reversal = ShortTermReversalParameters(
+        strategy="short_term_reversal",
+        formation_days=1,
+        universe="test-universe",
+        cost_model=_PARAMETERS.cost_model,
+    )
+
+    result = run_study(
+        _FixtureProvider(),
+        reversal,
+        ZeroCostModel(),
+        _UNIVERSE,
+        date(2026, 1, 3),
+        date(2026, 1, 5),
+        0,
+        "abc123",
+    )
+
+    assert result.strategy_name == "short_term_reversal"
+    assert result.strategy_params == {"formation_days": 1}
+    # "a" rose and "b" fell the day before: reversal takes the opposite of momentum's side.
+    assert result.snapshots[1].positions == {"a": -0.5, "b": 0.5}
 
 
 def test_run_cost_comparison_fetches_once_and_runs_each_model() -> None:
