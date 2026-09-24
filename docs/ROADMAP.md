@@ -21,6 +21,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 
 **Po `q3`-M4 (2026-09-24):** `q3` czeka na lokalny przebieg treningowy (M5 — Binance jest zablokowany w środowisku chmurowym), więc równolegle rusza następny w kolejności `q2-event-driven-engine`. Nie zależy od wyników `q3` i nie zmienia parametrów ani werdyktów żadnej hipotezy.
 
+**Po `q2`-E5 (2026-09-24):** `q2` i `q3` czekają na lokalne przebiegi (E6, M5), więc rusza `q6-advanced-validation-cpcv` w zakresie, który nie wymaga danych: PSR, deflated Sharpe z liczbą prób liczoną z historii gita i PBO. CPCV/purged k-fold odłożone do pierwszej hipotezy z parametrami dopasowywanymi na danych (`q4`).
+
 ## Epiki
 
 ### lab-foundation
@@ -55,9 +57,11 @@ Kointegracja (Engle-Granger/Johansen), spread trading, rozszerzenie silnika na m
 
 Point-in-time uniwersum, `CorporateAction` i korekta cen, obsługa survivorship bias.
 
-### q6-advanced-validation-cpcv (rozszerzenie, nierozpisane)
+### q6-advanced-validation-cpcv (rozszerzenie, w toku)
 
-Purged k-fold / CPCV, Deflated Sharpe Ratio, Probability of Backtest Overfitting po przetestowaniu kilku hipotez.
+Probabilistic i deflated Sharpe ratio, Probability of Backtest Overfitting (CSCV) i rejestr prób liczony z historii definicji hipotez — opisowo, bez zmiany zamrożonych kryteriów. Purged k-fold / CPCV wraca z pierwszą hipotezą z parametrami dopasowywanymi na danych (`q4`). Pełna specyfikacja: [specs/q6-advanced-validation-cpcv/](specs/q6-advanced-validation-cpcv/).
+
+Slice'y: V1 PSR i DSR · V2 rejestr prób z historii gita · V3 PBO (CSCV) · V4 PSR/DSR w `quantlab run` i tear-sheecie · V5 `quantlab trials` · V6 przebiegi lokalne i dziennik.
 
 ### q7-dotnet-react-presentation (rozszerzenie, nierozpisane)
 
@@ -87,5 +91,5 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
 | q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
-| q6-advanced-validation-cpcv | nie napisany | nie napisany | nie napisany | — |
+| q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | — |
 | q7-dotnet-react-presentation | nie napisany | nie napisany | nie napisany | — |
