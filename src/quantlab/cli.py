@@ -44,6 +44,13 @@ from quantlab.reporting.multiple_testing import (
     aligned_active_returns,
     multiple_testing,
 )
+from quantlab.reporting.results_store import (
+    REGISTRY_FILE,
+    RegistryRow,
+    RunEvidence,
+    write_registry,
+    write_run,
+)
 from quantlab.reporting.tear_sheet import Contrast, TearSheet, render_html
 from quantlab.research.definition import StudyParameters
 from quantlab.research.hypothesis import concluded_status
@@ -96,6 +103,9 @@ _PBO_BLOCKS = 16
 _PARITY_NOISE = 1e-9
 _DEFAULT_HYPOTHESIS = "momentum_v1"
 _HOLDOUT_DIR = Path("config/holdout")
+# What the presentation layer reads (q7, ADR-0008); gitignored, since the trade
+# ledger carries market prices.
+_RESULTS_DIR = Path("results")
 
 
 def _definition_path(hypothesis: str) -> Path:
@@ -391,6 +401,10 @@ def _fmt_pct(value: float | None, pattern: str = ".2%") -> str:
     return "n/a" if value is None else format(value, pattern)
 
 
+def _in_order(groups: dict[str, PnlGroup], order: tuple[str, ...]) -> dict[str, PnlGroup]:
+    return {key: groups[key] for key in order if key in groups}
+
+
 def _current_git_sha() -> str:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
@@ -542,9 +556,8 @@ def run(
     if detail["low_confidence"]:
         typer.echo(f"Low confidence: only {detail['active_days']} days with a position")
 
-    for diagnostic in parameters.training_diagnostics(
-        bars, config.training_start, config.training_end
-    ):
+    diagnostics = parameters.training_diagnostics(bars, config.training_start, config.training_end)
+    for diagnostic in diagnostics:
         typer.echo("")
         typer.echo(
             f"{diagnostic.title} (training {config.training_start} .. {config.training_end}):"
@@ -665,18 +678,21 @@ def run(
         f"{'Worst':>10}{'Best':>10}{'Costs':>9}"
     )
 
-    def _print_groups(title: str, groups: dict[str, PnlGroup], order: tuple[str, ...]) -> None:
+    def _print_groups(title: str, groups: dict[str, PnlGroup]) -> None:
         typer.echo(f"{title:<12}{header}")
-        for key in (key for key in order if key in groups):
-            group = groups[key]
+        for key, group in groups.items():
             typer.echo(
                 f"{key:<12}{group.trades:>7}{group.win_rate:>10.1%}{group.total_net_pnl:>+10.4f}"
                 f"{group.mean_net_pnl:>+10.4f}{group.median_net_pnl:>+10.4f}"
                 f"{group.worst_net_pnl:>+10.4f}{group.best_net_pnl:>+10.4f}{group.costs:>9.4f}"
             )
 
-    _print_groups("Regime", group_pnl(trades, by_regime_at_entry), VOLATILITY_REGIMES)
-    _print_groups("Holding", group_pnl(trades, by_holding_period), HOLDING_PERIOD_BUCKETS)
+    pnl_groups = {
+        "regime": _in_order(group_pnl(trades, by_regime_at_entry), VOLATILITY_REGIMES),
+        "holding_period": _in_order(group_pnl(trades, by_holding_period), HOLDING_PERIOD_BUCKETS),
+    }
+    _print_groups("Regime", pnl_groups["regime"])
+    _print_groups("Holding", pnl_groups["holding_period"])
     typer.echo("Regime = market regime as of the entry close. Descriptive only.")
 
     contrast_result = None
@@ -721,24 +737,41 @@ def run(
             f"as recorded {holdout.opened_at:%Y-%m-%d})"
         )
 
-    if tear_sheet is not None:
-        sheet = TearSheet(
-            hypothesis=config.hypothesis,
-            run=runs[2],
-            cost_comparison=metrics,
-            regimes=by_regime,
-            regime_method=(
-                f"Reżim rynku: tercyl {_REGIME_VOL_WINDOW_DAYS}-dniowej zmienności "
-                f"{_REGIME_INSTRUMENT} względem jej ostatnich {_REGIME_HISTORY_DAYS} dni, "
-                "na dzień przed każdym zwrotem."
+    sheet = TearSheet(
+        hypothesis=config.hypothesis,
+        run=runs[2],
+        cost_comparison=metrics,
+        regimes=by_regime,
+        regime_method=(
+            f"Reżim rynku: tercyl {_REGIME_VOL_WINDOW_DAYS}-dniowej zmienności "
+            f"{_REGIME_INSTRUMENT} względem jej ostatnich {_REGIME_HISTORY_DAYS} dni, "
+            "na dzień przed każdym zwrotem."
+        ),
+        walk_forward=walk_forward,
+        permutation=permutation,
+        holdout=holdout,
+        contrast=contrast_result,
+        multiple_testing=deflation,
+        generated_at=datetime.now(tz=UTC),
+    )
+    stored = write_run(
+        _RESULTS_DIR,
+        RunEvidence(
+            sheet=sheet,
+            cost_sensitivity=sensitivity,
+            trades=trades,
+            pnl_groups=pnl_groups,
+            diagnostics=diagnostics,
+            data_source=",".join(
+                sorted({bar.source for series in bars.values() for bar in series})
             ),
-            walk_forward=walk_forward,
-            permutation=permutation,
-            holdout=holdout,
-            contrast=contrast_result,
-            multiple_testing=deflation,
-            generated_at=datetime.now(tz=UTC),
-        )
+        ),
+    )
+    write_registry(_RESULTS_DIR, _HOLDOUT_DIR)
+    typer.echo("")
+    typer.echo(f"Results written to {stored} (registry: {_RESULTS_DIR / REGISTRY_FILE})")
+
+    if tear_sheet is not None:
         tear_sheet.parent.mkdir(parents=True, exist_ok=True)
         tear_sheet.write_text(render_html(sheet), encoding="utf-8")
         typer.echo("")
@@ -947,3 +980,35 @@ def open_holdout(hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYP
         )
         typer.echo(f"Holdout opened. Result recorded in {record_path} - commit it.")
     _print_holdout(record)
+    try:
+        write_registry(_RESULTS_DIR, _HOLDOUT_DIR)
+    except TrialRegistryError as error:
+        typer.echo(f"Registry not refreshed: {error}", err=True)
+
+
+def _holdout_state(row: RegistryRow) -> str:
+    if row.holdout is None:
+        return f"sealed {row.holdout_start}..{row.holdout_end}"
+    return f"opened {row.holdout.opened_at:%Y-%m-%d}: {row.holdout.verdict}"
+
+
+@app.command("registry")
+def registry_command() -> None:
+    """Refresh the results store's hypothesis registry from the committed definitions.
+
+    Reads config/holdout, the holdout records next to it and git history; fetches
+    no data (REQ-712). The presentation layer reads the registry it writes.
+    """
+    try:
+        rows = write_registry(_RESULTS_DIR, _HOLDOUT_DIR)
+    except TrialRegistryError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
+    width = max((len(row.hypothesis) for row in rows), default=10) + 2
+    typer.echo(f"{'Hypothesis':<{width}}{'Status':<14}{'Stored run':<12}Holdout")
+    for row in rows:
+        typer.echo(
+            f"{row.hypothesis:<{width}}{row.status:<14}{'yes' if row.has_run else 'no':<12}"
+            f"{_holdout_state(row)}"
+        )
+    typer.echo(f"Registry written to {_RESULTS_DIR / REGISTRY_FILE}")

@@ -4,6 +4,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import numpy as np
+import pyarrow.parquet as pq
 import pytest
 from typer.testing import CliRunner
 
@@ -567,3 +568,62 @@ def test_run_reports_no_cointegration_for_a_directional_hypothesis(tmp_path, mon
 
     assert result.exit_code == 0, result.output
     assert "Cointegration" not in result.output
+
+
+def test_run_writes_its_evidence_and_the_registry_to_the_results_store(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "definitions"
+    _definition_repo(repo, monkeypatch)
+    _add_definition(repo, "pairs_x", _PAIRS)
+
+    result = runner.invoke(app, ["run", "pairs_x"])
+
+    assert result.exit_code == 0, result.output
+    store = cli._RESULTS_DIR
+    assert f"Results written to {store / 'pairs_x'}" in result.output
+    [run] = pq.read_table(store / "pairs_x" / "run.parquet").to_pylist()
+    assert run["data_source"] == "test"
+    assert run["trials"] == ["momentum_v1", "pairs_x"]
+    diagnostics = pq.read_table(store / "pairs_x" / "diagnostics.parquet").to_pylist()
+    assert {row["title"] for row in diagnostics} == {"Cointegration of eth-usdt on btc-usdt"}
+    registry = pq.read_table(store / "hypotheses.parquet").to_pylist()
+    assert [(row["hypothesis"], row["status"]) for row in registry] == [
+        ("momentum_v1", "proposed"),
+        ("pairs_x", "testing"),
+    ]
+
+
+def test_registry_lists_the_committed_definitions_without_fetching(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "definitions"
+    provider = _definition_repo(repo, monkeypatch)
+    record = read_holdout_record(_HOLDOUT_DIR / "momentum_v1.opened.json")
+    write_holdout_record(repo / "momentum_v1.opened.json", record)
+    _add_definition(repo, "reversal_v1", _REVERSAL)
+
+    result = runner.invoke(app, ["registry"])
+
+    assert result.exit_code == 0, result.output
+    assert provider.requests == []
+    lines = result.output.splitlines()
+    assert lines[1].split() == [
+        "momentum_v1",
+        "inconclusive",
+        "no",
+        "opened",
+        "2026-09-23:",
+        "inconclusive",
+    ]
+    assert lines[2].split() == ["reversal_v1", "proposed", "no", "sealed", "2024-01-01..2025-12-31"]
+    assert f"Registry written to {cli._RESULTS_DIR / 'hypotheses.parquet'}" in result.output
+
+
+def test_registry_refuses_definitions_outside_git(tmp_path, monkeypatch) -> None:
+    directory = tmp_path / "not-a-repo"
+    directory.mkdir()
+    monkeypatch.setattr(cli, "_HOLDOUT_DIR", directory)
+
+    result = runner.invoke(app, ["registry"])
+
+    assert result.exit_code == 1
+    assert "Error: git log" in result.output

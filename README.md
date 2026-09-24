@@ -17,7 +17,10 @@ uv run quantlab run --tear-sheet reports/momentum_v1.html   # okres treningowy; 
 uv run quantlab open-holdout                                 # holdout już otwarty: pokazuje zapisany wynik
 uv run quantlab compare-engines                              # silnik wektorowy vs event-driven, okres treningowy
 uv run quantlab trials                                       # wszystkie próby na tych samych danych: PSR, DSR, PBO
+uv run quantlab registry                                     # rejestr hipotez w magazynie wyników, bez pobierania danych
 ```
+
+`quantlab run` zapisuje też dowody hipotezy do magazynu wyników `results/` (Parquet, ignorowany przez gita), z którego czyta warstwa prezentacji (`q7`, [ADR-0008](docs/adr/0008-results-store-parquet-duckdb.md)).
 
 ## Stack
 

@@ -1,5 +1,6 @@
 import math
 import statistics
+from datetime import date, timedelta
 
 import pytest
 
@@ -9,6 +10,7 @@ from quantlab.reporting.metrics import (
     calmar,
     drawdown_series,
     max_drawdown,
+    monthly_returns,
     sharpe,
     sortino,
 )
@@ -108,3 +110,39 @@ def test_annualized_turnover_is_mean_traded_weight_per_year() -> None:
 def test_annualized_turnover_raises_without_periods() -> None:
     with pytest.raises(ValueError):
         annualized_turnover([], periods_per_year=365)
+
+
+def test_monthly_returns_chain_month_ends() -> None:
+    dates = [date(2024, 1, 30), date(2024, 1, 31), date(2024, 2, 1), date(2024, 2, 29)]
+    equity = [1.0, 1.1, 1.2, 0.99]
+
+    months = monthly_returns(dates, equity)
+
+    assert [(year, month) for year, month, _ in months] == [(2024, 1), (2024, 2)]
+    assert months[0][2] == pytest.approx(0.1)  # partial first month, from the first point
+    assert months[1][2] == pytest.approx(0.99 / 1.1 - 1.0)
+
+
+def test_monthly_returns_compound_to_the_total_return() -> None:
+    dates = [date(2023, 12, 1) + timedelta(days=i) for i in range(120)]
+    equity = [1.0 + 0.01 * math.sin(i / 7.0) + 0.002 * i for i in range(120)]
+
+    months = monthly_returns(dates, equity)
+
+    assert len(months) == 4
+    assert math.prod(1.0 + r for _, _, r in months) == pytest.approx(equity[-1] / equity[0])
+
+
+def test_monthly_returns_skip_a_month_without_points() -> None:
+    months = monthly_returns([date(2024, 1, 31), date(2024, 3, 31)], [1.0, 1.5])
+
+    assert months == [(2024, 1, 0.0), (2024, 3, 0.5)]
+
+
+def test_monthly_returns_of_an_empty_curve() -> None:
+    assert monthly_returns([], []) == []
+
+
+def test_monthly_returns_require_matching_lengths() -> None:
+    with pytest.raises(ValueError, match="one equity point per date"):
+        monthly_returns([date(2024, 1, 1)], [1.0, 1.1])
