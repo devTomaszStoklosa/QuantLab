@@ -108,10 +108,12 @@ def cpcv_of_selection(returns: np.ndarray, labels: list[str], settings: CpcvSett
 # strategy/selected_parameter.py
 class SelectedParameter:
     def __init__(self, variants: dict[str, Callable[[], Strategy]], cost_model: CostModel,
-                 min_history_days: int, periods_per_year: int) -> None: ...
+                 warm_up_days: int, history_start: date, min_history_days: int) -> None: ...
+    def choice(self, bars, year: int) -> SelectionRecord: ...  # zapamiętany na rok
     def generate_signals(self, bars, as_of) -> list[Signal]: ...
     @property
     def history(self) -> list[SelectionRecord]: ...
+# research/definition.py: StudyParametersBase.fetch_start(start), .configurations
 ```
 
 ## Rollout and rollback

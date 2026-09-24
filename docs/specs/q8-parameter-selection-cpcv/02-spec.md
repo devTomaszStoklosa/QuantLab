@@ -30,8 +30,9 @@ Upstream: 01-story.md
 
 Procedura doboru
 
-- REQ-801 (AC-1): A hypothesis definition shall be able to replace a strategy parameter with a selection: the grid (at least two distinct values), the selection metric (annualized Sharpe of net daily returns under the definition's realistic cost model), the schedule (a new choice on the first trading day of each calendar year), the minimum history before the first choice (in days) and anchored history.
-- REQ-802 (AC-1): On a choice day s the strategy shall backtest every grid value on bars dated before s only, from the first available bar, compute each value's metric, choose the best, ties going to the earlier value in the grid, and signal with that value until the next choice day. With less than the minimum history before s it shall give no signal until the next choice day.
+- REQ-801 (AC-1): A hypothesis definition shall be able to replace a strategy parameter with a selection: the grid (at least two distinct ascending values), the selection metric (Sharpe of net daily returns under the definition's realistic cost model), the schedule (a new choice for each calendar year, made on its 1 January), the anchor of the history (`history_start`) and the minimum history before a choice (in days).
+- REQ-802 (AC-1): The choice for year Y shall use bars dated before 1 January of Y only. It shall backtest every grid value over one common window, from `history_start` or from the first day on which every value can signal (the latest first bar plus the longest warm-up), whichever is later, to 31 December of Y−1; choose the value with the best metric, ties going to the earlier value in the grid; and signal with it through year Y. With a window shorter than the minimum history, or no value with a defined metric, there shall be no position in year Y.
+- REQ-805 (AC-1): A run of a selection hypothesis shall fetch data from the anchor minus the longest warm-up, or from its own start minus that warm-up if earlier, so every choice sees its whole anchored history.
 - REQ-803 (AC-1): The selection shall be one strategy for both engines, so a change of value is a change of targets, traded and costed like any other, and engine parity (`q2`) holds.
 - REQ-804 (AC-1): The run shall report the selection history: each choice day, every value's metric and the value chosen (or that there was too little history).
 
@@ -78,6 +79,7 @@ Pre-rejestracja i wynik
 |---|---|---|---|
 | `strategy` | enum | tak | np. `time_series_momentum_selected` |
 | `lookback_grid` | list[int] | tak | ≥ 2 różne wartości ≥ 1, rosnąco |
+| `history_start` | date | tak | początek zakotwiczonej historii wyboru |
 | `min_history_days` | int | tak | ≥ 1 |
 | `universe`, `cost_model` | — | tak | jak w pozostałych definicjach |
 
@@ -108,7 +110,7 @@ Pre-rejestracja i wynik
 
 ## Non-functional requirements
 
-- Performance: przebieg `momentum_select_v1` (2 instrumenty × ok. 8 lat, 6 wartości, wybór co rok, CPCV 45 podziałów, 10 000 permutacji) < 2 min na maszynie deweloperskiej; pomiar na danych syntetycznych w slice'ie strategii.
+- Performance: przebieg `momentum_select_v1` (2 instrumenty × ok. 8 lat, 6 wartości, wybór co rok, CPCV 45 podziałów, 10 000 permutacji) < 2 min na maszynie deweloperskiej. **Pomiar P3 (2026-09-24, dane syntetyczne od 2017-08-17, siatka 30–365):** trzy przebiegi modeli kosztów 5,3 s, porównanie silników (5 przebiegów) 10,0 s, parytet 1,4e-15 — po zamianie sortowania historii przy każdym wywołaniu na wyszukiwanie binarne (przebieg 8 lat: 3,1 → 0,21 s).
 - Reproducibility: deterministycznie (remisy po kolejności siatki, CPCV bez losowości).
 - Compatibility: hipotezy bez siatki — wyniki co do bitu jak przed epikiem (REQ-860).
 
@@ -116,7 +118,7 @@ Pre-rejestracja i wynik
 
 | AC | REQ |
 |---|---|
-| AC-1 | REQ-801, REQ-802, REQ-803, REQ-804 |
+| AC-1 | REQ-801, REQ-802, REQ-803, REQ-804, REQ-805 |
 | AC-2 | REQ-810, REQ-811, REQ-812 |
 | AC-3 | REQ-813, REQ-814 |
 | AC-4 | REQ-820, REQ-821 |

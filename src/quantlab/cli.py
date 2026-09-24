@@ -3,7 +3,7 @@ import importlib.resources
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, NamedTuple
 
@@ -210,7 +210,7 @@ def _fetch_market_data(
     unknown delisting returns taking the definition's assumption (q5). Only the
     window's members and the market proxy are fetched (REQ-505).
     """
-    fetch_start = start - timedelta(days=parameters.warm_up_days)
+    fetch_start = parameters.fetch_start(start)
     instruments = universe.instruments_between(start, end)
     bars = {
         instrument.id: provider.fetch(instrument, fetch_start, end) for instrument in instruments
