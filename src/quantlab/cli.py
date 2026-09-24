@@ -26,6 +26,7 @@ from quantlab.backtest.event_driven.fills import FillPolicy, FullFill, VolumePar
 from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core.data.binance import BinanceProvider
+from quantlab.core.data.corporate_actions import with_events
 from quantlab.core.data.provider import DataProvider, PriceBar
 from quantlab.core.universe import Universe
 from quantlab.costs.base import CostModel
@@ -140,10 +141,15 @@ def _fetch_bars(
     the window's first day where data allows. Nothing after `end` is requested.
     """
     fetch_start = start - timedelta(days=warm_up_days)
-    return {
+    bars = {
         instrument.id: provider.fetch(instrument, fetch_start, end)
         for instrument in universe.instruments
     }
+    events = {
+        instrument.id: provider.events(instrument, fetch_start, end)
+        for instrument in universe.instruments
+    }
+    return with_events(bars, events)
 
 
 def _strategy(parameters: StudyParameters, universe: Universe) -> Strategy:

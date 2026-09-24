@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 from quantlab import cli
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.cli import app, run_cost_comparison, run_engine_comparison, run_study
-from quantlab.core.data.provider import PriceBar
+from quantlab.core.data.provider import PriceBar, WithoutEvents
 from quantlab.core.universe import Instrument, Universe
 from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.zero import ZeroCostModel
@@ -48,7 +48,7 @@ _UNIVERSE = Universe(
 )
 
 
-class _FixtureProvider:
+class _FixtureProvider(WithoutEvents):
     """DataProvider test double: serves fixed daily closes, records each request."""
 
     def __init__(self) -> None:
@@ -215,7 +215,7 @@ def test_run_cost_comparison_fetches_once_and_runs_each_model() -> None:
     assert runs[1].snapshots[-1].equity < runs[0].snapshots[-1].equity
 
 
-class _RandomWalkProvider:
+class _RandomWalkProvider(WithoutEvents):
     """DataProvider test double: a seeded random walk per instrument, records requests."""
 
     def __init__(self) -> None:
