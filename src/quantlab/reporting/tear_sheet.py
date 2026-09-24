@@ -18,6 +18,7 @@ from pydantic import BaseModel, model_validator
 from quantlab.backtest.run import BacktestRun
 from quantlab.reporting.cost_comparison import RunMetrics
 from quantlab.reporting.metrics import drawdown_series
+from quantlab.reporting.multiple_testing import MultipleTesting
 from quantlab.research.hypothesis import concluded_status
 from quantlab.risk.conditional import RegimeMetrics
 from quantlab.risk.regime import VOLATILITY_REGIMES
@@ -68,6 +69,7 @@ class TearSheet(BaseModel):
     holdout: HoldoutRecord | None
     generated_at: datetime
     contrast: Contrast | None = None
+    multiple_testing: MultipleTesting | None = None
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:
@@ -365,6 +367,35 @@ def _permutation(result: ValidationResult) -> str:
     return header + body + warning
 
 
+def _multiple_testing(result: MultipleTesting | None, cost_model_name: str) -> str:
+    if result is None:
+        return ""
+    trials = ", ".join(f"<code>{_e(trial)}</code>" for trial in result.trials)
+    days = f"{result.n_returns:,}".replace(",", _THIN_SPACE)
+    rows = [
+        ["Sharpe od pierwszej pozycji", _ratio(result.sharpe_annualized)],
+        ["PSR: P(prawdziwy Sharpe > 0)", _ratio(result.psr)],
+        [
+            f"Próg: oczekiwany najlepszy Sharpe {len(result.trials)} prób bez przewagi",
+            _ratio(result.threshold_annualized),
+        ],
+        ["DSR: P(prawdziwy Sharpe > próg)", _ratio(result.dsr)],
+    ]
+    return (
+        '<h3 id="multiple-testing">Wielokrotne testowanie</h3>'
+        f"<p>Próby na tym uniwersum i okresie treningowym: "
+        f"<strong>{len(result.trials)}</strong> ({trials}) — każda hipoteza, której "
+        "definicja została kiedykolwiek zacommitowana.</p>"
+        f"{_table(['Miara', 'Wartość'], rows)}"
+        f'<p class="muted">Dzienne zwroty netto (<code>{_e(cost_model_name)}</code>) od '
+        f"pierwszej pozycji, {days} dni; Sharpe w skali roku. PSR uwzględnia "
+        "długość historii, skośność i kurtozę; DSR to PSR względem progu, który osiągnąłby "
+        "najlepszy z tylu przebiegów bez żadnej przewagi (DSR ≥ 0.95 odpowiada istotności 5% "
+        "po korekcie). Opisowe: nie jest częścią żadnej reguły zaliczenia ani werdyktu "
+        "hipotezy.</p>"
+    )
+
+
 def _contrast(contrast: Contrast | None, cost_model_name: str) -> str:
     if contrast is None:
         return ""
@@ -428,6 +459,7 @@ def _training_section(sheet: TearSheet) -> str:
         f"{_walk_forward(sheet.walk_forward)}"
         '<h3 id="permutation">Test permutacyjny</h3>'
         f"{_permutation(sheet.permutation)}"
+        f"{_multiple_testing(sheet.multiple_testing, run.cost_model_name)}"
         f"{_contrast(sheet.contrast, run.cost_model_name)}"
         "</section>"
     )

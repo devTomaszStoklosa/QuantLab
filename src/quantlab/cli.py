@@ -39,9 +39,11 @@ from quantlab.reporting.engine_comparison import (
     comparison_row,
     max_equity_difference,
 )
+from quantlab.reporting.multiple_testing import multiple_testing
 from quantlab.reporting.tear_sheet import Contrast, TearSheet, render_html
 from quantlab.research.definition import StudyParameters
 from quantlab.research.hypothesis import concluded_status
+from quantlab.research.trials import registered_trials, trials_on_same_data
 from quantlab.risk.conditional import regime_conditional_metrics
 from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier, label_periods
 from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
@@ -315,6 +317,10 @@ def _load_definition(hypothesis: str) -> FrozenHoldout:
         raise typer.Exit(1) from error
 
 
+def _fmt_ratio(value: float | None) -> str:
+    return "n/a" if value is None else f"{value:.2f}"
+
+
 def _current_git_sha() -> str:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
@@ -465,6 +471,27 @@ def run(
         typer.echo(f"Result: p = {detail['p_value']:.4f}, {significance}")
     if detail["low_confidence"]:
         typer.echo(f"Low confidence: only {detail['active_days']} days with a position")
+
+    deflation = multiple_testing(
+        runs[2],
+        trials_on_same_data(config.hypothesis, registered_trials(_HOLDOUT_DIR)),
+        _PERIODS_PER_YEAR,
+    )
+    typer.echo("")
+    typer.echo(
+        f"Multiple testing ({runs[2].cost_model_name}, net daily returns from the first "
+        f"position, {deflation.n_returns} days):"
+    )
+    typer.echo(
+        f"Trials on this universe and training period: {len(deflation.trials)} "
+        f"({', '.join(deflation.trials)})"
+    )
+    typer.echo(
+        f"Sharpe {_fmt_ratio(deflation.sharpe_annualized)}; PSR(0) {_fmt_ratio(deflation.psr)}; "
+        f"best of {len(deflation.trials)} no-edge trials expected at Sharpe "
+        f"{_fmt_ratio(deflation.threshold_annualized)} -> DSR {_fmt_ratio(deflation.dsr)}"
+    )
+    typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
 
     classifier = VolatilityTercileClassifier(
         vol_window=_REGIME_VOL_WINDOW_DAYS, history_days=_REGIME_HISTORY_DAYS
@@ -619,6 +646,7 @@ def run(
             permutation=permutation,
             holdout=holdout,
             contrast=contrast_result,
+            multiple_testing=deflation,
             generated_at=datetime.now(tz=UTC),
         )
         tear_sheet.parent.mkdir(parents=True, exist_ok=True)

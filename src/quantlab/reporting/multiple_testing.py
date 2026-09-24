@@ -1,0 +1,70 @@
+import math
+from itertools import pairwise
+
+from pydantic import BaseModel
+
+from quantlab.backtest.run import BacktestRun
+from quantlab.research.trials import Trial
+from quantlab.validation.sharpe_inference import (
+    deflated_sharpe_ratio,
+    expected_max_sharpe,
+    null_sharpe_variance,
+    probabilistic_sharpe_ratio,
+    sharpe_statistics,
+)
+
+
+def active_returns(run: BacktestRun) -> list[float]:
+    """Daily net returns from the first held position on, as in walk-forward and
+    regimes: a warm-up without positions would understate the variance."""
+    snapshots = run.snapshots
+    first = next((i for i in range(1, len(snapshots)) if snapshots[i].positions), None)
+    if first is None:
+        return []
+    return [
+        current.equity / previous.equity - 1.0
+        for previous, current in pairwise(snapshots[first - 1 :])
+    ]
+
+
+class MultipleTesting(BaseModel):
+    """PSR and DSR of a training run, with the trials they are deflated for (REQ-640).
+
+    Descriptive: none of it enters a pass rule or a hypothesis verdict.
+    """
+
+    trials: list[str]  # hypotheses on the same data, oldest first, the run's own included
+    n_returns: int
+    sharpe_annualized: float | None
+    psr: float | None  # probability that the true Sharpe exceeds 0
+    threshold_annualized: float | None  # expected best Sharpe of that many no-edge trials
+    dsr: float | None
+
+
+def multiple_testing(
+    run: BacktestRun, trials: list[Trial], periods_per_year: int
+) -> MultipleTesting:
+    if not trials:
+        raise ValueError("A run is always one of its own trials")
+    returns = active_returns(run)
+    statistics = sharpe_statistics(returns)
+    names = [trial.hypothesis for trial in trials]
+    if statistics is None:
+        return MultipleTesting(
+            trials=names,
+            n_returns=len(returns),
+            sharpe_annualized=None,
+            psr=None,
+            threshold_annualized=None,
+            dsr=None,
+        )
+    annualize = math.sqrt(periods_per_year)
+    threshold = expected_max_sharpe(len(trials), null_sharpe_variance(statistics.n_returns))
+    return MultipleTesting(
+        trials=names,
+        n_returns=statistics.n_returns,
+        sharpe_annualized=statistics.sharpe * annualize,
+        psr=probabilistic_sharpe_ratio(statistics),
+        threshold_annualized=threshold * annualize,
+        dsr=deflated_sharpe_ratio(statistics, len(trials)),
+    )
