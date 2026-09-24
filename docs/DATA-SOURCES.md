@@ -34,6 +34,13 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
 - Skala dla `xsmom_v1` (szacunek): trening ok. 875 tickerów członków S&P 500 z lat 2005–2019 plus SPY — ok. 1 750 zapytań, przy 90 s ok. 44 h; holdout ok. 650 tickerów — same ceny, ok. 16 h. Łącznie ok. 1 050 unikalnych tickerów, ponad limit ok. 500 unikalnych symboli miesięcznie w darmowym tierze: pobieranie rozłożone na 2–3 miesiące albo jeden miesiąc płatnego tieru.
 - Test bez sieci: odpowiedź w udokumentowanym formacie Tiingo z syntetycznymi liczbami (`tests/core/data/test_tiingo.py`) — środowisko chmurowe nie ma dostępu do API, więc to nie jest nagranie na żywo. Przy pierwszym lokalnym pobraniu warto porównać format z prawdziwą odpowiedzią (pola `date`, `open`, `high`, `low`, `close`, `volume`, `adjClose`, `divCash`, `splitFactor`; metadane `endDate`).
 
+#### Skład S&P 500 lokalnie (`core.sp500`, `quantlab build-universe`, `q5`-X7d)
+
+- Komenda czyta ostatnią rewizję strony *List of S&P 500 companies* sprzed 2026-09-24T00:00Z (API MediaWiki, bez klucza), odtwarza skład wstecz do 2000-01-01 i zapisuje `src/quantlab/config/universes/sp500.yaml` z numerem rewizji i atrybucją CC BY-SA 4.0 w nagłówku (plik jest adaptacją treści Wikipedii i dzieli jej licencję).
+- Raport budowy wymienia sprzeczności tabeli zmian; zmiany tickerów (np. `FB` → `META`) trafiają do `sp500-renames.yaml`, po czym budowę się powtarza. Ticker użyty ponownie przez inną spółkę nie jest mapowany — raport pokazuje go jako ticker z kilkoma okresami.
+- Oba pliki commitowane przed zamrożeniem `xsmom_v1` (X8): skład jest częścią pre-rejestracji.
+- `quantlab run` na uniwersum point-in-time drukuje pokrycie cenami: udział dni członkostwa z ceną i członków bez żadnej ceny w źródle (REQ-554).
+
 Przed pierwszym użyciem źródła: sprawdzić aktualne warunki na stronie dostawcy (ten dokument nie jest źródłem prawdy dla licencji — zmieniają się bez ostrzeżenia), zapisać datę weryfikacji w tej tabeli.
 
 ## Nowe źródło — checklista

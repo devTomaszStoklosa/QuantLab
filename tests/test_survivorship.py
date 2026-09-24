@@ -202,6 +202,9 @@ success_criterion: {description: test, min_sharpe: 0.0, max_p_value: 0.1}
         "Delistings in the data: 1, 1 at the definition's assumed return -30% (source gave none)"
         in result.output
     )
+    # Every member-day has a price in this synthetic source (REQ-554).
+    assert "Price coverage of the point-in-time universe: 100.0% of member-days" in result.output
+    assert "Members without any price" not in result.output
 
 
 def test_the_cash_out_is_not_a_trade_in_the_vectorized_engine() -> None:
