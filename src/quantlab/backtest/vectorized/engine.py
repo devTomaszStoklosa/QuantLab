@@ -2,21 +2,11 @@ import uuid
 from datetime import date
 from itertools import pairwise
 
-from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
+from quantlab.backtest.run import BacktestRun, PortfolioSnapshot, trading_dates
 from quantlab.backtest.sizing import equal_weight_by_sign
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.base import CostModel
 from quantlab.strategy.base import Strategy
-
-
-def _trading_dates(bars: dict[str, list[PriceBar]], start: date, end: date) -> list[date]:
-    dates = {
-        bar.ts
-        for instrument_bars in bars.values()
-        for bar in instrument_bars
-        if start <= bar.ts <= end
-    }
-    return sorted(dates)
 
 
 def _closes_by_date(instrument_bars: list[PriceBar]) -> dict[date, float]:
@@ -50,7 +40,7 @@ def run(
     previous period's price moves, not the previous targets: prices push the
     portfolio off equal weight every day, and trading it back is real trading.
     """
-    dates = _trading_dates(bars, start, end)
+    dates = trading_dates(bars, start, end)
     if not dates:
         raise ValueError(f"No price data available between {start} and {end}")
     closes = {instrument_id: _closes_by_date(instrument_bars) for instrument_id, instrument_bars in bars.items()}
