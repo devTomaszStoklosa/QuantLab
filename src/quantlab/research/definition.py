@@ -7,7 +7,7 @@ own strategy: the runner never branches on the strategy type (REQ-301).
 """
 
 from abc import ABC, abstractmethod
-from datetime import date
+from datetime import date, timedelta
 from typing import Annotated, Literal, Self
 
 import numpy as np
@@ -21,6 +21,7 @@ from quantlab.strategy.base import Strategy
 from quantlab.strategy.cointegration import engle_granger
 from quantlab.strategy.cross_sectional_momentum import CrossSectionalMomentum
 from quantlab.strategy.pairs_spread import PairsSpreadReversion
+from quantlab.strategy.selected_parameter import SelectedParameter
 from quantlab.strategy.short_term_reversal import ShortTermReversal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 
@@ -64,6 +65,16 @@ class StudyParametersBase(BaseModel, ABC):
     @abstractmethod
     def warm_up_days(self) -> int:
         """Days of history needed before a window starts for a signal on its first day."""
+
+    def fetch_start(self, start: date) -> date:
+        """The first day of data a run over a window starting on `start` needs."""
+        return start - timedelta(days=self.warm_up_days)
+
+    @property
+    def configurations(self) -> int:
+        """Parameter configurations this hypothesis tries on its data (q8, REQ-820): 1
+        for fixed parameters, the grid's size when one is chosen from a grid."""
+        return 1
 
     @abstractmethod
     def strategy_params(self) -> dict:
@@ -240,12 +251,67 @@ class CrossSectionalMomentumParameters(StudyParametersBase):
         return OnSignalChange()
 
 
+class TimeSeriesMomentumSelectedParameters(StudyParametersBase):
+    """Time-series momentum whose lookback is chosen each year on past data (q8, REQ-801).
+
+    The frozen hypothesis is the procedure, not a lookback: the grid, the
+    anchored history from `history_start` and the minimum history before a first
+    choice; each year's value is the one with the best net Sharpe under this
+    definition's cost model on the bars before that year (SelectedParameter).
+    """
+
+    strategy: Literal["time_series_momentum_selected"]
+    lookback_grid: list[int] = Field(min_length=2)
+    history_start: date
+    min_history_days: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def _grid(self) -> Self:
+        if len(set(self.lookback_grid)) != len(self.lookback_grid):
+            raise ValueError("lookback_grid must not repeat a value")
+        if self.lookback_grid != sorted(self.lookback_grid) or self.lookback_grid[0] < 1:
+            raise ValueError("lookback_grid must be ascending lookbacks of at least 1 day")
+        return self
+
+    @property
+    def warm_up_days(self) -> int:
+        return max(self.lookback_grid)
+
+    def fetch_start(self, start: date) -> date:
+        # The choices read the anchored history, and its first day needs the longest warm-up.
+        return min(start, self.history_start) - timedelta(days=self.warm_up_days)
+
+    @property
+    def configurations(self) -> int:
+        return len(self.lookback_grid)
+
+    def strategy_params(self) -> dict:
+        return {
+            "lookback_grid": self.lookback_grid,
+            "history_start": self.history_start.isoformat(),
+            "min_history_days": self.min_history_days,
+        }
+
+    def build_strategy(self) -> Strategy:
+        return SelectedParameter(
+            variants={
+                str(lookback): lambda lookback=lookback: TimeSeriesMomentum(lookback_days=lookback)
+                for lookback in self.lookback_grid
+            },
+            cost_model=self.cost_model.build(),
+            warm_up_days=self.warm_up_days,
+            history_start=self.history_start,
+            min_history_days=self.min_history_days,
+        )
+
+
 # A definition's `strategy` field picks the variant; a new strategy is a new
 # variant here, never a branch in the runner.
 StudyParameters = Annotated[
     TimeSeriesMomentumParameters
     | ShortTermReversalParameters
     | PairsSpreadParameters
-    | CrossSectionalMomentumParameters,
+    | CrossSectionalMomentumParameters
+    | TimeSeriesMomentumSelectedParameters,
     Field(discriminator="strategy"),
 ]
