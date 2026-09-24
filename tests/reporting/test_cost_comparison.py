@@ -114,3 +114,25 @@ def test_turnover_is_zero_without_trades() -> None:
     )
 
     assert run_metrics(run, periods_per_year=365).turnover == 0.0
+
+
+def test_a_run_that_never_traded_has_undefined_ratios_not_an_error() -> None:
+    flat = _traded_run([{}, {}, {}, {}, {}, {}])
+    flat = flat.model_copy(
+        update={"snapshots": [s.model_copy(update={"equity": 1.0}) for s in flat.snapshots]}
+    )
+
+    metrics = run_metrics(flat, periods_per_year=365)
+
+    assert (metrics.sharpe, metrics.sortino, metrics.calmar) == (None, None, None)
+    assert (metrics.cagr, metrics.max_drawdown, metrics.turnover) == (0.0, 0.0, 0.0)
+
+
+def test_cost_sensitivity_is_undefined_without_a_sharpe_to_compare() -> None:
+    defined = _metrics("naive", 0.05, 0.4)
+    undefined = defined.model_copy(update={"cost_model_name": "realistic", "sharpe": None})
+
+    sensitivity = cost_sensitivity(lower_cost=defined, higher_cost=undefined)
+
+    assert sensitivity.verdict == "undefined"
+    assert (sensitivity.sharpe_difference, sensitivity.cagr_sign_flip) == (None, None)
