@@ -44,7 +44,7 @@ Jako badacz chcę testować hipotezy przekrojowe na akcjach z uniwersum takim, j
 
 ## Priority
 
-Should have — ostatni nierozpoczęty epik rozszerzeń. Kod (uniwersum, corporate actions, delisting, rebalans, strategia) powstaje na danych syntetycznych; adaptery (Tiingo, skład S&P 500) na nagranych, syntetycznych odpowiedziach, bo środowisko chmurowe nie ma dostępu do tych źródeł. Zamrożenie czeka na pytania 6–7 poniżej, przebiegi na lokalny dostęp do sieci.
+Should have — ostatni nierozpoczęty epik rozszerzeń. Kod (uniwersum, corporate actions, delisting, rebalans, strategia) powstaje na danych syntetycznych; adaptery (Tiingo, skład S&P 500) na nagranych, syntetycznych odpowiedziach, bo środowisko chmurowe nie ma dostępu do tych źródeł. Zamrożenie po decyzjach 1–7 poniżej; budowa pliku uniwersum, pobranie cen i przebiegi czekają na lokalny dostęp do sieci.
 
 ## Dependencies and risks
 
@@ -63,14 +63,16 @@ Odpowiedzi na pytania 1–5, przyjęte przez Tomasza 2026-09-24 (wszystkie propo
 | 1 | Źródło danych akcji | **Tiingo** (darmowy klucz; ceny dzienne, dywidendy, splity, spółki zdjęte z obrotu). Warunki i limity do sprawdzenia na stronie dostawcy przy pierwszym lokalnym użyciu, z datą w [DATA-SOURCES](../../DATA-SOURCES.md). Alpha Vantage, Sharadar i Yahoo Finance odrzucone (limity, koszt, warunki użycia) |
 | 2 | Uniwersum i historyczny skład | **S&P 500 point-in-time** ze zmian składu w Wikipedii (CC BY-SA 4.0, z atrybucją), z jednej zapisanej rewizji strony |
 | 3 | Hipoteza i parametry | **Momentum przekrojowe 12-1** (Jegadeesh i Titman 1993): formacja 12 miesięcy z pominięciem ostatniego, rebalans miesięczny, long górny decyl i short dolny decyl, równe wagi, pomijane spółki z ceną poniżej 5 USD na koniec miesiąca formacji |
-| 4 | Zwrot z delistingu, gdy źródło go nie podaje | **−30%** (Shumway 1997) — patrz pytanie 6 |
+| 4 | Zwrot z delistingu, gdy źródło go nie podaje | −30% (Shumway 1997) — zastąpione decyzją 6 (0%, z −30% jako analizą wrażliwości) |
 | 5 | Okresy i kryterium | Trening **2005-01-01 → 2019-12-31**, holdout **2020-01-01 → 2025-12-31**; kryterium: Sharpe netto > 0 i p < 0.1, gdzie p pochodzi z **testu losowych portfeli** z tego samego przekroju (selekcja), nie z tasowania dni z `q1` (timing) |
+
+Odpowiedzi na pytania 6–7 (wynikłe z decyzji 1–2), przyjęte przez Tomasza 2026-09-24 (propozycje):
+
+| # | Question | Decision |
+|---|---|---|
+| 6 | Zwrot z delistingu przy Tiingo i S&P 500 | **0%** jako zamrożone założenie (zastępuje −30% z decyzji 4): Tiingo nie podaje zwrotu z delistingu ani przyczyny, a delisting członka S&P 500 to prawie zawsze przejęcie po cenie bliskiej ostatniemu zamknięciu; spółki upadające wypadają z indeksu przed zdjęciem z obrotu, a ich spadek jest w cenach. Każdy `run` pokazuje też wynik przy −30% (Shumway 1997), opisowo |
+| 7 | Model kosztów dla akcji | `fee_bps` **5**, `k` **0.05**, `vol_window` **21**; koszt pożyczki akcji do shortu poza modelem (ograniczenie opisane w wyniku) |
 
 ## Open questions
 
-Blokują zamrożenie (X8). Obie wynikły z decyzji 1–2 po ich przyjęciu.
-
-| # | Question | Owner | Due |
-|---|---|---|---|
-| 6 | Zwrot z delistingu przy Tiingo i S&P 500. Tiingo nie podaje ani zwrotu z delistingu, ani przyczyny, więc −30% trafiłoby w każdy delisting. Tymczasem spółka zdjęta z obrotu jako członek S&P 500 to prawie zawsze przejęcie: ostatnie zamknięcie leży tuż przy cenie transakcji, zwrot z delistingu ≈ 0. Spółki upadające wypadają z indeksu przed zdjęciem z obrotu, a ich spadek jest w cenach. −30% dopisałoby więc fikcyjną stratę (w nodze long) albo zysk (w nodze short) przy każdym przejęciu. Propozycja: **0%** jako zamrożone założenie, a −30% jako opisowa analiza wrażliwości w wyniku | Tomasz | przed X8 |
-| 7 | Model kosztów dla akcji. Propozycja: `fee_bps` **5** (prowizja i połowa spreadu dużych spółek S&P 500 z zapasem na lata 2005–2009), `k` **0.05** (jak w hipotezach krypto: poślizg względem zamknięcia w jednostkach dziennej zmienności), `vol_window` **21** (miesiąc sesji, odpowiednik 30 dni krypto). Koszt pożyczki akcji do shortu poza modelem (ograniczenie opisane w wyniku, jak w `q1`) | Tomasz | przed X8 |
+Brak — wszystkie decyzje potrzebne do zamrożenia (X8) przyjęte.

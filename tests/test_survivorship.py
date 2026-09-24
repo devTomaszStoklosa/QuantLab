@@ -164,11 +164,11 @@ def test_both_engines_realize_the_delisting_return() -> None:
     assert comparison.parity_difference < 1e-12
 
 
-def test_run_reports_the_delistings_it_met(tmp_path, monkeypatch) -> None:
+def _run_dead_v1(tmp_path, monkeypatch, missing_delisting_return: float) -> str:
     repo = tmp_path / "definitions"
     repo.mkdir()
     (repo / "dead_v1.yaml").write_text(
-        """hypothesis: dead_v1
+        f"""hypothesis: dead_v1
 training_start: 2024-01-06
 training_end: 2024-04-09
 start: 2024-06-01
@@ -177,9 +177,9 @@ parameters:
   strategy: time_series_momentum
   lookback_days: 5
   universe: pit-test
-  missing_delisting_return: -0.3
-  cost_model: {name: realistic, fee_bps: 10, k: 0.05, vol_window: 5}
-success_criterion: {description: test, min_sharpe: 0.0, max_p_value: 0.1}
+  missing_delisting_return: {missing_delisting_return}
+  cost_model: {{name: realistic, fee_bps: 10, k: 0.05, vol_window: 5}}
+success_criterion: {{description: test, min_sharpe: 0.0, max_p_value: 0.1}}
 """,
         encoding="utf-8",
     )
@@ -198,13 +198,31 @@ success_criterion: {description: test, min_sharpe: 0.0, max_p_value: 0.1}
     result = CliRunner().invoke(cli.app, ["run", "dead_v1"])
 
     assert result.exit_code == 0, result.output
+    return result.output
+
+
+def test_run_reports_the_delistings_it_met(tmp_path, monkeypatch) -> None:
+    output = _run_dead_v1(tmp_path, monkeypatch, -0.3)
+
     assert (
         "Delistings in the data: 1, 1 at the definition's assumed return -30% (source gave none)"
-        in result.output
+        in output
     )
+    # The frozen assumption is Shumway's already: nothing to compare it with.
+    assert "At an assumed delisting return of -30%" not in output
     # Every member-day has a price in this synthetic source (REQ-554).
-    assert "Price coverage of the point-in-time universe: 100.0% of member-days" in result.output
-    assert "Members without any price" not in result.output
+    assert "Price coverage of the point-in-time universe: 100.0% of member-days" in output
+    assert "Members without any price" not in output
+
+
+def test_run_shows_the_result_under_shumways_delisting_return_too(tmp_path, monkeypatch) -> None:
+    output = _run_dead_v1(tmp_path, monkeypatch, 0.0)
+
+    assert "1 at the definition's assumed return +0% (source gave none)" in output
+    line = next(l for l in output.splitlines() if l.startswith("At an assumed delisting return"))
+    assert line.startswith("At an assumed delisting return of -30% (Shumway 1997) instead")
+    shumway, frozen = line.split("Sharpe ")[1].split(",")[0].split(" vs ")
+    assert shumway != frozen  # the delisted stock is held into its delisting
 
 
 def test_the_cash_out_is_not_a_trade_in_the_vectorized_engine() -> None:

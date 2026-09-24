@@ -82,7 +82,8 @@ Strategia przekrojowa
 Pre-rejestracja i wynik
 
 - REQ-561 (AC-7): The hypothesis definition shall be committed before any run of it reads market data, with the answers to the story's open questions 1–7.
-- REQ-562 (AC-7): The research log entry shall state the status, PSR and DSR with the trial count from the registry, the cost sensitivity, and the number of delistings and of default delisting returns in the run.
+- REQ-562 (AC-7): The research log entry shall state the status, PSR and DSR with the trial count from the registry, the cost sensitivity, the number of delistings and of default delisting returns in the run, the result under a −30% delisting return, and the price coverage of the universe.
+- REQ-566 (AC-3, AC-7): When a run's data has delistings at the definition's assumed return and that assumption is not −30%, `quantlab run` shall also report the realistic-cost Sharpe and CAGR with −30% (Shumway 1997) assumed instead, as a descriptive sensitivity.
 
 Test istotności
 
@@ -181,14 +182,14 @@ Test istotności
 |---|---|
 | AC-1 | REQ-501, REQ-502, REQ-503, REQ-504, REQ-505, REQ-506 |
 | AC-2 | REQ-510, REQ-511, REQ-512, REQ-513, REQ-514 |
-| AC-3 | REQ-520, REQ-521, REQ-522, REQ-523, REQ-524, REQ-525, REQ-526 |
+| AC-3 | REQ-520, REQ-521, REQ-522, REQ-523, REQ-524, REQ-525, REQ-526, REQ-566 |
 | AC-4 | REQ-530, REQ-531, REQ-532 |
 | AC-5 | REQ-540, REQ-541, REQ-542, REQ-543, REQ-565 |
 | AC-6 | REQ-506, REQ-550, REQ-551, REQ-552, REQ-553, REQ-554 |
-| AC-7 | REQ-561, REQ-562, REQ-563, REQ-564, REQ-565 |
+| AC-7 | REQ-561, REQ-562, REQ-563, REQ-564, REQ-565, REQ-566 |
 
 ## Open questions
 
 | # | Question | Owner |
 |---|---|---|
-| 1 | Pytania 6–7 z [01-story.md](01-story.md) (zwrot z delistingu przy Tiingo, model kosztów dla akcji); pytania 1–5 rozstrzygnięte 2026-09-24 | Tomasz |
+| — | Brak: pytania 1–7 z [01-story.md](01-story.md) rozstrzygnięte 2026-09-24 | — |
