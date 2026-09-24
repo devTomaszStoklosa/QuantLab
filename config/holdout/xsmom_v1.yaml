@@ -1,0 +1,64 @@
+# Frozen definition of the cross-sectional momentum hypothesis on US equities
+# (q5, REQ-561). Committed before any run of it reads market data: it is the
+# single source of its parameters, dates and success criterion. Do not edit:
+# a change after this commit makes it a different hypothesis.
+# frozen_at_commit is read from git (the last commit touching this file).
+#
+# Jegadeesh and Titman (1993) momentum, 12-1: in month m, rank the S&P 500
+# members on their return from the end of month m-13 to the end of m-2; hold the
+# top decile long and the bottom decile short, equal weights; stocks quoted
+# below 5 USD at the end of m-1 are left out. Signals change once a month, so
+# drift between formations is held, not traded (on_signal_change).
+#
+# Universe `sp500`: the S&P 500 point in time, rebuilt from Wikipedia's "List
+# of S&P 500 companies", last revision before 2026-09-24T00:00Z
+# (`quantlab build-universe`). Built and committed before the first run;
+# tickers are corrected only from the build report (sp500-renames.yaml),
+# before any run reads prices.
+#
+# Data: Tiingo daily prices, dividends and splits. Delistings come from Tiingo's
+# last price date, with no return given: 0% is assumed (q5 story, decision 6:
+# an S&P 500 member delisted while in the index has almost always been acquired
+# near its last close; failing companies leave the index first). Every run also
+# shows the result at -30% (Shumway 1997).
+#
+# Costs (decision 7): 5 bps fee (commission and half the spread of large US
+# stocks, with a margin for 2005-2009), k 0.05 of daily volatility for slippage
+# from the close, volatility over 21 sessions (one month). The short leg's
+# borrowing costs are not modelled: a limitation reported with the result.
+#
+# Training 2005-2019; holdout 2020-2025, data no run in this project has read.
+# Significance comes from random portfolios drawn from each decision's ranking
+# (selection), not from day shuffles (timing): q5 02-spec, business rules.
+# Trials on this universe start at 1 (q6).
+hypothesis: xsmom_v1
+
+training_start: 2005-01-01
+training_end: 2019-12-31
+start: 2020-01-01
+end: 2025-12-31
+
+parameters:
+  strategy: cross_sectional_momentum
+  formation_months: 12
+  skip_months: 1
+  quantile: 0.1
+  long_short: true
+  min_price: 5.0
+  missing_delisting_return: 0.0
+  universe: sp500
+  cost_model:
+    name: realistic
+    fee_bps: 5
+    k: 0.05
+    vol_window: 21
+
+success_criterion:
+  description: >-
+    Holdout net Sharpe under the realistic cost model > 0 and random-portfolio
+    test p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 ->
+    inconclusive; Sharpe > 0 and p < 0.1 -> passed; no position held (Sharpe
+    undefined) -> inconclusive.
+  min_sharpe: 0.0
+  max_p_value: 0.1
+  significance_test: random_portfolio
