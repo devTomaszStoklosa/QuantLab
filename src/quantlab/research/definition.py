@@ -53,6 +53,10 @@ class StudyParametersBase(BaseModel, ABC):
     strategy: str
     universe: str
     cost_model: CostModelParameters
+    # What holders got when a company was delisted and the source does not say
+    # (q5, REQ-522): a frozen research assumption, e.g. -0.3 after Shumway (1997).
+    # None - the default - makes a run with such a delisting refuse.
+    missing_delisting_return: float | None = Field(default=None, ge=-1.0)
 
     @property
     @abstractmethod

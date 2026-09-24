@@ -1,4 +1,4 @@
-"""What happens to an instrument besides its prices: corporate actions (q5, REQ-510)."""
+"""What happens to an instrument besides its prices: corporate actions and delisting (q5)."""
 
 from datetime import date
 from typing import Annotated, Literal
@@ -42,7 +42,17 @@ class CashDividend(BaseModel):
 CorporateAction = Annotated[Split | CashDividend, Field(discriminator="kind")]
 
 
+class Delisting(BaseModel):
+    """The instrument stopped trading; holders received `delisting_return` on its last close
+    (the counterpart of CRSP's DLRET), or an unknown amount when it is None (REQ-520)."""
+
+    instrument_id: str
+    date: date
+    delisting_return: float | None = Field(ge=-1.0)
+
+
 class InstrumentEvents(BaseModel):
-    """An instrument's corporate actions over a fetched range; none for crypto."""
+    """An instrument's corporate actions and delisting over a fetched range; none for crypto."""
 
     actions: list[CorporateAction] = []
+    delisting: Delisting | None = None

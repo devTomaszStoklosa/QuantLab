@@ -47,6 +47,9 @@ class Universe(BaseModel):
     asof_date: date
     instruments: list[Instrument]
     memberships: list[Membership] = []
+    # The instrument standing for the whole market: its volatility sets the
+    # regimes and its worst day the stress scenario (q1). None: no such analysis.
+    market_proxy: str | None = None
 
     _periods: dict[str, list[Membership]] = PrivateAttr(default_factory=dict)
 
@@ -56,6 +59,8 @@ class Universe(BaseModel):
         duplicates = sorted({i for i in ids if ids.count(i) > 1})
         if duplicates:
             raise ValueError(f"Duplicate instrument id(s) in universe '{self.name}': {duplicates}")
+        if self.market_proxy is not None and self.market_proxy not in ids:
+            raise ValueError(f"Market proxy {self.market_proxy} is not in universe '{self.name}'")
         if not self.memberships:
             return self
         periods: dict[str, list[Membership]] = defaultdict(list)

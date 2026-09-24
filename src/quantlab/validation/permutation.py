@@ -34,6 +34,11 @@ class PermutationTestValidator:
 
     Statistic: annualized Sharpe of gross daily returns (costs are covered by
     the cost comparison and by the net-Sharpe half of the holdout criterion).
+
+    In a point-in-time universe (q5) instruments start and stop trading, so a
+    shuffle can pair a position with a day its instrument did not trade; that
+    pairing earns nothing. A held position always has its return - the engines
+    hold only what trades at both ends of a period.
     p = (1 + #{shuffled >= actual}) / (1 + N), which is never zero.
     """
 
@@ -59,15 +64,24 @@ class PermutationTestValidator:
             for instrument_id in instruments:
                 instrument_closes = closes[instrument_id]
                 if previous.ts not in instrument_closes or current.ts not in instrument_closes:
-                    raise ValueError(
-                        f"Permutation test needs aligned price history: {instrument_id} has no "
-                        f"bar on {previous.ts if previous.ts not in instrument_closes else current.ts}"
+                    row.append(np.nan)
+                else:
+                    row.append(
+                        instrument_closes[current.ts] / instrument_closes[previous.ts] - 1.0
                     )
-                row.append(instrument_closes[current.ts] / instrument_closes[previous.ts] - 1.0)
             returns.append(row)
             weights.append([current.positions.get(i, 0.0) for i in instruments])
         returns_matrix = np.array(returns, dtype=np.float64)
         weights_matrix = np.array(weights, dtype=np.float64)
+        missing = np.isnan(returns_matrix)
+        held_without_return = missing & (weights_matrix != 0.0)
+        if held_without_return.any():
+            period, column = np.argwhere(held_without_return)[0]
+            raise ValueError(
+                f"{instruments[column]} is held on {run.snapshots[period + 1].ts} "
+                "without a price on both ends of the period"
+            )
+        returns_matrix = np.where(missing, 0.0, returns_matrix)
 
         active_days = int((np.abs(weights_matrix).sum(axis=1) > 0).sum())
         detail = {
@@ -78,6 +92,8 @@ class PermutationTestValidator:
             "active_days": active_days,
             "low_confidence": active_days < MIN_ACTIVE_DAYS,
         }
+        if missing.any():
+            detail["missing_returns"] = int(missing.sum())
 
         actual = _defined_sharpe((weights_matrix * returns_matrix).sum(axis=1), self.periods_per_year)
         if np.isnan(actual):

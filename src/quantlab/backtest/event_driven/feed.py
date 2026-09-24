@@ -52,6 +52,12 @@ class BarFeed:
             return self._bars[instrument_id][revealed - 1]
         return None
 
+    def trading_bar(self, instrument_id: str) -> PriceBar | None:
+        """The current bar if the instrument trades on it: a delisting bar is the value
+        holders received, not a market to trade in (q5, REQ-523)."""
+        bar = self.bar(instrument_id)
+        return None if bar is None or bar.delisting else bar
+
     def last_close(self, instrument_id: str) -> float | None:
         revealed = self._revealed[instrument_id]
         return self._bars[instrument_id][revealed - 1].close if revealed else None

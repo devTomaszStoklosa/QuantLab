@@ -20,6 +20,9 @@ class PriceBar(BaseModel):
     # The raw close of a bar adjusted for corporate actions (q5, REQ-511); None
     # when the bar was never adjusted, so its close is already raw.
     unadjusted_close: float | None = None
+    # The value holders received when the instrument was delisted, not a day of
+    # trading (q5, REQ-521): no order fills against it and no position opens on it.
+    delisting: bool = False
 
     @property
     def raw_close(self) -> float:

@@ -26,7 +26,7 @@ from quantlab.backtest.event_driven.fills import FillPolicy, FullFill, VolumePar
 from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core.data.binance import BinanceProvider
-from quantlab.core.data.corporate_actions import with_events
+from quantlab.core.data.corporate_actions import MarketData, with_events
 from quantlab.core.data.provider import DataProvider, PriceBar
 from quantlab.core.universe import Universe
 from quantlab.costs.base import CostModel
@@ -90,9 +90,8 @@ _SEED = 0  # seeds the permutation test's shuffles, so reruns reproduce its p-va
 _PERMUTATIONS = 10_000
 _PERMUTATION_ALPHA = 0.1
 _PERIODS_PER_YEAR = 365  # crypto trades every calendar day
-# Market regime for the whole portfolio: BTC as the usual crypto market proxy,
-# 30-day volatility ranked against its own last 365 days.
-_REGIME_INSTRUMENT = "btc-usdt"
+# Market regime for the whole portfolio: the universe's market proxy (BTC for
+# crypto), 30-day volatility ranked against its own last 365 days.
 _REGIME_VOL_WINDOW_DAYS = 30
 _REGIME_HISTORY_DAYS = 365
 _STRESS_SHOCK = 0.20  # the AC-10 example size, applied down and up
@@ -134,13 +133,19 @@ def main(
     pass
 
 
-def _fetch_bars(
-    provider: DataProvider, universe: Universe, warm_up_days: int, start: date, end: date
-) -> dict[str, list[PriceBar]]:
-    """History from `warm_up_days` before `start`, so a signal can exist from
-    the window's first day where data allows. Nothing after `end` is requested.
+def _fetch_market_data(
+    provider: DataProvider,
+    universe: Universe,
+    parameters: StudyParameters,
+    start: date,
+    end: date,
+) -> MarketData:
+    """History from the hypothesis's warm-up before `start`, so a signal can exist
+    from the window's first day where data allows; nothing after `end` is
+    requested. Bars come adjusted for corporate actions and ended by delistings,
+    unknown delisting returns taking the definition's assumption (q5).
     """
-    fetch_start = start - timedelta(days=warm_up_days)
+    fetch_start = start - timedelta(days=parameters.warm_up_days)
     bars = {
         instrument.id: provider.fetch(instrument, fetch_start, end)
         for instrument in universe.instruments
@@ -149,7 +154,17 @@ def _fetch_bars(
         instrument.id: provider.events(instrument, fetch_start, end)
         for instrument in universe.instruments
     }
-    return with_events(bars, events)
+    return with_events(bars, events, parameters.missing_delisting_return)
+
+
+def _fetch_bars(
+    provider: DataProvider,
+    universe: Universe,
+    parameters: StudyParameters,
+    start: date,
+    end: date,
+) -> dict[str, list[PriceBar]]:
+    return _fetch_market_data(provider, universe, parameters, start, end).bars
 
 
 def _strategy(parameters: StudyParameters, universe: Universe) -> Strategy:
@@ -193,7 +208,7 @@ def run_study(
     git_sha: str,
 ) -> BacktestRun:
     """Fetch data, run the hypothesis's strategy through the vectorized engine."""
-    bars = _fetch_bars(provider, universe, parameters.warm_up_days, start, end)
+    bars = _fetch_bars(provider, universe, parameters, start, end)
     return _run_study(bars, parameters, cost_model, universe, start, end, seed, git_sha)
 
 
@@ -208,7 +223,7 @@ def run_cost_comparison(
     git_sha: str,
 ) -> list[BacktestRun]:
     """Same inputs under each cost model; data is fetched once and shared (REQ-031)."""
-    bars = _fetch_bars(provider, universe, parameters.warm_up_days, start, end)
+    bars = _fetch_bars(provider, universe, parameters, start, end)
     return [
         _run_study(bars, parameters, cost_model, universe, start, end, seed, git_sha)
         for cost_model in cost_models
@@ -237,7 +252,7 @@ def run_engine_comparison(
     Data is fetched once, with the same warm-up and end as a training run, and
     every run uses the hypothesis's own cost model.
     """
-    bars = _fetch_bars(provider, universe, parameters.warm_up_days, start, end)
+    bars = _fetch_bars(provider, universe, parameters, start, end)
     cost_model = parameters.cost_model.build()
     vectorized = _run_study(bars, parameters, cost_model, universe, start, end, seed, git_sha)
 
@@ -355,7 +370,7 @@ def open_frozen_holdout(
     config = frozen.config
     parameters = config.parameters
     universe = Universe.load(parameters.universe)
-    bars = _fetch_bars(provider, universe, parameters.warm_up_days, config.start, config.end)
+    bars = _fetch_bars(provider, universe, parameters, config.start, config.end)
     run = _run_study(
         bars,
         parameters,
@@ -457,6 +472,13 @@ def run(
     parameters = config.parameters
     provider = BinanceProvider()
     universe = Universe.load(parameters.universe)
+    market_proxy = universe.market_proxy
+    if market_proxy is None:
+        typer.echo(
+            f"Error: universe {universe.name} names no market_proxy for regimes and stress",
+            err=True,
+        )
+        raise typer.Exit(1)
     runs = run_cost_comparison(
         provider=provider,
         parameters=parameters,
@@ -538,9 +560,22 @@ def run(
     )
 
     # Same bars the runs used; a cache hit, not a second download.
-    bars = _fetch_bars(
-        provider, universe, parameters.warm_up_days, config.training_start, config.training_end
+    market = _fetch_market_data(
+        provider, universe, parameters, config.training_start, config.training_end
     )
+    bars = market.bars
+    if market.delistings:
+        assumed = market.assumed_delistings
+        typer.echo("")
+        typer.echo(
+            f"Delistings in the data: {len(market.delistings)}"
+            + (
+                f", {assumed} at the definition's assumed return "
+                f"{parameters.missing_delisting_return:+.0%} (source gave none)"
+                if assumed
+                else ", all with the source's delisting return"
+            )
+        )
     permutation = PermutationTestValidator(
         bars=bars,
         n_permutations=_PERMUTATIONS,
@@ -608,13 +643,13 @@ def run(
         vol_window=_REGIME_VOL_WINDOW_DAYS, history_days=_REGIME_HISTORY_DAYS
     )
     labels = label_periods(
-        classifier, bars[_REGIME_INSTRUMENT], [snapshot.ts for snapshot in runs[2].snapshots]
+        classifier, bars[market_proxy], [snapshot.ts for snapshot in runs[2].snapshots]
     )
     by_regime = regime_conditional_metrics(runs[2], labels, _PERIODS_PER_YEAR)
     total_days = sum(regime.days for regime in by_regime.values())
     typer.echo("")
     typer.echo(
-        f"Regimes ({runs[2].cost_model_name}): {_REGIME_INSTRUMENT} {_REGIME_VOL_WINDOW_DAYS}-day "
+        f"Regimes ({runs[2].cost_model_name}): {market_proxy} {_REGIME_VOL_WINDOW_DAYS}-day "
         f"volatility tercile vs its last {_REGIME_HISTORY_DAYS} days, "
         "as of the day before each return"
     )
@@ -644,7 +679,9 @@ def run(
             description=f"every instrument +{_STRESS_SHOCK:.0%} at once; hurts short positions",
             shocks={instrument_id: _STRESS_SHOCK for instrument_id in instrument_ids},
         ),
-        worst_day_scenario("worst-btc-day", bars, _REGIME_INSTRUMENT, runs[2].start, runs[2].end),
+        worst_day_scenario(
+            f"worst-{market_proxy.split('-')[0]}-day", bars, market_proxy, runs[2].start, runs[2].end
+        ),
     ]
     typer.echo("")
     typer.echo(
@@ -757,7 +794,7 @@ def run(
         regimes=by_regime,
         regime_method=(
             f"Reżim rynku: tercyl {_REGIME_VOL_WINDOW_DAYS}-dniowej zmienności "
-            f"{_REGIME_INSTRUMENT} względem jej ostatnich {_REGIME_HISTORY_DAYS} dni, "
+            f"{market_proxy} względem jej ostatnich {_REGIME_HISTORY_DAYS} dni, "
             "na dzień przed każdym zwrotem."
         ),
         walk_forward=walk_forward,
