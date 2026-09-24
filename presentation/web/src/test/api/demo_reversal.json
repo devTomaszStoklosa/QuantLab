@@ -23,7 +23,7 @@
     "minSharpe": 0,
     "maxPValue": 0.1,
     "significanceTest": "day_shuffle",
-    "frozenAtCommit": "a9463b4e258a5b058f06a421273d7ae405b50cf2",
+    "frozenAtCommit": "324957ab0b4653e3550722fe836680404b9368f7",
     "registeredAt": "2026-09-02T09:00:00\u002B00:00",
     "trialsOnSameData": 3,
     "status": "proposed",
