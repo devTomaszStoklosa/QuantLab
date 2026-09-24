@@ -2,6 +2,7 @@ import importlib.metadata
 import subprocess
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -23,6 +24,7 @@ from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.costs.zero import ZeroCostModel
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
+from quantlab.reporting.tear_sheet import TearSheet, render_html
 from quantlab.risk.conditional import regime_conditional_metrics
 from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier, label_periods
 from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
@@ -62,8 +64,9 @@ _REGIME_INSTRUMENT = "btc-usdt"
 _REGIME_VOL_WINDOW_DAYS = 30
 _REGIME_HISTORY_DAYS = 365
 _STRESS_SHOCK = 0.20  # the AC-10 example size, applied down and up
-_HOLDOUT_CONFIG = Path("config/holdout/momentum_v1.yaml")
-_HOLDOUT_RECORD = Path("config/holdout/momentum_v1.opened.json")
+_HYPOTHESIS = "momentum_v1"
+_HOLDOUT_CONFIG = Path(f"config/holdout/{_HYPOTHESIS}.yaml")
+_HOLDOUT_RECORD = Path(f"config/holdout/{_HYPOTHESIS}.opened.json")
 
 
 def _version_callback(show_version: bool) -> None:
@@ -220,7 +223,12 @@ def _current_git_sha() -> str:
 
 
 @app.command()
-def run() -> None:
+def run(
+    tear_sheet: Annotated[
+        Path | None,
+        typer.Option(help="Also write an HTML tear-sheet of the realistic-cost run to this file."),
+    ] = None,
+) -> None:
     """Run the momentum study on the MVP basket under each cost model, training period only."""
     naive = NaiveCostModel(bps=_COST_BPS)
     realistic = RealisticCostModel(fee_bps=_COST_BPS, k=_SLIPPAGE_K, vol_window=_VOL_WINDOW_DAYS)
@@ -425,6 +433,29 @@ def run() -> None:
     _print_groups("Regime", group_pnl(trades, by_regime_at_entry), VOLATILITY_REGIMES)
     _print_groups("Holding", group_pnl(trades, by_holding_period), HOLDING_PERIOD_BUCKETS)
     typer.echo("Regime = market regime as of the entry close. Descriptive only.")
+
+    if tear_sheet is not None:
+        # The holdout's numbers come only from the record of its one-time opening.
+        holdout = read_holdout_record(_HOLDOUT_RECORD) if _HOLDOUT_RECORD.exists() else None
+        sheet = TearSheet(
+            hypothesis=_HYPOTHESIS,
+            run=runs[2],
+            cost_comparison=metrics,
+            regimes=by_regime,
+            regime_method=(
+                f"Reżim rynku: tercyl {_REGIME_VOL_WINDOW_DAYS}-dniowej zmienności "
+                f"{_REGIME_INSTRUMENT} względem jej ostatnich {_REGIME_HISTORY_DAYS} dni, "
+                "na dzień przed każdym zwrotem."
+            ),
+            walk_forward=walk_forward,
+            permutation=permutation,
+            holdout=holdout,
+            generated_at=datetime.now(tz=UTC),
+        )
+        tear_sheet.parent.mkdir(parents=True, exist_ok=True)
+        tear_sheet.write_text(render_html(sheet), encoding="utf-8")
+        typer.echo("")
+        typer.echo(f"Tear-sheet written to {tear_sheet}")
 
 
 def _print_holdout(record: HoldoutRecord) -> None:

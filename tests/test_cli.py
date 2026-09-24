@@ -1,8 +1,10 @@
 import importlib.metadata
 from datetime import date, timedelta
 
+import numpy as np
 from typer.testing import CliRunner
 
+from quantlab import cli
 from quantlab.cli import app, run_cost_comparison, run_momentum_study
 from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument, Universe
@@ -138,3 +140,45 @@ def test_run_cost_comparison_fetches_once_and_runs_each_model() -> None:
     assert [run.cost_model_name for run in runs] == ["zero-cost", "naive-100bps"]
     # Same signals and prices; only costs differ, so the costlier run ends lower.
     assert runs[1].snapshots[-1].equity < runs[0].snapshots[-1].equity
+
+
+class _RandomWalkProvider:
+    """DataProvider test double: a seeded random walk per instrument, any date range."""
+
+    def fetch(self, instrument: Instrument, start: date, end: date) -> list[PriceBar]:
+        rng = np.random.default_rng(len(instrument.id) + ord(instrument.id[0]))
+        returns = rng.normal(0.0005, 0.03, (end - start).days + 1)
+        closes = 100.0 * np.cumprod(1.0 + returns)
+        return [
+            PriceBar(
+                instrument_id=instrument.id,
+                ts=start + timedelta(days=i),
+                open=close,
+                high=close,
+                low=close,
+                close=close,
+                volume=1.0,
+                adj_close=None,
+                source="test",
+            )
+            for i, close in enumerate(closes)
+        ]
+
+
+def test_run_writes_tear_sheet_of_the_realistic_cost_run(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(cli, "BinanceProvider", _RandomWalkProvider)
+    monkeypatch.setattr(cli, "_TRAINING_START", date(2022, 1, 1))
+    monkeypatch.setattr(cli, "_TRAINING_END", date(2023, 12, 31))
+    monkeypatch.setattr(cli, "_PERMUTATIONS", 20)
+    monkeypatch.setattr(cli, "_HOLDOUT_RECORD", tmp_path / "not-opened.json")
+    output = tmp_path / "reports" / "tear-sheet.html"
+
+    result = runner.invoke(app, ["run", "--tear-sheet", str(output)])
+
+    assert result.exit_code == 0, result.output
+    assert f"Tear-sheet written to {output}" in result.output
+    page = output.read_text(encoding="utf-8")
+    assert "<h1>momentum_v1</h1>" in page
+    assert "Okres treningowy 2022-01-01 \u2192 2023-12-31" in page
+    assert "realistic-10bps-k0.05-vol30d</code> *" in page
+    assert "nie został jeszcze otwarty" in page

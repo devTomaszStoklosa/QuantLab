@@ -3,7 +3,14 @@ import statistics
 
 import pytest
 
-from quantlab.reporting.metrics import cagr, calmar, max_drawdown, sharpe, sortino
+from quantlab.reporting.metrics import (
+    cagr,
+    calmar,
+    drawdown_series,
+    max_drawdown,
+    sharpe,
+    sortino,
+)
 
 
 def test_cagr_over_two_years() -> None:
@@ -66,6 +73,17 @@ def test_max_drawdown_finds_largest_peak_to_trough_decline() -> None:
 
 def test_max_drawdown_is_zero_for_monotonically_increasing_curve() -> None:
     assert max_drawdown([1.0, 1.1, 1.2]) == 0.0
+
+
+def test_drawdown_series_measures_each_point_against_its_running_peak() -> None:
+    equity_curve = [1.0, 1.2, 0.9, 1.1, 1.3]
+
+    assert drawdown_series(equity_curve) == pytest.approx([0.0, 0.0, -0.25, -1 / 12, 0.0])
+
+
+def test_drawdown_series_raises_on_empty_curve() -> None:
+    with pytest.raises(ValueError):
+        drawdown_series([])
 
 
 def test_calmar_composes_cagr_and_max_drawdown() -> None:
