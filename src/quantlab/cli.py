@@ -21,18 +21,18 @@ from quantlab.core.data.provider import DataProvider, PriceBar
 from quantlab.core.universe import Universe
 from quantlab.costs.base import CostModel
 from quantlab.costs.naive import NaiveCostModel
-from quantlab.costs.realistic import RealisticCostModel
 from quantlab.costs.zero import ZeroCostModel
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
 from quantlab.reporting.tear_sheet import TearSheet, render_html
+from quantlab.research.definition import StudyParameters
 from quantlab.research.hypothesis import concluded_status
 from quantlab.risk.conditional import regime_conditional_metrics
 from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier, label_periods
 from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
-from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 from quantlab.validation.holdout import (
     FrozenHoldout,
     HoldoutAlreadyOpenedError,
+    HoldoutNotFrozenError,
     HoldoutRecord,
     holdout_passed,
     holdout_verdict,
@@ -45,17 +45,9 @@ from quantlab.validation.walk_forward import WalkForwardValidator
 
 app = typer.Typer()
 
-_UNIVERSE_NAME = "mvp-crypto"
-# Training period only. The 2024-01-01..2025-12-31 holdout is deliberately never
-# fetched or evaluated here - it gets frozen (S10) before anything looks at it.
-_TRAINING_START = date(2018, 1, 1)
-_TRAINING_END = date(2023, 12, 31)
-_LOOKBACK_DAYS = 365  # ~12-month formation period, Moskowitz/Ooi/Pedersen (2012)
-_COST_BPS = 10  # Binance spot default maker/taker fee for regular users: 0.1%
-# Trading a few minutes after the close moves price by ~sigma_daily * sqrt(min/1440),
-# about 0.05-0.06 sigma for ~5 minutes. Conservative: zero-mean drift charged as cost.
-_SLIPPAGE_K = 0.05
-_VOL_WINDOW_DAYS = 30
+# Lab-wide methodology, the same for every hypothesis. What a hypothesis itself
+# defines - strategy, parameters, universe, cost model, training and holdout
+# dates - comes only from its committed file in _HOLDOUT_DIR (REQ-301).
 _SEED = 0  # seeds the permutation test's shuffles, so reruns reproduce its p-value
 _PERMUTATIONS = 10_000
 _PERMUTATION_ALPHA = 0.1
@@ -66,9 +58,16 @@ _REGIME_INSTRUMENT = "btc-usdt"
 _REGIME_VOL_WINDOW_DAYS = 30
 _REGIME_HISTORY_DAYS = 365
 _STRESS_SHOCK = 0.20  # the AC-10 example size, applied down and up
-_HYPOTHESIS = "momentum_v1"
-_HOLDOUT_CONFIG = Path(f"config/holdout/{_HYPOTHESIS}.yaml")
-_HOLDOUT_RECORD = Path(f"config/holdout/{_HYPOTHESIS}.opened.json")
+_DEFAULT_HYPOTHESIS = "momentum_v1"
+_HOLDOUT_DIR = Path("config/holdout")
+
+
+def _definition_path(hypothesis: str) -> Path:
+    return _HOLDOUT_DIR / f"{hypothesis}.yaml"
+
+
+def _record_path(hypothesis: str) -> Path:
+    return _HOLDOUT_DIR / f"{hypothesis}.opened.json"
 
 
 def _version_callback(show_version: bool) -> None:
@@ -87,30 +86,30 @@ def main(
 
 
 def _fetch_bars(
-    provider: DataProvider, universe: Universe, lookback_days: int, start: date, end: date
+    provider: DataProvider, universe: Universe, warm_up_days: int, start: date, end: date
 ) -> dict[str, list[PriceBar]]:
-    """History from `lookback_days` before `start`, so a signal can exist from
+    """History from `warm_up_days` before `start`, so a signal can exist from
     the window's first day where data allows. Nothing after `end` is requested.
     """
-    fetch_start = start - timedelta(days=lookback_days)
+    fetch_start = start - timedelta(days=warm_up_days)
     return {
         instrument.id: provider.fetch(instrument, fetch_start, end)
         for instrument in universe.instruments
     }
 
 
-def _run_momentum(
+def _run_study(
     bars: dict[str, list[PriceBar]],
+    parameters: StudyParameters,
     cost_model: CostModel,
     universe: Universe,
-    lookback_days: int,
     start: date,
     end: date,
     seed: int,
     git_sha: str,
 ) -> BacktestRun:
     return run_backtest(
-        strategy=TimeSeriesMomentum(lookback_days=lookback_days),
+        strategy=parameters.build_strategy(),
         cost_model=cost_model,
         bars=bars,
         universe_name=universe.name,
@@ -118,40 +117,40 @@ def _run_momentum(
         end=end,
         seed=seed,
         git_sha=git_sha,
-        strategy_name="time_series_momentum",
-        strategy_params={"lookback_days": lookback_days},
+        strategy_name=parameters.strategy,
+        strategy_params=parameters.strategy_params(),
     )
 
 
-def run_momentum_study(
+def run_study(
     provider: DataProvider,
+    parameters: StudyParameters,
     cost_model: CostModel,
     universe: Universe,
-    lookback_days: int,
     start: date,
     end: date,
     seed: int,
     git_sha: str,
 ) -> BacktestRun:
-    """Fetch data, run time-series momentum through the vectorized engine."""
-    bars = _fetch_bars(provider, universe, lookback_days, start, end)
-    return _run_momentum(bars, cost_model, universe, lookback_days, start, end, seed, git_sha)
+    """Fetch data, run the hypothesis's strategy through the vectorized engine."""
+    bars = _fetch_bars(provider, universe, parameters.warm_up_days, start, end)
+    return _run_study(bars, parameters, cost_model, universe, start, end, seed, git_sha)
 
 
 def run_cost_comparison(
     provider: DataProvider,
+    parameters: StudyParameters,
     cost_models: list[CostModel],
     universe: Universe,
-    lookback_days: int,
     start: date,
     end: date,
     seed: int,
     git_sha: str,
 ) -> list[BacktestRun]:
     """Same inputs under each cost model; data is fetched once and shared (REQ-031)."""
-    bars = _fetch_bars(provider, universe, lookback_days, start, end)
+    bars = _fetch_bars(provider, universe, parameters.warm_up_days, start, end)
     return [
-        _run_momentum(bars, cost_model, universe, lookback_days, start, end, seed, git_sha)
+        _run_study(bars, parameters, cost_model, universe, start, end, seed, git_sha)
         for cost_model in cost_models
     ]
 
@@ -177,14 +176,16 @@ def open_frozen_holdout(
     config = frozen.config
     parameters = config.parameters
     universe = Universe.load(parameters.universe)
-    cost_model = RealisticCostModel(
-        fee_bps=parameters.cost_model.fee_bps,
-        k=parameters.cost_model.k,
-        vol_window=parameters.cost_model.vol_window,
-    )
-    bars = _fetch_bars(provider, universe, parameters.lookback_days, config.start, config.end)
-    run = _run_momentum(
-        bars, cost_model, universe, parameters.lookback_days, config.start, config.end, seed, git_sha
+    bars = _fetch_bars(provider, universe, parameters.warm_up_days, config.start, config.end)
+    run = _run_study(
+        bars,
+        parameters,
+        parameters.cost_model.build(),
+        universe,
+        config.start,
+        config.end,
+        seed,
+        git_sha,
     )
     metrics = run_metrics(run, _PERIODS_PER_YEAR)
     permutation = PermutationTestValidator(
@@ -217,6 +218,15 @@ def open_frozen_holdout(
     return record
 
 
+def _load_definition(hypothesis: str) -> FrozenHoldout:
+    """The hypothesis's committed definition, or exit before fetching any data (REQ-303)."""
+    try:
+        return load_frozen_holdout(_definition_path(hypothesis))
+    except HoldoutNotFrozenError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
+
+
 def _current_git_sha() -> str:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
@@ -224,25 +234,39 @@ def _current_git_sha() -> str:
     return result.stdout.strip()
 
 
+_HYPOTHESIS_ARGUMENT = typer.Argument(
+    help="Hypothesis id; its committed definition is config/holdout/<id>.yaml."
+)
+
+
 @app.command()
 def run(
+    hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYPOTHESIS,
     tear_sheet: Annotated[
         Path | None,
         typer.Option(help="Also write an HTML tear-sheet of the realistic-cost run to this file."),
     ] = None,
 ) -> None:
-    """Run the momentum study on the MVP basket under each cost model, training period only."""
-    naive = NaiveCostModel(bps=_COST_BPS)
-    realistic = RealisticCostModel(fee_bps=_COST_BPS, k=_SLIPPAGE_K, vol_window=_VOL_WINDOW_DAYS)
+    """Run a hypothesis under each cost model, over its training period only.
+
+    Its holdout is never fetched here; that happens once, in open-holdout.
+    """
+    frozen = _load_definition(hypothesis)
+    config = frozen.config
+    parameters = config.parameters
     provider = BinanceProvider()
-    universe = Universe.load(_UNIVERSE_NAME)
+    universe = Universe.load(parameters.universe)
     runs = run_cost_comparison(
         provider=provider,
-        cost_models=[ZeroCostModel(), naive, realistic],
+        parameters=parameters,
+        cost_models=[
+            ZeroCostModel(),
+            NaiveCostModel(bps=parameters.cost_model.fee_bps),
+            parameters.cost_model.build(),
+        ],
         universe=universe,
-        lookback_days=_LOOKBACK_DAYS,
-        start=_TRAINING_START,
-        end=_TRAINING_END,
+        start=config.training_start,
+        end=config.training_end,
         seed=_SEED,
         git_sha=_current_git_sha(),
     )
@@ -251,6 +275,7 @@ def run(
 
     first = runs[0]
     first_position = next((snapshot.ts for snapshot in first.snapshots if snapshot.positions), None)
+    typer.echo(f"Hypothesis:     {config.hypothesis} (defined at {frozen.frozen_at_commit[:7]})")
     typer.echo(f"Universe:       {first.universe_name}")
     typer.echo(f"Strategy:       {first.strategy_name} {first.strategy_params}")
     typer.echo(f"Period:         {first.start} .. {first.end} (training only)")
@@ -311,7 +336,9 @@ def run(
     )
 
     # Same bars the runs used; a cache hit, not a second download.
-    bars = _fetch_bars(provider, universe, _LOOKBACK_DAYS, _TRAINING_START, _TRAINING_END)
+    bars = _fetch_bars(
+        provider, universe, parameters.warm_up_days, config.training_start, config.training_end
+    )
     permutation = PermutationTestValidator(
         bars=bars,
         n_permutations=_PERMUTATIONS,
@@ -437,21 +464,22 @@ def run(
     typer.echo("Regime = market regime as of the entry close. Descriptive only.")
 
     # The holdout's result comes only from the record of its one-time opening.
-    holdout = read_holdout_record(_HOLDOUT_RECORD) if _HOLDOUT_RECORD.exists() else None
+    record_path = _record_path(hypothesis)
+    holdout = read_holdout_record(record_path) if record_path.exists() else None
     typer.echo("")
     if holdout is None:
-        typer.echo(f"Hypothesis {_HYPOTHESIS}: no verdict until the frozen holdout is opened")
+        typer.echo(f"Hypothesis {hypothesis}: no verdict until the frozen holdout is opened")
     else:
         status = concluded_status(walk_forward.passed, holdout_passed(holdout.verdict))
         typer.echo(
-            f"Hypothesis {_HYPOTHESIS}: {status.upper()} "
+            f"Hypothesis {hypothesis}: {status.upper()} "
             f"(walk-forward {outcome}, holdout {holdout.verdict} "
             f"as recorded {holdout.opened_at:%Y-%m-%d})"
         )
 
     if tear_sheet is not None:
         sheet = TearSheet(
-            hypothesis=_HYPOTHESIS,
+            hypothesis=config.hypothesis,
             run=runs[2],
             cost_comparison=metrics,
             regimes=by_regime,
@@ -497,23 +525,24 @@ def _print_holdout(record: HoldoutRecord) -> None:
 
 
 @app.command("open-holdout")
-def open_holdout() -> None:
-    """Open the frozen holdout exactly once and record the result (REQ-041, REQ-042)."""
-    if _HOLDOUT_RECORD.exists():
-        record = read_holdout_record(_HOLDOUT_RECORD)
+def open_holdout(hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYPOTHESIS) -> None:
+    """Open a hypothesis's frozen holdout exactly once and record the result (REQ-041, REQ-042)."""
+    record_path = _record_path(hypothesis)
+    if record_path.exists():
+        record = read_holdout_record(record_path)
         typer.echo(
             f"Holdout already opened on {record.opened_at:%Y-%m-%d %H:%M} UTC - not re-running. "
-            f"Showing the recorded result from {_HOLDOUT_RECORD}."
+            f"Showing the recorded result from {record_path}."
         )
     else:
         record = open_frozen_holdout(
             provider=BinanceProvider(),
-            frozen=load_frozen_holdout(_HOLDOUT_CONFIG),
-            record_path=_HOLDOUT_RECORD,
+            frozen=_load_definition(hypothesis),
+            record_path=record_path,
             n_permutations=_PERMUTATIONS,
             seed=_SEED,
             git_sha=_current_git_sha(),
             opened_at=datetime.now(tz=UTC),
         )
-        typer.echo(f"Holdout opened. Result recorded in {_HOLDOUT_RECORD} - commit it.")
+        typer.echo(f"Holdout opened. Result recorded in {record_path} - commit it.")
     _print_holdout(record)

@@ -6,6 +6,8 @@ from typing import Literal, Self
 import yaml
 from pydantic import BaseModel, model_validator
 
+from quantlab.research.definition import StudyParameters
+
 
 class HoldoutNotFrozenError(Exception):
     pass
@@ -13,20 +15,6 @@ class HoldoutNotFrozenError(Exception):
 
 class HoldoutAlreadyOpenedError(Exception):
     pass
-
-
-class CostModelParameters(BaseModel):
-    name: Literal["realistic"]
-    fee_bps: float
-    k: float
-    vol_window: int
-
-
-class HoldoutParameters(BaseModel):
-    strategy: Literal["time_series_momentum"]
-    lookback_days: int
-    universe: str
-    cost_model: CostModelParameters
 
 
 class SuccessCriterion(BaseModel):
@@ -41,7 +29,7 @@ class HoldoutConfig(BaseModel):
     training_end: date
     start: date
     end: date
-    parameters: HoldoutParameters
+    parameters: StudyParameters  # the hypothesis definition, not only the holdout's
     success_criterion: SuccessCriterion
 
     @model_validator(mode="after")

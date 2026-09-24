@@ -15,7 +15,7 @@ Dokument żywy: docelowy układ repo i kontrakty modułów wspólnych. Decyzje z
 ## Warstwy i przepływ
 
 1. **Data layer** (`core.data`, `core.universe`) — pozyskanie i kanoniczny schemat OHLCV, point-in-time uniwersum.
-2. **Research layer** (`quantlab.research`, notebooki) — rejestr `Hypothesis`, eksploracja przed kodem produkcyjnym.
+2. **Research layer** (`quantlab.research`, notebooki) — rejestr `Hypothesis`, definicje hipotez (`research.definition`: strategia z parametrami, uniwersum, model kosztów; każdy wariant sam buduje swoją strategię), eksploracja przed kodem produkcyjnym.
 3. **Strategy layer** (`quantlab.strategy`) — interfejs `Strategy.generate_signals`, jedna implementacja per hipoteza.
 4. **Backtest engine** (`quantlab.backtest.vectorized`, `quantlab.backtest.event_driven`) — dwa silniki za wspólnym kontraktem `BacktestRun`.
 5. **Cost & execution model** (`quantlab.costs`) — interfejs `CostModel`, implementacje naiwna i realistyczna.
@@ -23,7 +23,7 @@ Dokument żywy: docelowy układ repo i kontrakty modułów wspólnych. Decyzje z
 7. **Risk & regime analytics** (`quantlab.risk`) — klasyfikacja reżimów, metryki warunkowe.
 8. **Trade & attribution analysis** (`quantlab.attribution`) — rejestr `Trade`, cięcia P&L.
 9. **Reporting layer** (`quantlab.reporting`) — tear-sheet z metrykami liczonymi własnym kodem.
-10. **Orchestration/CLI** (`quantlab.cli`) — uruchamianie przebiegów, wersjonowanie eksperymentów.
+10. **Orchestration/CLI** (`quantlab.cli`) — `quantlab run [HIPOTEZA]` i `quantlab open-holdout [HIPOTEZA]`. Parametry hipotezy pochodzą wyłącznie z jej zacommitowanej definicji `config/holdout/<id>.yaml` (przebieg bez commitu jest odrzucany przed pobraniem danych); stałe w CLI to tylko metodologia wspólna dla wszystkich hipotez (seed, liczba permutacji, reżimy, scenariusze stress testu).
 11. **Presentation** (poza pakietem Python, rozszerzenie `q7`) — ASP.NET Core Web API + React, czyta wyniki z DuckDB/Parquet.
 
 ## Układ repo
