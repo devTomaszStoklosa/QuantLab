@@ -1,4 +1,4 @@
-namespace QuantLab.Api.Results;
+namespace QuantLab.Api.Store;
 
 /// <summary>Where the results store written by <c>quantlab</c> lives (ADR-0008).</summary>
 public sealed class ResultsOptions

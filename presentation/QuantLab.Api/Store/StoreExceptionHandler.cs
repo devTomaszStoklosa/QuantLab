@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 
-namespace QuantLab.Api.Results;
+namespace QuantLab.Api.Store;
 
 /// <summary>An incompatible store is 503 with both versions named, not a 500 (REQ-725).</summary>
 internal sealed class StoreExceptionHandler(IProblemDetailsService problems) : IExceptionHandler

@@ -1,5 +1,5 @@
 using QuantLab.Api.Endpoints;
-using QuantLab.Api.Results;
+using QuantLab.Api.Store;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,6 +7,8 @@ builder.Services.Configure<ResultsOptions>(builder.Configuration.GetSection(Resu
 builder.Services.AddSingleton<IResultsStore, DuckDbResultsStore>();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<StoreExceptionHandler>();
+// A malformed query parameter is a 400 problem, in Development too (REQ-724).
+builder.Services.Configure<RouteHandlerOptions>(routes => routes.ThrowOnBadRequest = false);
 
 var app = builder.Build();
 

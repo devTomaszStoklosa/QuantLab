@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using QuantLab.Api.Results;
+using QuantLab.Api.Store;
 
 namespace QuantLab.Api.Tests;
 

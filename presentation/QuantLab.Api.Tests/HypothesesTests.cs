@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using DuckDB.NET.Data;
-using QuantLab.Api.Results;
+using QuantLab.Api.Store;
 
 namespace QuantLab.Api.Tests;
 
