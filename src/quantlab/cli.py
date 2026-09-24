@@ -194,6 +194,7 @@ def _run_study(
         strategy_name=parameters.strategy,
         strategy_params=parameters.strategy_params(),
         sizer=parameters.build_sizer(),
+        rebalance=parameters.build_rebalance_policy(),
     )
 
 
@@ -272,6 +273,7 @@ def run_engine_comparison(
             fill_policy=fills,
             capital=capital,
             sizer=parameters.build_sizer(),
+            rebalance=parameters.build_rebalance_policy(),
         )
 
     close = event_driven(CloseExecution(), FullFill())

@@ -13,6 +13,7 @@ from typing import Annotated, Literal, Self
 import numpy as np
 from pydantic import BaseModel, Field, model_validator
 
+from quantlab.backtest.rebalance import Daily, RebalancePolicy
 from quantlab.backtest.sizing import EqualWeightBySign, PairWeights, Sizer
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.realistic import RealisticCostModel
@@ -73,6 +74,10 @@ class StudyParametersBase(BaseModel, ABC):
     def build_sizer(self) -> Sizer:
         """How the engines weight this strategy's signals: equally by sign by default."""
         return EqualWeightBySign()
+
+    def build_rebalance_policy(self) -> RebalancePolicy:
+        """When the engines trade back to the targets: every period by default (REQ-532)."""
+        return Daily()
 
     def training_diagnostics(
         self, bars: dict[str, list[PriceBar]], start: date, end: date

@@ -2,6 +2,7 @@ import uuid
 from datetime import date
 from itertools import pairwise
 
+from quantlab.backtest.rebalance import Daily, RebalancePolicy
 from quantlab.backtest.run import BacktestRun, PortfolioSnapshot, trading_dates
 from quantlab.backtest.sizing import EqualWeightBySign, Sizer
 from quantlab.core.data.provider import PriceBar
@@ -25,6 +26,7 @@ def run(
     strategy_name: str,
     strategy_params: dict,
     sizer: Sizer | None = None,
+    rebalance: RebalancePolicy | None = None,
 ) -> BacktestRun:
     """Vectorized backtest: daily rebalancing to the sizer's weights.
 
@@ -42,11 +44,13 @@ def run(
     no trade, so no cost and no turnover (REQ-523).
 
     Rebalancing happens at the close of t and its cost is charged in the same
-    period. Turnover is measured against the weights actually held after the
+    period. `rebalance` decides whether unchanged targets are traded back to
+    (daily, the default) or the drifted positions are held without trading. Turnover is measured against the weights actually held after the
     previous period's price moves, not the previous targets: prices push the
     portfolio off equal weight every day, and trading it back is real trading.
     """
     sizer = sizer if sizer is not None else EqualWeightBySign()
+    rebalance = rebalance if rebalance is not None else Daily()
     dates = trading_dates(bars, start, end)
     if not dates:
         raise ValueError(f"No price data available between {start} and {end}")
@@ -59,6 +63,7 @@ def run(
     equity = 1.0
     snapshots = [PortfolioSnapshot(ts=dates[0], cash=equity, positions={}, equity=equity)]
     held: dict[str, float] = {}
+    previous_targets: dict[str, float] | None = None
 
     for previous_date, current_date in pairwise(dates):
         signals = strategy.generate_signals(bars, previous_date)
@@ -70,7 +75,9 @@ def run(
             and current_date in closes[signal.instrument_id]
         ]
 
-        weights = sizer.weights(active)
+        targets = sizer.weights(active)
+        weights = held if rebalance.holds(previous_targets, targets) else targets
+        previous_targets = targets
         instrument_returns = {
             instrument_id: (
                 closes[instrument_id][current_date] - closes[instrument_id][previous_date]
