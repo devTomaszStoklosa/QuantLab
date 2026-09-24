@@ -23,7 +23,7 @@ Dokument żywy: docelowy układ repo i kontrakty modułów wspólnych. Decyzje z
 7. **Risk & regime analytics** (`quantlab.risk`) — klasyfikacja reżimów, metryki warunkowe.
 8. **Trade & attribution analysis** (`quantlab.attribution`) — rejestr `Trade`, cięcia P&L.
 9. **Reporting layer** (`quantlab.reporting`) — tear-sheet z metrykami liczonymi własnym kodem.
-10. **Orchestration/CLI** (`quantlab.cli`) — `quantlab run [HIPOTEZA]` i `quantlab open-holdout [HIPOTEZA]`. Parametry hipotezy pochodzą wyłącznie z jej zacommitowanej definicji `config/holdout/<id>.yaml` (przebieg bez commitu jest odrzucany przed pobraniem danych); stałe w CLI to tylko metodologia wspólna dla wszystkich hipotez (seed, liczba permutacji, reżimy, scenariusze stress testu).
+10. **Orchestration/CLI** (`quantlab.cli`) — `quantlab run [HIPOTEZA]`, `quantlab open-holdout [HIPOTEZA]` i `quantlab compare-engines [HIPOTEZA]` (opisowe porównanie silników na okresie treningowym). Parametry hipotezy pochodzą wyłącznie z jej zacommitowanej definicji `config/holdout/<id>.yaml` (przebieg bez commitu jest odrzucany przed pobraniem danych); stałe w CLI to tylko metodologia wspólna dla wszystkich hipotez (seed, liczba permutacji, reżimy, scenariusze stress testu).
 11. **Presentation** (poza pakietem Python, rozszerzenie `q7`) — ASP.NET Core Web API + React, czyta wyniki z DuckDB/Parquet.
 
 ## Układ repo

@@ -6,7 +6,7 @@ Cel nie jest jedna działająca strategia — cel jest pokazanie procesu badawcz
 
 ## Status
 
-MVP zamknięte (`lab-foundation` + `q1-momentum-research-mvp`): pierwsza hipoteza — time-series momentum na BTC-USDT i ETH-USDT — przeszła pełny pipeline (sygnał, silnik wektorowy z testem golden-master, trzy modele kosztów, walk-forward, zamrożony holdout otwarty raz, test permutacyjny, reżimy, stress test, rejestr transakcji, tear-sheet). Wynik: `inconclusive`, opisany w [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md). Następny epik: `q3-mean-reversion-hypothesis`, patrz [docs/ROADMAP.md](docs/ROADMAP.md).
+MVP zamknięte (`lab-foundation` + `q1-momentum-research-mvp`): pierwsza hipoteza — time-series momentum na BTC-USDT i ETH-USDT — przeszła pełny pipeline (sygnał, silnik wektorowy z testem golden-master, trzy modele kosztów, walk-forward, zamrożony holdout otwarty raz, test permutacyjny, reżimy, stress test, rejestr transakcji, tear-sheet). Wynik: `inconclusive`, opisany w [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md). W toku: `q3-mean-reversion-hypothesis` (druga hipoteza, zamrożona przed pierwszym przebiegiem; czeka na przebieg treningowy) i `q2-event-driven-engine` (drugi silnik z egzekucją zleceń, do opisowego porównania założeń egzekucji), patrz [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Uruchomienie
 
@@ -15,6 +15,7 @@ uv sync
 uv run pytest -q
 uv run quantlab run --tear-sheet reports/momentum_v1.html   # okres treningowy; wymaga dostępu do api.binance.com
 uv run quantlab open-holdout                                 # holdout już otwarty: pokazuje zapisany wynik
+uv run quantlab compare-engines                              # silnik wektorowy vs event-driven, okres treningowy
 ```
 
 ## Stack

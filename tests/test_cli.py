@@ -4,11 +4,12 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import numpy as np
+import pytest
 from typer.testing import CliRunner
 
 from quantlab import cli
 from quantlab.backtest.vectorized.engine import run as run_backtest
-from quantlab.cli import app, run_cost_comparison, run_study
+from quantlab.cli import app, run_cost_comparison, run_engine_comparison, run_study
 from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument, Universe
 from quantlab.costs.naive import NaiveCostModel
@@ -360,4 +361,76 @@ def test_run_refuses_an_undefined_contrast_before_fetching(tmp_path, monkeypatch
 
     assert result.exit_code == 1
     assert "No frozen holdout file" in result.output
+    assert provider.requests == []
+
+
+def test_run_engine_comparison_runs_each_mode_on_one_fetch() -> None:
+    provider = _RandomWalkProvider()
+
+    comparison = run_engine_comparison(
+        provider=provider,
+        parameters=_PARAMETERS,
+        universe=_UNIVERSE,
+        start=date(2026, 1, 10),
+        end=date(2026, 4, 30),
+        seed=0,
+        git_sha="abc123",
+        capital=100_000.0,
+        max_participation=0.025,
+    )
+
+    assert provider.requests == [
+        ("a", date(2026, 1, 8), date(2026, 4, 30)),
+        ("b", date(2026, 1, 8), date(2026, 4, 30)),
+    ]
+    assert [row.label for row in comparison.rows] == [
+        "vectorized, close t",
+        "event-driven, close t",
+        "event-driven, open t+1",
+        "event-driven, close t+1",
+        "event-driven, open t+1, 2.5% vol",
+    ]
+    assert comparison.parity_difference < 1e-12
+    assert comparison.rows[0].limited_orders is None
+    assert comparison.rows[1].metrics.model_dump() == pytest.approx(
+        comparison.rows[0].metrics.model_dump(), rel=1e-9
+    )
+    # The test data trades 1 unit a day, so 100 000 of capital outgrows 2.5% of it at once.
+    assert comparison.rows[4].limited_orders > 0
+    assert comparison.capacity < 100_000.0
+    assert all(
+        row.metrics.cost_model_name == "realistic-10bps-k0.05-vol30d" for row in comparison.rows
+    )
+
+
+def test_compare_engines_reads_the_training_period_only(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "definitions"
+    provider = _definition_repo(repo, monkeypatch)
+
+    result = runner.invoke(app, ["compare-engines", "momentum_v1"])
+
+    assert result.exit_code == 0, result.output
+    assert set(provider.requests) == {
+        ("btc-usdt", date(2021, 1, 1), date(2023, 12, 31)),
+        ("eth-usdt", date(2021, 1, 1), date(2023, 12, 31)),
+    }
+    assert "Period:         2022-01-01 .. 2023-12-31 (training only)" in result.output
+    for label in ("vectorized, close t", "event-driven, open t+1", "event-driven, close t+1"):
+        assert label in result.output
+    assert "numerical noise only" in result.output
+    assert "Capacity (event-driven, open t+1): the 2.5% volume limit" in result.output
+    assert not (repo / "momentum_v1.opened.json").exists()
+
+
+def test_compare_engines_refuses_an_uncommitted_definition_before_fetching(
+    tmp_path, monkeypatch
+) -> None:
+    repo = tmp_path / "definitions"
+    provider = _definition_repo(repo, monkeypatch)
+    (repo / "momentum_v1.yaml").write_text("changed", encoding="utf-8")
+
+    result = runner.invoke(app, ["compare-engines", "momentum_v1"])
+
+    assert result.exit_code == 1
+    assert "uncommitted changes" in result.output
     assert provider.requests == []
