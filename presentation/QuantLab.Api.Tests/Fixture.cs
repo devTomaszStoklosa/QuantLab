@@ -11,19 +11,22 @@ namespace QuantLab.Api.Tests;
 /// </summary>
 internal static class Fixture
 {
-    public static string Store { get; } = FindStore();
+    public static string Store { get; } = Find("presentation", "fixtures", "results");
 
-    private static string FindStore()
+    /// <summary>API responses the UI tests run on (presentation/web/src/test/api).</summary>
+    public static string WebTestData { get; } = Find("presentation", "web", "src", "test", "api");
+
+    private static string Find(params string[] parts)
     {
         for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
         {
-            var candidate = Path.Combine(directory.FullName, "presentation", "fixtures", "results");
+            var candidate = Path.Combine([directory.FullName, .. parts]);
             if (Directory.Exists(candidate))
             {
                 return candidate;
             }
         }
-        throw new DirectoryNotFoundException("presentation/fixtures/results not found above the test binaries");
+        throw new DirectoryNotFoundException($"{string.Join('/', parts)} not found above the test binaries");
     }
 
     public static WebApplicationFactory<Program> Api(string store) =>

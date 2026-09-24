@@ -525,14 +525,14 @@
         h('div', { className: 'qf-side__ws' }, h('div', null, h('b', null, p.workspace || 'Crypto majors'), h('span', null, p.workspaceMeta || 'Binance daily · 7 instruments')), h(Icon, { name: 'chevron', size: 14, style: { transform: 'rotate(90deg)', color: 'var(--ink-muted)' } })),
         h('nav', { className: 'qf-nav' }, nav.map(function (n, i) {
           if (n.group) return h('div', { key: 'g' + i, className: 'qf-nav__group' }, n.group);
-          return h('a', { key: n.key, className: cx('qf-nav__item', p.active === n.key && 'is-active'), 'aria-current': p.active === n.key ? 'page' : undefined },
+          return h('a', { key: n.key, href: n.href, className: cx('qf-nav__item', p.active === n.key && 'is-active'), 'aria-current': p.active === n.key ? 'page' : undefined },
             h(Icon, { name: n.icon, size: 16 }), n.label, (p.counts && p.counts[n.key] != null) && h('span', { className: 'qf-nav__count' }, p.counts[n.key]));
         })),
         h('div', { className: 'qf-side__foot' }, p.sideFoot || 'Historical simulations. Nothing here is investment advice.')),
       h('div', { className: 'qf-main' },
         h('div', { className: 'qf-top' },
           h('div', { className: 'qf-crumbs' }, (p.crumbs || []).map(function (c, i, a) { return h(F, { key: i }, i ? h(Icon, { name: 'chevron', size: 12 }) : null, i === a.length - 1 ? h('b', null, c) : h('span', null, c)); })),
-          h('div', { className: 'qf-search' }, h(Icon, { name: 'search', size: 14 }), 'Search hypotheses, runs, commits', h('kbd', null, '/')),
+          p.search !== false && h('div', { className: 'qf-search' }, h(Icon, { name: 'search', size: 14 }), 'Search hypotheses, runs, commits', h('kbd', null, '/')),
           p.topActions),
         h('main', { className: 'qf-content' }, p.children)),
       p.overlay);

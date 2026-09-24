@@ -1,3 +1,4 @@
+using Microsoft.Extensions.FileProviders;
 using QuantLab.Api.Endpoints;
 using QuantLab.Api.Store;
 
@@ -14,6 +15,17 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+
+// The built React app (presentation/web/dist), when there is one. It routes on the URL
+// hash, so there is no fallback route that could answer an unknown /api path with HTML.
+var web = Path.GetFullPath(app.Configuration["Web:Root"] ?? "../web/dist", app.Environment.ContentRootPath);
+if (Directory.Exists(web))
+{
+    var files = new PhysicalFileProvider(web);
+    app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = files });
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = files });
+}
+
 app.MapResultsEndpoints();
 
 app.Run();

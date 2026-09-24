@@ -39,7 +39,8 @@ public sealed record HypothesisSummary(
     bool HasRun,
     HoldoutRecord? Holdout,
     double? TrainingSharpe,
-    IReadOnlyList<double> Sparkline);
+    IReadOnlyList<double> Sparkline,
+    string? DataSource);
 
 public sealed record CostSensitivity(string Verdict, double? SharpeDifference, bool? CagrSignFlip);
 

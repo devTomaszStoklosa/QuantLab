@@ -52,6 +52,7 @@ QuantLab/
 ├── presentation/                  # rozszerzenie q7 (ADR-0006, ADR-0008)
 │   ├── QuantLab.Api/               # ASP.NET Core minimal API, IResultsStore (DuckDB.NET)
 │   ├── QuantLab.Api.Tests/         # xUnit v3: kontrakt na syntetycznym magazynie, test środowiska DuckDB
+│   ├── web/                        # Vite + React 18 + TypeScript: rejestr hipotez, dowody, rejestr transakcji
 │   ├── fixtures/results/           # syntetyczny magazyn wyników (generowany przez tests/test_results_fixture.py)
 │   └── design-system/              # QuantForge: tokeny, komponenty React 18
 ├── data/

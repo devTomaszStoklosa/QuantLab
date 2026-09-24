@@ -20,6 +20,8 @@ Zgodnie z [ADR-0006](../../docs/adr/0006-dotnet-react-presentation-layer-only.md
 
 Dane na ekranach są syntetyczne (deterministyczne ziarno), nie są wynikami badań.
 
+Aplikacja `presentation/web` używa tych plików bezpośrednio: `bundle.js` i `bundle.css` importuje po ustawieniu `window.React`, a zmienne CSS tokenów generuje z `tokens.json` (to samo mapowanie co `tools/build_test.py`).
+
 ## Regeneracja i sprawdzenie
 
 ```bash

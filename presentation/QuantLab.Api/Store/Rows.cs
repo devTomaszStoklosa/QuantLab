@@ -38,7 +38,8 @@ internal static class Rows
                 Verdict: verdict)
             : null,
         TrainingSharpe: null,
-        Sparkline: []);
+        Sparkline: [],
+        DataSource: null);
 
     public static RunSummary Run(DbDataReader row) => new(
         RunId: row.Text("run_id"),

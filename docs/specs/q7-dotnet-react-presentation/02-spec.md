@@ -156,7 +156,7 @@ Parametry `GET /api/hypotheses/{id}/trades`
 
 - Performance: odpowiedź API na magazynie z kilkoma hipotezami i 10 000 transakcji < 200 ms lokalnie; zapis magazynu dodaje < 1 s do `quantlab run`.
 - Reproducibility: magazyn syntetyczny deterministyczny (stałe ziarno, stały SHA i czas generacji), więc test aktualności porównuje treść.
-- Environment: .NET 10 SDK (10.0.1xx), Node.js ≥ 22.12, `npm ci` z lockfile'em; testy .NET i UI bez sieci (poza `restore`/`npm ci`).
+- Environment: .NET 10 SDK (10.0.1xx), Node.js ≥ 22.22 (wymóg vitest 5 i jsdom 30), `npm ci` z lockfile'em; testy .NET i UI bez sieci (poza `restore`/`npm ci`).
 - Accessibility: komponenty design systemu (focus, kontrast 4.5:1, status zawsze z ikoną i słowem).
 
 ## Traceability

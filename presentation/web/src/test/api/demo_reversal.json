@@ -1,0 +1,42 @@
+{
+  "hypothesis": {
+    "hypothesis": "demo_reversal",
+    "strategy": "short_term_reversal",
+    "universe": "mvp-crypto",
+    "costModel": "realistic-10bps-k0.05-vol30d",
+    "parameters": {
+      "cost_model": {
+        "fee_bps": 10.0,
+        "k": 0.05,
+        "name": "realistic",
+        "vol_window": 30
+      },
+      "formation_days": 7,
+      "strategy": "short_term_reversal",
+      "universe": "mvp-crypto"
+    },
+    "trainingStart": "2020-01-01",
+    "trainingEnd": "2022-12-31",
+    "holdoutStart": "2023-01-01",
+    "holdoutEnd": "2023-06-30",
+    "criterion": "Synthetic demo. Holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1.",
+    "minSharpe": 0,
+    "maxPValue": 0.1,
+    "frozenAtCommit": "a9463b4e258a5b058f06a421273d7ae405b50cf2",
+    "registeredAt": "2026-09-02T09:00:00\u002B00:00",
+    "trialsOnSameData": 3,
+    "status": "proposed",
+    "hasRun": false,
+    "holdout": null,
+    "trainingSharpe": null,
+    "sparkline": [],
+    "dataSource": null
+  },
+  "run": null,
+  "metrics": [],
+  "walkForward": [],
+  "regimes": [],
+  "monthly": [],
+  "pnlGroups": [],
+  "diagnostics": []
+}

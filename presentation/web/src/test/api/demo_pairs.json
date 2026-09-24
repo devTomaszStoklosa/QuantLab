@@ -1,0 +1,578 @@
+{
+  "hypothesis": {
+    "hypothesis": "demo_pairs",
+    "strategy": "pairs_spread",
+    "universe": "mvp-crypto",
+    "costModel": "realistic-10bps-k0.05-vol30d",
+    "parameters": {
+      "cost_model": {
+        "fee_bps": 10.0,
+        "k": 0.05,
+        "name": "realistic",
+        "vol_window": 30
+      },
+      "dependent": "eth-usdt",
+      "entry_z": 2.0,
+      "exit_z": 0.0,
+      "explanatory": "btc-usdt",
+      "formation_days": 120,
+      "max_coint_p_value": 0.05,
+      "strategy": "pairs_spread",
+      "universe": "mvp-crypto"
+    },
+    "trainingStart": "2020-01-01",
+    "trainingEnd": "2022-12-31",
+    "holdoutStart": "2023-01-01",
+    "holdoutEnd": "2023-06-30",
+    "criterion": "Synthetic demo. Holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1.",
+    "minSharpe": 0,
+    "maxPValue": 0.1,
+    "frozenAtCommit": "f68fc60a28f3f0e88ff7f3754dec47b6b8408613",
+    "registeredAt": "2026-09-03T09:00:00\u002B00:00",
+    "trialsOnSameData": 3,
+    "status": "testing",
+    "hasRun": true,
+    "holdout": null,
+    "trainingSharpe": 0.9817279532547157,
+    "sparkline": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1.052936409147584,
+      1.052936409147584,
+      1.0309875017032832,
+      1.0242567084975067,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.0878080592612558,
+      1.1024322605749295,
+      1.1586102601515191,
+      1.150829991968217,
+      1.1670504787509122,
+      1.2296755326686848,
+      1.2296755326686848,
+      1.2296755326686848,
+      1.2296755326686848,
+      1.2296755326686848,
+      1.2296755326686848,
+      1.2296755326686848,
+      1.2296755326686848,
+      1.2296755326686848
+    ],
+    "dataSource": "synthetic"
+  },
+  "run": {
+    "runId": "00000000-0000-0000-0000-000000000008",
+    "strategy": "pairs_spread",
+    "strategyParams": {
+      "dependent": "eth-usdt",
+      "entry_z": 2.0,
+      "exit_z": 0.0,
+      "explanatory": "btc-usdt",
+      "formation_days": 120,
+      "max_coint_p_value": 0.05
+    },
+    "universe": "mvp-crypto",
+    "costModel": "realistic-10bps-k0.05-vol30d",
+    "start": "2020-01-01",
+    "end": "2022-12-31",
+    "firstPosition": "2021-07-16",
+    "seed": 0,
+    "gitSha": "5e7f1c0de0000000000000000000000000000000",
+    "generatedAt": "2026-09-24T12:00:00\u002B00:00",
+    "dataSource": "synthetic",
+    "costSensitivity": {
+      "verdict": "robust",
+      "sharpeDifference": 0.08783019498587674,
+      "cagrSignFlip": false
+    },
+    "walkForward": {
+      "passed": null,
+      "rule": "Sharpe \u003E 0 in at least 2/3 of windows with a defined Sharpe, and aggregate Sharpe \u003E 0; inconclusive if fewer than 3 windows have a defined Sharpe",
+      "positiveWindows": 2,
+      "windowsWithSharpe": 2
+    },
+    "permutation": {
+      "passed": true,
+      "statistic": "annualized Sharpe of gross daily returns",
+      "count": 500,
+      "seed": 0,
+      "alpha": 0.1,
+      "activeDays": 59,
+      "lowConfidence": true,
+      "actual": 1.1119515509384768,
+      "nullMean": 0.005168866496285515,
+      "nullStd": 0.5828681745274623,
+      "percentile": 0.974,
+      "pValue": 0.027944111776447105,
+      "reason": null
+    },
+    "multipleTesting": {
+      "trials": [
+        "demo_momentum",
+        "demo_reversal",
+        "demo_pairs"
+      ],
+      "returnsCount": 534,
+      "sharpeAnnualized": 1.4070927480216526,
+      "psr": 0.960903513140765,
+      "dsrThreshold": 0.7057198109149657,
+      "dsr": 0.8100047308333327
+    },
+    "contrast": null,
+    "regimeMethod": "Re\u017Cim rynku: tercyl 30-dniowej zmienno\u015Bci btc-usdt wzgl\u0119dem jej ostatnich 365 dni, na dzie\u0144 przed ka\u017Cdym zwrotem.",
+    "trades": {
+      "total": 8,
+      "openAtEnd": 0,
+      "winning": 4
+    }
+  },
+  "metrics": [
+    {
+      "costModel": "zero-cost",
+      "cagr": 0.08188761280767509,
+      "sharpe": 1.1119515509384785,
+      "sortino": 1.964034829886567,
+      "calmar": 0.9323467323995904,
+      "maxDrawdown": -0.08782957022536036,
+      "turnover": 6.66109902378079,
+      "primary": false
+    },
+    {
+      "costModel": "naive-10bps",
+      "cagr": 0.07839088282753948,
+      "sharpe": 1.0695581482405925,
+      "sortino": 1.8780051481979545,
+      "calmar": 0.8884707100570847,
+      "maxDrawdown": -0.08823125167795663,
+      "turnover": 6.659180056028259,
+      "primary": false
+    },
+    {
+      "costModel": "realistic-10bps-k0.05-vol30d",
+      "cagr": 0.07134704793925262,
+      "sharpe": 0.9817279532547157,
+      "sortino": 1.7011427681467517,
+      "calmar": 0.8003418727430723,
+      "maxDrawdown": -0.08914571431170966,
+      "turnover": 6.655396467713002,
+      "primary": true
+    }
+  ],
+  "walkForward": [
+    {
+      "start": "2021-07-16",
+      "end": "2021-12-31",
+      "partial": true,
+      "aggregate": false,
+      "cagr": 0.19934535152630506,
+      "sharpe": 1.447273555106934,
+      "maxDrawdown": -0.08914571431170966
+    },
+    {
+      "start": "2022-01-01",
+      "end": "2022-12-31",
+      "partial": false,
+      "aggregate": false,
+      "cagr": 0.13041590582052964,
+      "sharpe": 1.4204451450582396,
+      "maxDrawdown": -0.04147882407156509
+    },
+    {
+      "start": "2021-07-16",
+      "end": "2022-12-31",
+      "partial": false,
+      "aggregate": true,
+      "cagr": 0.15179099319634481,
+      "sharpe": 1.4070927480216526,
+      "maxDrawdown": -0.08914571431170966
+    }
+  ],
+  "regimes": [
+    {
+      "regime": "low",
+      "days": 215,
+      "share": 0.40262172284644193,
+      "cagr": 0.2655189350610516,
+      "sharpe": 2.113709272963269,
+      "sortino": 4.107271262050695
+    },
+    {
+      "regime": "medium",
+      "days": 175,
+      "share": 0.32771535580524347,
+      "cagr": 0.17405361710229283,
+      "sharpe": 1.5205265024223449,
+      "sortino": 2.7724459342339536
+    },
+    {
+      "regime": "high",
+      "days": 144,
+      "share": 0.2696629213483146,
+      "cagr": -0.022287674638442057,
+      "sharpe": -0.24598276540318634,
+      "sortino": -0.3111016313666853
+    }
+  ],
+  "monthly": [
+    {
+      "year": 2020,
+      "month": 1,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 2,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 3,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 4,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 5,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 6,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 7,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 8,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 9,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 10,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 11,
+      "netReturn": 0
+    },
+    {
+      "year": 2020,
+      "month": 12,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 1,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 2,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 3,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 4,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 5,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 6,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 7,
+      "netReturn": 0.05293640914758391
+    },
+    {
+      "year": 2021,
+      "month": 8,
+      "netReturn": 0.03311847687164948
+    },
+    {
+      "year": 2021,
+      "month": 9,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 10,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 11,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "month": 12,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 1,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 2,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 3,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 4,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 5,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 6,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 7,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 8,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 9,
+      "netReturn": 0.07262825505489401
+    },
+    {
+      "year": 2022,
+      "month": 10,
+      "netReturn": 0.05387481682801498
+    },
+    {
+      "year": 2022,
+      "month": 11,
+      "netReturn": 0
+    },
+    {
+      "year": 2022,
+      "month": 12,
+      "netReturn": 0
+    }
+  ],
+  "pnlGroups": [
+    {
+      "dimension": "regime",
+      "key": "low",
+      "trades": 4,
+      "winRate": 0.5,
+      "totalNetPnl": 0.08780805926125577,
+      "meanNetPnl": 0.021952014815313944,
+      "medianNetPnl": 0.021671669354057704,
+      "worstNetPnl": -0.023239098847480884,
+      "bestNetPnl": 0.06770381940062126,
+      "costs": 0.015425820098030566
+    },
+    {
+      "dimension": "regime",
+      "key": "medium",
+      "trades": 4,
+      "winRate": 0.5,
+      "totalNetPnl": 0.14186747340742967,
+      "meanNetPnl": 0.03546686835185742,
+      "medianNetPnl": 0.03553263625858316,
+      "worstNetPnl": -0.07749063021324877,
+      "bestNetPnl": 0.14829283110351213,
+      "costs": 0.017033802238462036
+    },
+    {
+      "dimension": "holding_period",
+      "key": "1-7d",
+      "trades": 2,
+      "winRate": 0.5,
+      "totalNetPnl": 0.052936409147583754,
+      "meanNetPnl": 0.026468204573791877,
+      "medianNetPnl": 0.026468204573791877,
+      "worstNetPnl": -0.014767410253037504,
+      "bestNetPnl": 0.06770381940062126,
+      "costs": 0.006430718188726281
+    },
+    {
+      "dimension": "holding_period",
+      "key": "8-30d",
+      "trades": 6,
+      "winRate": 0.5,
+      "totalNetPnl": 0.17673912352110172,
+      "meanNetPnl": 0.029456520586850287,
+      "medianNetPnl": 0.017435825056836014,
+      "worstNetPnl": -0.07749063021324877,
+      "bestNetPnl": 0.14829283110351213,
+      "costs": 0.02602890414776632
+    }
+  ],
+  "diagnostics": [
+    {
+      "title": "Cointegration of eth-usdt on btc-usdt",
+      "label": "days",
+      "value": 1096
+    },
+    {
+      "title": "Cointegration of eth-usdt on btc-usdt",
+      "label": "hedge ratio",
+      "value": 1.1066738381191477
+    },
+    {
+      "title": "Cointegration of eth-usdt on btc-usdt",
+      "label": "Engle-Granger statistic",
+      "value": -5.9290339194227375
+    },
+    {
+      "title": "Cointegration of eth-usdt on btc-usdt",
+      "label": "5% critical value",
+      "value": -3.3417156904568293
+    },
+    {
+      "title": "Cointegration of eth-usdt on btc-usdt",
+      "label": "p-value",
+      "value": 2.306063881021256E-06
+    },
+    {
+      "title": "Cointegration of eth-usdt on btc-usdt",
+      "label": "half-life (days)",
+      "value": 10.779460400427995
+    }
+  ]
+}
