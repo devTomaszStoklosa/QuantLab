@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from pydantic import BaseModel
 
 from quantlab.attribution.trade_ledger import (
     HOLDING_PERIOD_BUCKETS,
@@ -14,6 +15,14 @@ from quantlab.attribution.trade_ledger import (
     group_pnl,
 )
 from quantlab.attribution.trade_ledger import by_regime as by_regime_at_entry
+from quantlab.backtest.event_driven.engine import EventDrivenResult
+from quantlab.backtest.event_driven.engine import run as run_event_driven
+from quantlab.backtest.event_driven.execution import (
+    CloseExecution,
+    ExecutionModel,
+    NextBarExecution,
+)
+from quantlab.backtest.event_driven.fills import FillPolicy, FullFill, VolumeParticipationFill
 from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core.data.binance import BinanceProvider
@@ -24,6 +33,12 @@ from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.zero import ZeroCostModel
 from quantlab.reporting.contrast import return_correlation
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
+from quantlab.reporting.engine_comparison import (
+    EngineComparisonRow,
+    capacity,
+    comparison_row,
+    max_equity_difference,
+)
 from quantlab.reporting.tear_sheet import Contrast, TearSheet, render_html
 from quantlab.research.definition import StudyParameters
 from quantlab.research.hypothesis import concluded_status
@@ -59,6 +74,12 @@ _REGIME_INSTRUMENT = "btc-usdt"
 _REGIME_VOL_WINDOW_DAYS = 30
 _REGIME_HISTORY_DAYS = 365
 _STRESS_SHOCK = 0.20  # the AC-10 example size, applied down and up
+# Execution simulation for the engine comparison (q2): lab-wide too, and they
+# only change how orders fill in a descriptive comparison, never a verdict.
+_NOMINAL_CAPITAL = 100_000.0  # USDT, a private researcher's scale
+_MAX_PARTICIPATION = 0.025  # of the fill bar's volume; zipline's VolumeShareSlippage default
+# Parity differences above this are not floating-point noise.
+_PARITY_NOISE = 1e-9
 _DEFAULT_HYPOTHESIS = "momentum_v1"
 _HOLDOUT_DIR = Path("config/holdout")
 
@@ -154,6 +175,72 @@ def run_cost_comparison(
         _run_study(bars, parameters, cost_model, universe, start, end, seed, git_sha)
         for cost_model in cost_models
     ]
+
+
+class EngineComparison(BaseModel):
+    rows: list[EngineComparisonRow]
+    parity_difference: float  # vectorized vs event-driven close t, in normalized equity
+    capacity: float | None  # of the event-driven open t+1 run, in currency
+
+
+def run_engine_comparison(
+    provider: DataProvider,
+    parameters: StudyParameters,
+    universe: Universe,
+    start: date,
+    end: date,
+    seed: int,
+    git_sha: str,
+    capital: float,
+    max_participation: float,
+) -> EngineComparison:
+    """The hypothesis under both engines and each execution mode (REQ-250).
+
+    Data is fetched once, with the same warm-up and end as a training run, and
+    every run uses the hypothesis's own cost model.
+    """
+    bars = _fetch_bars(provider, universe, parameters.warm_up_days, start, end)
+    cost_model = parameters.cost_model.build()
+    vectorized = _run_study(bars, parameters, cost_model, universe, start, end, seed, git_sha)
+
+    def event_driven(execution: ExecutionModel, fills: FillPolicy) -> EventDrivenResult:
+        return run_event_driven(
+            strategy=parameters.build_strategy(),
+            cost_model=cost_model,
+            bars=bars,
+            universe_name=universe.name,
+            start=start,
+            end=end,
+            seed=seed,
+            git_sha=git_sha,
+            strategy_name=parameters.strategy,
+            strategy_params=parameters.strategy_params(),
+            execution=execution,
+            fill_policy=fills,
+            capital=capital,
+        )
+
+    close = event_driven(CloseExecution(), FullFill())
+    next_open = event_driven(NextBarExecution("open"), FullFill())
+    next_close = event_driven(NextBarExecution("close"), FullFill())
+    limited = event_driven(NextBarExecution("open"), VolumeParticipationFill(max_participation))
+    event_driven_rows = [
+        ("event-driven, close t", close),
+        ("event-driven, open t+1", next_open),
+        ("event-driven, close t+1", next_close),
+        (f"event-driven, open t+1, {max_participation:.1%} vol", limited),
+    ]
+    return EngineComparison(
+        rows=[
+            comparison_row("vectorized, close t", vectorized, None, _PERIODS_PER_YEAR),
+            *(
+                comparison_row(label, result.run, result.orders, _PERIODS_PER_YEAR)
+                for label, result in event_driven_rows
+            ),
+        ],
+        parity_difference=max_equity_difference(vectorized, close.run),
+        capacity=capacity(next_open.orders, bars, capital, max_participation),
+    )
 
 
 def open_frozen_holdout(
@@ -538,6 +625,83 @@ def run(
         tear_sheet.write_text(render_html(sheet), encoding="utf-8")
         typer.echo("")
         typer.echo(f"Tear-sheet written to {tear_sheet}")
+
+
+@app.command("compare-engines")
+def compare_engines(
+    hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYPOTHESIS,
+) -> None:
+    """Compare execution assumptions on a hypothesis's training period.
+
+    Descriptive only: its holdout is never fetched and no status changes;
+    validation and verdicts stay on the vectorized engine (REQ-253).
+    """
+    frozen = _load_definition(hypothesis)
+    config = frozen.config
+    parameters = config.parameters
+    git_sha = _current_git_sha()
+    comparison = run_engine_comparison(
+        provider=BinanceProvider(),
+        parameters=parameters,
+        universe=Universe.load(parameters.universe),
+        start=config.training_start,
+        end=config.training_end,
+        seed=_SEED,
+        git_sha=git_sha,
+        capital=_NOMINAL_CAPITAL,
+        max_participation=_MAX_PARTICIPATION,
+    )
+
+    typer.echo(f"Hypothesis:     {config.hypothesis} (defined at {frozen.frozen_at_commit[:7]})")
+    typer.echo(f"Universe:       {parameters.universe}")
+    typer.echo(f"Strategy:       {parameters.strategy} {parameters.strategy_params()}")
+    typer.echo(f"Period:         {config.training_start} .. {config.training_end} (training only)")
+    typer.echo(f"Cost model:     {comparison.rows[0].metrics.cost_model_name}")
+    typer.echo(
+        f"Capital:        {_NOMINAL_CAPITAL:,.0f} (nominal: sizes orders against volume; "
+        "results are normalized)"
+    )
+    typer.echo(f"Git:            {git_sha[:7]}")
+    typer.echo("")
+    typer.echo(
+        f"{'Engine, execution':<36}{'CAGR':>9}{'Sharpe':>8}{'Max DD':>9}"
+        f"{'Turnover':>12}{'Costs':>8}{'Limited':>9}"
+    )
+    for row in comparison.rows:
+        metrics = row.metrics
+        limited = "n/a" if row.limited_orders is None else str(row.limited_orders)
+        typer.echo(
+            f"{row.label:<36}{metrics.cagr:>9.2%}{metrics.sharpe:>8.2f}"
+            f"{metrics.max_drawdown:>9.2%}{f'{metrics.turnover:.1f}x/yr':>12}"
+            f"{row.total_costs:>8.2%}{limited:>9}"
+        )
+    typer.echo(
+        "Costs = all costs as a share of starting capital. "
+        "Limited = orders filled for less than ordered."
+    )
+
+    typer.echo("")
+    difference = comparison.parity_difference
+    note = (
+        "numerical noise only"
+        if difference <= _PARITY_NOISE
+        else "above numerical noise: the engines treat missing bars differently (see q2 02-spec)"
+    )
+    typer.echo(
+        f"Parity (vectorized vs event-driven, close t): max equity difference "
+        f"{difference:.1e} - {note}"
+    )
+    if comparison.capacity is None:
+        typer.echo("Capacity: n/a (no filled orders)")
+    else:
+        typer.echo(
+            f"Capacity (event-driven, open t+1): the {_MAX_PARTICIPATION:.1%} volume limit "
+            f"first binds above a capital of {comparison.capacity:,.0f}"
+        )
+    typer.echo(
+        "Descriptive only: validation and verdicts stay on the vectorized engine "
+        "and the frozen rules."
+    )
 
 
 def _print_holdout(record: HoldoutRecord) -> None:
