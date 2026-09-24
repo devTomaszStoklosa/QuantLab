@@ -291,6 +291,9 @@ def test_run_takes_the_hypothesis_from_its_committed_definition(tmp_path, monkey
     assert "realistic-10bps-k0.05-vol30d</code> *" in page
     assert "nie został jeszcze otwarty" in page
     assert "Hypothesis momentum_v1: no verdict until the frozen holdout is opened" in result.output
+    # The temporary repo holds one committed definition, so there is one trial.
+    assert "Trials on this universe and training period: 1 (momentum_v1)" in result.output
+    assert '<h3 id="multiple-testing">' in page
 
 
 def test_run_reports_the_status_from_the_recorded_holdout(tmp_path, monkeypatch) -> None:

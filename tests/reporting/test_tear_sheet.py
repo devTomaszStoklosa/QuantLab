@@ -7,6 +7,7 @@ from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.core.data.provider import PriceBar
 from quantlab.reporting.cost_comparison import RunMetrics, run_metrics
 from quantlab.reporting.metrics import drawdown_series
+from quantlab.reporting.multiple_testing import MultipleTesting
 from quantlab.reporting.tear_sheet import DISCLAIMER, Contrast, TearSheet, render_html
 from quantlab.risk.conditional import RegimeMetrics, regime_conditional_metrics
 from quantlab.validation.holdout import HoldoutRecord
@@ -356,3 +357,27 @@ def test_undefined_contrast_is_shown_as_a_dash() -> None:
     page = render_html(_sheet(contrast=contrast))
 
     assert "<strong>\u2014</strong>" in page[page.index('<h3 id="contrast">') :]
+
+
+def test_multiple_testing_is_shown_only_when_given() -> None:
+    deflation = MultipleTesting(
+        trials=["momentum_v1", "mean_reversion_v1"],
+        n_returns=1_961,
+        sharpe_annualized=0.45,
+        psr=0.84,
+        threshold_annualized=0.22,
+        dsr=0.70,
+    )
+
+    with_section = render_html(_sheet(multiple_testing=deflation))
+    without_section = render_html(_sheet())
+
+    start = with_section.index('<h3 id="multiple-testing">')
+    section = with_section[start : with_section.index("</section>", start)]
+    assert "<strong>2</strong>" in section
+    assert "<code>momentum_v1</code>, <code>mean_reversion_v1</code>" in section
+    for value in ("0.45", "0.84", "0.22", "0.70", "1\u2009961 dni"):
+        assert value in section
+    assert "nie jest częścią żadnej reguły" in section
+    assert '<h3 id="multiple-testing">' not in without_section
+    assert '<h3 id="multiple-testing">' in _section(with_section, "training")
