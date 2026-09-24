@@ -5,6 +5,14 @@ from pathlib import Path
 
 import typer
 
+from quantlab.attribution.trade_ledger import (
+    HOLDING_PERIOD_BUCKETS,
+    PnlGroup,
+    build_trade_ledger,
+    by_holding_period,
+    group_pnl,
+)
+from quantlab.attribution.trade_ledger import by_regime as by_regime_at_entry
 from quantlab.backtest.vectorized.engine import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core.data.binance import BinanceProvider
@@ -385,6 +393,38 @@ def run() -> None:
             for instrument_id, shock in result.scenario.shocks.items()
         )
         typer.echo(f"{result.scenario.name}: {result.scenario.description} ({shocks})")
+
+    trades = build_trade_ledger(runs[2], bars, labels)
+    open_at_end = sum(1 for trade in trades if trade.open_at_end)
+    winners = sum(1 for trade in trades if trade.net_pnl > 0)
+    equity_change = runs[2].snapshots[-1].equity - runs[2].snapshots[0].equity
+    typer.echo("")
+    typer.echo(
+        f"Trade ledger ({runs[2].cost_model_name}): {len(trades)} trades "
+        f"({open_at_end} open at the end), {winners / len(trades):.1%} with net P&L > 0"
+    )
+    typer.echo(
+        f"Net P&L of all trades {sum(trade.net_pnl for trade in trades):+.4f} "
+        f"= equity change {equity_change:+.4f} (P&L in equity units, portfolio started at 1.00)"
+    )
+    header = (
+        f"{'Trades':>7}{'Win rate':>10}{'Total':>10}{'Mean':>10}{'Median':>10}"
+        f"{'Worst':>10}{'Best':>10}{'Costs':>9}"
+    )
+
+    def _print_groups(title: str, groups: dict[str, PnlGroup], order: tuple[str, ...]) -> None:
+        typer.echo(f"{title:<12}{header}")
+        for key in (key for key in order if key in groups):
+            group = groups[key]
+            typer.echo(
+                f"{key:<12}{group.trades:>7}{group.win_rate:>10.1%}{group.total_net_pnl:>+10.4f}"
+                f"{group.mean_net_pnl:>+10.4f}{group.median_net_pnl:>+10.4f}"
+                f"{group.worst_net_pnl:>+10.4f}{group.best_net_pnl:>+10.4f}{group.costs:>9.4f}"
+            )
+
+    _print_groups("Regime", group_pnl(trades, by_regime_at_entry), VOLATILITY_REGIMES)
+    _print_groups("Holding", group_pnl(trades, by_holding_period), HOLDING_PERIOD_BUCKETS)
+    typer.echo("Regime = market regime as of the entry close. Descriptive only.")
 
 
 def _print_holdout(record: HoldoutRecord) -> None:
