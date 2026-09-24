@@ -130,7 +130,7 @@ export function TradeBlotter({ id, instruments }: { id: string; instruments: str
     <QF.Panel
       title="Trades"
       icon="attribution"
-      subtitle="Trade ledger of the training run · P&L and costs as percent of initial equity · * still held at the end"
+      subtitle="Trade ledger of the training run · prices adjusted for corporate actions · P&L and costs as percent of initial equity · * still held at the end"
       actions={filters}
       flush
       footer={footer}

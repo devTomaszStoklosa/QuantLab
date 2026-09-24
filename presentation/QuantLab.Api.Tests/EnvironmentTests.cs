@@ -24,6 +24,6 @@ public class EnvironmentTests
     {
         var rows = Fixture.Query($"SELECT count(*) AS n FROM read_parquet('{Fixture.File("hypotheses.parquet")}')");
 
-        Assert.Equal(3L, rows.Single()["n"]);
+        Assert.Equal(4L, rows.Single()["n"]);
     }
 }
