@@ -7,6 +7,7 @@ import yaml
 from pydantic import BaseModel, model_validator
 
 from quantlab.research.definition import StudyParameters
+from quantlab.validation.base import SignificanceTest
 
 
 class HoldoutNotFrozenError(Exception):
@@ -20,7 +21,10 @@ class HoldoutAlreadyOpenedError(Exception):
 class SuccessCriterion(BaseModel):
     description: str
     min_sharpe: float  # holdout Sharpe must be strictly greater
-    max_p_value: float  # permutation p-value must be strictly lower
+    max_p_value: float  # the significance test's p-value must be strictly lower
+    # Which test gives that p-value (REQ-563). The default is q1's day shuffle, so
+    # every definition frozen before q5 keeps its meaning.
+    significance_test: SignificanceTest = "day_shuffle"
 
 
 class HoldoutConfig(BaseModel):

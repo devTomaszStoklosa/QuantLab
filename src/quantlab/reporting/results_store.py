@@ -28,7 +28,7 @@ from quantlab.research.trials import registered_trials, trials_on_same_data
 from quantlab.risk.regime import VOLATILITY_REGIMES
 from quantlab.validation.holdout import HoldoutRecord, holdout_passed, read_holdout_record
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 REGISTRY_FILE = "hypotheses.parquet"
 RUN_FILE = "run.parquet"
 
@@ -59,6 +59,7 @@ REGISTRY_SCHEMA = pa.schema(
         _field("criterion", pa.string()),
         _field("min_sharpe", pa.float64()),
         _field("max_p_value", pa.float64()),
+        _field("significance_test", pa.string()),
         _field("frozen_at_commit", pa.string()),
         _field("registered_at", _TIMESTAMP),
         _field("trials_on_same_data", pa.int64()),
@@ -101,6 +102,7 @@ RUN_SCHEMA = pa.schema(
         _field("walk_forward_positive_windows", pa.int64()),
         _field("walk_forward_windows_with_sharpe", pa.int64()),
         _optional("permutation_passed", pa.bool_()),
+        _field("permutation_test", pa.string()),
         _field("permutation_statistic", pa.string()),
         _field("permutation_count", pa.int64()),
         _field("permutation_seed", pa.int64()),
@@ -267,6 +269,7 @@ class RegistryRow(BaseModel):
     criterion: str
     min_sharpe: float
     max_p_value: float
+    significance_test: str
     frozen_at_commit: str
     registered_at: datetime
     trials_on_same_data: int
@@ -323,6 +326,7 @@ def _run_row(evidence: RunEvidence) -> dict:
         "walk_forward_positive_windows": walk_forward.get("positive_windows", 0),
         "walk_forward_windows_with_sharpe": walk_forward.get("windows_with_sharpe", 0),
         "permutation_passed": sheet.permutation.passed,
+        "permutation_test": permutation["test"],
         "permutation_statistic": permutation["statistic"],
         "permutation_count": permutation["n_permutations"],
         "permutation_seed": permutation["seed"],
@@ -508,6 +512,7 @@ def registry_rows(store: Path, definitions_dir: Path) -> list[RegistryRow]:
                 criterion=config.success_criterion.description,
                 min_sharpe=config.success_criterion.min_sharpe,
                 max_p_value=config.success_criterion.max_p_value,
+                significance_test=config.success_criterion.significance_test,
                 frozen_at_commit=trial.last_commit,
                 registered_at=trial.registered_at,
                 trials_on_same_data=len(trials_on_same_data(trial.hypothesis, trials)),

@@ -22,6 +22,7 @@
     "criterion": "Synthetic demo. Holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1.",
     "minSharpe": 0,
     "maxPValue": 0.1,
+    "significanceTest": "day_shuffle",
     "frozenAtCommit": "556db55158d88667d0c5a69397cc37e1bc91f670",
     "registeredAt": "2026-09-01T09:00:00\u002B00:00",
     "trialsOnSameData": 3,
@@ -192,6 +193,7 @@
     },
     "permutation": {
       "passed": null,
+      "test": "day_shuffle",
       "statistic": "annualized Sharpe of gross daily returns",
       "count": 500,
       "seed": 0,

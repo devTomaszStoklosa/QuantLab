@@ -31,6 +31,21 @@ public class DetailTests
     }
 
     [Fact]
+    public async Task ARunNamesTheSignificanceTestItsCriterionChose()
+    {
+        var momentum = await Http.Ok("/api/hypotheses/demo_momentum");
+        var equities = await Http.Ok("/api/hypotheses/demo_xsmom");
+
+        Assert.Equal("day_shuffle", momentum.GetProperty("hypothesis").GetProperty("significanceTest").GetString());
+        Assert.Equal("day_shuffle", momentum.GetProperty("run").GetProperty("permutation").GetProperty("test").GetString());
+        Assert.Equal("random_portfolio", equities.GetProperty("hypothesis").GetProperty("significanceTest").GetString());
+        var permutation = equities.GetProperty("run").GetProperty("permutation");
+        Assert.Equal("random_portfolio", permutation.GetProperty("test").GetString());
+        var stored = Fixture.Query($"SELECT permutation_p_value FROM {Table("demo_xsmom", "run")}").Single();
+        Assert.Equal(stored["permutation_p_value"], permutation.Number("pValue"));
+    }
+
+    [Fact]
     public async Task EvidenceTablesKeepTheStoredOrderAndNumbers()
     {
         var detail = await Http.Ok("/api/hypotheses/demo_momentum");

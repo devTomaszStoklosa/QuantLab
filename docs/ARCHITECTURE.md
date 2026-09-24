@@ -105,6 +105,7 @@ presentation (.NET + React, rozszerzenie q7)
 
 - `Validator` (interfejs): `validate(backtest_run) -> ValidationResult`.
 - Implementacje MVP: `WalkForwardValidator`, `PermutationTestValidator`. Docelowo (`q6`): `PurgedKFoldValidator`/CPCV, deflated Sharpe, PBO.
+- Test istotności kryterium wybiera zamrożona definicja (`success_criterion.significance_test`, rejestr nazw `cli._SIGNIFICANCE_TESTS`): `day_shuffle` (`PermutationTestValidator`, timing; domyślny) albo `random_portfolio` (`RandomPortfolioValidator`, `q5`: selekcja — losowe portfele z przekroju każdej decyzji rebalansu, te same wagi, harmonogram i dryf; przekrój to instrumenty z sygnałem, także flat).
 - Holdout: zakres dat i parametry hipotezy zamrożone w pliku commitowanym przed pierwszym uruchomieniem na tym zakresie.
 
 ### `risk`

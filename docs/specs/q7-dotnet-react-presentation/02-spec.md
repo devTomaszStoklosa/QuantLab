@@ -74,19 +74,20 @@ UI (React)
 
 ## Data and validation
 
-Magazyn wyników, schemat w wersji 1. Typy Parquet: `DATE` (date32), `TIMESTAMP` (UTC), `DOUBLE`, `INTEGER` (int64), `BOOLEAN`, `VARCHAR`, `VARCHAR[]`. Kolumny oznaczone `?` mogą być NULL.
+Magazyn wyników, schemat w wersji 2 (wersja 2 od `q5`-X7b: kolumny `significance_test` w rejestrze i `permutation_test` w `run.parquet`; API czytające wersję 1 odpowiada 503 z prośbą o odświeżenie magazynu). Typy Parquet: `DATE` (date32), `TIMESTAMP` (UTC), `DOUBLE`, `INTEGER` (int64), `BOOLEAN`, `VARCHAR`, `VARCHAR[]`. Kolumny oznaczone `?` mogą być NULL.
 
 `results/hypotheses.parquet` — jeden wiersz na definicję
 
 | Column | Type | Meaning |
 |---|---|---|
-| `schema_version` | INTEGER | 1 |
+| `schema_version` | INTEGER | 2 |
 | `hypothesis` | VARCHAR | id z definicji |
 | `strategy`, `universe`, `cost_model` | VARCHAR | nazwa strategii, uniwersum i modelu kosztów przebiegu głównego |
 | `parameters` | VARCHAR | JSON parametrów z definicji |
 | `training_start`, `training_end`, `holdout_start`, `holdout_end` | DATE | zakresy z definicji |
 | `criterion` | VARCHAR | opis kryterium sukcesu |
 | `min_sharpe`, `max_p_value` | DOUBLE | progi kryterium |
+| `significance_test` | VARCHAR | test, z którego pochodzi p-value kryterium (i holdoutu): `day_shuffle`, `random_portfolio` (`q5`, REQ-563) |
 | `frozen_at_commit` | VARCHAR | ostatni commit definicji |
 | `registered_at` | TIMESTAMP | pierwszy commit definicji |
 | `trials_on_same_data` | INTEGER | liczba prób na tym uniwersum i okresie treningowym, z usuniętymi |
@@ -100,7 +101,7 @@ Magazyn wyników, schemat w wersji 1. Typy Parquet: `DATE` (date32), `TIMESTAMP`
 
 | Column | Type | Meaning |
 |---|---|---|
-| `schema_version` | INTEGER | 1 |
+| `schema_version` | INTEGER | 2 |
 | `hypothesis`, `run_id`, `strategy`, `universe`, `cost_model` | VARCHAR | z `BacktestRun` |
 | `strategy_params` | VARCHAR | JSON |
 | `start`, `end` | DATE | okres treningowy przebiegu |
@@ -111,6 +112,7 @@ Magazyn wyników, schemat w wersji 1. Typy Parquet: `DATE` (date32), `TIMESTAMP`
 | `data_source` | VARCHAR | źródło barów (`binance`, `synthetic`) |
 | `cost_sensitivity`, `cost_sharpe_difference`?, `cost_cagr_sign_flip`? | VARCHAR, DOUBLE, BOOLEAN | wrażliwość na koszty (naiwny vs realistyczny) |
 | `walk_forward_passed`?, `walk_forward_rule`, `walk_forward_positive_windows`, `walk_forward_windows_with_sharpe` | BOOLEAN, VARCHAR, INTEGER, INTEGER | |
+| `permutation_test` | VARCHAR | który test istotności: `day_shuffle` (tasowanie dni) albo `random_portfolio` (losowe portfele) |
 | `permutation_passed`?, `permutation_statistic`, `permutation_count`, `permutation_seed`, `permutation_alpha`, `permutation_active_days`, `permutation_low_confidence` | | parametry testu |
 | `permutation_actual`?, `permutation_null_mean`?, `permutation_null_std`?, `permutation_percentile`?, `permutation_p_value`?, `permutation_reason`? | DOUBLE, VARCHAR | wynik albo powód braku |
 | `trials` | VARCHAR[] | próby na tych samych danych, od najstarszej |

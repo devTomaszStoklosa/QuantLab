@@ -19,6 +19,7 @@ internal static class Rows
         Criterion: row.Text("criterion"),
         MinSharpe: row.Number("min_sharpe"),
         MaxPValue: row.Number("max_p_value"),
+        SignificanceTest: row.Text("significance_test"),
         FrozenAtCommit: row.Text("frozen_at_commit"),
         RegisteredAt: row.Instant("registered_at_us"),
         TrialsOnSameData: row.Integer("trials_on_same_data"),
@@ -65,6 +66,7 @@ internal static class Rows
             row.Integer("walk_forward_windows_with_sharpe")),
         Permutation: new PermutationSummary(
             Passed: row.OptionalFlag("permutation_passed"),
+            Test: row.Text("permutation_test"),
             Statistic: row.Text("permutation_statistic"),
             Count: row.Integer("permutation_count"),
             Seed: row.Integer("permutation_seed"),

@@ -83,6 +83,7 @@ class PermutationTestValidator:
 
         active_days = int((np.abs(weights_matrix).sum(axis=1) > 0).sum())
         detail = {
+            "test": "day_shuffle",
             "statistic": "annualized Sharpe of gross daily returns",
             "n_permutations": self.n_permutations,
             "seed": run.seed,

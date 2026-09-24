@@ -3,6 +3,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
 from quantlab.research.definition import (
     CostModelParameters,
@@ -183,3 +184,22 @@ def test_frozen_pairs_v1_reads_as_pre_registered() -> None:
         momentum.success_criterion.max_p_value,
     )
     assert "no position held (Sharpe undefined) -> inconclusive" in criterion.description
+
+
+def test_a_criterion_names_its_significance_test_and_defaults_to_the_day_shuffle() -> None:
+    assert _CRITERION.significance_test == "day_shuffle"
+    named = SuccessCriterion(
+        description="d", min_sharpe=0.0, max_p_value=0.1, significance_test="random_portfolio"
+    )
+    assert named.significance_test == "random_portfolio"
+    with pytest.raises(ValidationError):
+        SuccessCriterion(
+            description="d", min_sharpe=0.0, max_p_value=0.1, significance_test="bootstrap"
+        )
+
+
+@pytest.mark.parametrize("name", ["momentum_v1", "mean_reversion_v1", "pairs_v1"])
+def test_every_frozen_definition_keeps_the_day_shuffle(name: str) -> None:
+    config = parse_holdout_config(_FROZEN_CONFIG.parent / f"{name}.yaml")
+
+    assert config.success_criterion.significance_test == "day_shuffle"

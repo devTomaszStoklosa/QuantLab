@@ -101,7 +101,7 @@ public class HypothesesTests
         {
             connection.Open();
             using var command = connection.CreateCommand();
-            command.CommandText = $"COPY (SELECT 2::BIGINT AS schema_version) TO '{Path.Combine(store, "hypotheses.parquet").Replace('\\', '/')}' (FORMAT PARQUET)";
+            command.CommandText = $"COPY (SELECT {StoreSchema.Version + 1}::BIGINT AS schema_version) TO '{Path.Combine(store, "hypotheses.parquet").Replace('\\', '/')}' (FORMAT PARQUET)";
             command.ExecuteNonQuery();
         }
         using var api = Fixture.Api(store);
@@ -111,8 +111,8 @@ public class HypothesesTests
         Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
         Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
         var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        Assert.Contains("schema version 2", body, StringComparison.Ordinal);
-        Assert.Contains("reads version 1", body, StringComparison.Ordinal);
+        Assert.Contains($"schema version {StoreSchema.Version + 1}", body, StringComparison.Ordinal);
+        Assert.Contains($"reads version {StoreSchema.Version}", body, StringComparison.Ordinal);
     }
 }
 
