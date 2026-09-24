@@ -83,7 +83,7 @@ vectorized.run / event_driven.run (policy: Daily | OnSignalChange)
 
 ```
 src/quantlab/core/universe.py                  # Membership, Universe.members, load z universes/ (X1)
-src/quantlab/config/universes/mvp-crypto.yaml   # przeniesiony universe.yaml, treść bez zmian (X1)
+src/quantlab/config/universes/mvp-crypto.yaml   # przeniesiony universe.yaml, te same instrumenty (X1)
 src/quantlab/strategy/members_only.py          # MembersOnly (X1)
 src/quantlab/core/data/provider.py             # PriceBar.unadjusted_close, EventSource, InstrumentEvents (X2)
 src/quantlab/core/data/corporate_actions.py    # CorporateAction, Delisting, adjust_bars, with_events (X2, X3)

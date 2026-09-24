@@ -1,4 +1,5 @@
-# Placeholder universe for exercising Universe.load() (lab-foundation F-3).
+# Placeholder universe for exercising Universe.load() (lab-foundation F-3); static:
+# no memberships, so both instruments are members on every date (q5 REQ-501).
 # NOT the final MVP basket — that's an open question owed before
 # q1-momentum-research-mvp slice S6 (docs/specs/q1-momentum-research-mvp/01-story.md).
 name: mvp-crypto
