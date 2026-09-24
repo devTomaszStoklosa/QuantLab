@@ -1,7 +1,7 @@
 """Bars as the engines need them: adjusted for corporate actions, ended by a delisting."""
 
 from bisect import bisect_left
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date
 
 from pydantic import BaseModel
@@ -37,15 +37,14 @@ def adjust_bars(bars: list[PriceBar], actions: list[CorporateAction]) -> list[Pr
             price[i] *= price_factor
             volume[i] *= volume_factor
     return [
-        bar.model_copy(
-            update={
-                "open": bar.open * price[i],
-                "high": bar.high * price[i],
-                "low": bar.low * price[i],
-                "close": bar.close * price[i],
-                "volume": bar.volume * volume[i],
-                "unadjusted_close": bar.close,
-            }
+        replace(
+            bar,
+            open=bar.open * price[i],
+            high=bar.high * price[i],
+            low=bar.low * price[i],
+            close=bar.close * price[i],
+            volume=bar.volume * volume[i],
+            unadjusted_close=bar.close,
         )
         for i, bar in enumerate(ordered)
     ]
@@ -101,17 +100,16 @@ def delisted(
             "missing_delisting_return in the hypothesis definition"
         )
     value = last.close * (1.0 + rate)
-    final = last.model_copy(
-        update={
-            "ts": delisting.date,
-            "open": value,
-            "high": value,
-            "low": value,
-            "close": value,
-            "volume": 0.0,
-            "unadjusted_close": last.raw_close * (1.0 + rate),
-            "delisting": True,
-        }
+    final = replace(
+        last,
+        ts=delisting.date,
+        open=value,
+        high=value,
+        low=value,
+        close=value,
+        volume=0.0,
+        unadjusted_close=last.raw_close * (1.0 + rate),
+        delisting=True,
     )
     applied = AppliedDelisting(
         instrument_id=delisting.instrument_id,
@@ -120,6 +118,26 @@ def delisted(
         assumed=not known,
     )
     return [*sorted(bars, key=lambda bar: bar.ts), final], applied
+
+
+def with_assumed_return(market: MarketData, rate: float) -> MarketData:
+    """The same data with `rate` as the return of every delisting the source gave none
+    for (q5, REQ-566): only those instruments' last bar changes, every other
+    instrument keeps its very list of bars, so no second copy of the data is made."""
+    bars = dict(market.bars)
+    delistings = []
+    for applied in market.delistings:
+        if not applied.assumed:
+            delistings.append(applied)
+            continue
+        unknown = Delisting(
+            instrument_id=applied.instrument_id, date=applied.date, delisting_return=None
+        )
+        bars[applied.instrument_id], result = delisted(
+            market.bars[applied.instrument_id][:-1], unknown, rate
+        )
+        delistings.append(result)
+    return MarketData(bars=bars, delistings=delistings)
 
 
 def next_session(sessions: list[date], day: date) -> date:

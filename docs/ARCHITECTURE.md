@@ -82,7 +82,7 @@ presentation (.NET + React, rozszerzenie q7)
 ### `core.data`
 
 - `DataProvider` (interfejs): `fetch(instrument, start, end) -> list[PriceBar]`. Implementacje: `BinanceProvider` ([ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md) — Stooq odrzucony, blokuje dostęp programistyczny) i `TiingoProvider` (akcje USA, `q5`: surowe ceny, dywidendy i splity z wierszy cen, delisting z ostatniego dnia notowań w metadanych, bez zwrotu z delistingu). Runner bierze dostawcę z rejestru nazw (`cli._PROVIDERS`) po polu `source` pliku uniwersum, bez `if` po klasie aktywów.
-- Kanoniczny schemat `PriceBar`: instrument_id, ts, open, high, low, close, volume, adj_close, source, `unadjusted_close` (surowe zamknięcie baru skorygowanego; `raw_close` do reguł na poziomie ceny).
+- Kanoniczny schemat `PriceBar`: instrument_id, ts, open, high, low, close, volume, adj_close, source, `unadjusted_close` (surowe zamknięcie baru skorygowanego; `raw_close` do reguł na poziomie ceny). Zamrożony dataclass ze slotami, nie model pydantic: uniwersum akcji to miliony barów (ok. 300 zamiast 1 450 bajtów na bar); zmiana przez `dataclasses.replace`, cache przez `to_json`/`from_json`.
 - `DataProvider.events` podaje corporate actions (`Split`, `CashDividend`, `core.data.events`; krypto: brak), a runner koryguje nimi każde pobrane bary (`core.data.corporate_actions.with_events`): ceny wstecz, tak że zwrot przez ex-date jest zwrotem całkowitym. Delisting kończy bary barem wartości delistingu (flaga `delisting`, zwrot ze źródła albo zamrożone `missing_delisting_return` definicji); oba silniki zamieniają trzymaną pozycję na gotówkę po tej wartości, bez kosztu.
 - Cache na dysku (`data/cache/`), throttling po stronie klienta, nigdy retry-on-429 jako jedyna ochrona.
 

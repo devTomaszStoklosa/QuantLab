@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date, timedelta
 
 import pytest
@@ -124,7 +125,7 @@ def test_no_positions_is_inconclusive_with_a_reason() -> None:
 
 def _two_instrument_validator() -> PermutationTestValidator:
     """ "a" trades throughout, "b" stops after 50 days, as a delisted stock would (q5)."""
-    shorter = [bar.model_copy(update={"instrument_id": "b"}) for bar in _bars(_DAILY_RETURNS[:50])]
+    shorter = [replace(bar, instrument_id="b") for bar in _bars(_DAILY_RETURNS[:50])]
     return PermutationTestValidator(
         bars={"a": _bars(_DAILY_RETURNS), "b": shorter},
         n_permutations=200,

@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date, timedelta
 from itertools import pairwise
 
@@ -5,7 +6,7 @@ import numpy as np
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from quantlab.core.data.corporate_actions import adjust_bars, with_events
+from quantlab.core.data.corporate_actions import adjust_bars, with_assumed_return, with_events
 from quantlab.core.data.events import (
     CashDividend,
     CorporateAction,
@@ -236,7 +237,7 @@ def test_a_delisting_without_bars_ends_nothing() -> None:
 
 def _other(days: list[int]) -> list[PriceBar]:
     return [
-        bar.model_copy(update={"instrument_id": "bbb"})
+        replace(bar, instrument_id="bbb")
         for bar in _bars([50.0] * 10, None)
         if (bar.ts - _FIRST).days in days
     ]
@@ -261,3 +262,28 @@ def test_a_delisting_on_a_session_keeps_its_date() -> None:
     )
 
     assert market.bars["aaa"][-1].ts == _day(3)
+
+
+def test_another_assumed_return_changes_only_the_assumed_delistings() -> None:
+    other = _other(list(range(10)))
+    ccc = [replace(bar, instrument_id="ccc") for bar in _bars([50.0, 55.0])]
+    ccc_delisting = _delisting(2, -0.5).model_copy(update={"instrument_id": "ccc"})
+    market = with_events(
+        {"aaa": _bars([100.0, 90.0]), "bbb": other, "ccc": ccc},
+        {
+            "aaa": InstrumentEvents(delisting=_delisting(2, None)),
+            "ccc": InstrumentEvents(delisting=ccc_delisting),
+        },
+        missing_delisting_return=0.0,
+    )
+
+    stressed = with_assumed_return(market, -0.3)
+
+    assert stressed.bars["aaa"][-1].close == pytest.approx(63.0)
+    assert stressed.bars["aaa"][:-1] == market.bars["aaa"][:-1]
+    assert stressed.bars["bbb"] is market.bars["bbb"]  # no copy of untouched data
+    assert stressed.bars["ccc"] is market.bars["ccc"]  # the source's own return stays
+    assert [(d.instrument_id, d.delisting_return, d.assumed) for d in stressed.delistings] == [
+        ("aaa", -0.3, True),
+        ("ccc", -0.5, False),
+    ]
