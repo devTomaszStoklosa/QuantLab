@@ -17,6 +17,7 @@ from quantlab.costs.zero import ZeroCostModel
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
 from quantlab.risk.conditional import regime_conditional_metrics
 from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier, label_periods
+from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 from quantlab.validation.holdout import (
     FrozenHoldout,
@@ -52,6 +53,7 @@ _PERIODS_PER_YEAR = 365  # crypto trades every calendar day
 _REGIME_INSTRUMENT = "btc-usdt"
 _REGIME_VOL_WINDOW_DAYS = 30
 _REGIME_HISTORY_DAYS = 365
+_STRESS_SHOCK = 0.20  # the AC-10 example size, applied down and up
 _HOLDOUT_CONFIG = Path("config/holdout/momentum_v1.yaml")
 _HOLDOUT_RECORD = Path("config/holdout/momentum_v1.opened.json")
 
@@ -347,6 +349,42 @@ def run() -> None:
             f"{_fmt(regime.sortino, '.2f'):>10}"
         )
     typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
+
+    instrument_ids = [instrument.id for instrument in universe.instruments]
+    scenarios = [
+        ShockScenario(
+            name=f"crash-{_STRESS_SHOCK:.0%}",
+            description=f"every instrument -{_STRESS_SHOCK:.0%} at once",
+            shocks={instrument_id: -_STRESS_SHOCK for instrument_id in instrument_ids},
+        ),
+        ShockScenario(
+            name=f"rally-{_STRESS_SHOCK:.0%}",
+            description=f"every instrument +{_STRESS_SHOCK:.0%} at once; hurts short positions",
+            shocks={instrument_id: _STRESS_SHOCK for instrument_id in instrument_ids},
+        ),
+        worst_day_scenario("worst-btc-day", bars, _REGIME_INSTRUMENT, runs[2].start, runs[2].end),
+    ]
+    stress = [stress_run(runs[2], scenario) for scenario in scenarios]
+    typer.echo("")
+    typer.echo(
+        f"Stress test ({runs[2].cost_model_name}): instantaneous shock, "
+        "impact = sum of weight x shock, costs of reacting not included"
+    )
+    typer.echo(
+        f"{'Scenario':<16}{'Last day':>10}{'Worst':>10}{'Worst held on':>15}{'Losing days':>13}"
+    )
+    for result in stress:
+        typer.echo(
+            f"{result.scenario.name:<16}{result.last_impact:>10.2%}{result.worst_impact:>10.2%}"
+            f"{result.worst_held_on!s:>15}{result.losing_share:>13.1%}"
+        )
+    typer.echo(f"Last day = positions held on {stress[0].last_held_on}.")
+    for result in stress:
+        shocks = ", ".join(
+            f"{instrument_id} {shock:+.1%}"
+            for instrument_id, shock in result.scenario.shocks.items()
+        )
+        typer.echo(f"{result.scenario.name}: {result.scenario.description} ({shocks})")
 
 
 def _print_holdout(record: HoldoutRecord) -> None:
