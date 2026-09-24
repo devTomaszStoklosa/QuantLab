@@ -7,6 +7,7 @@ from quantlab import cli
 from quantlab.validation.holdout import (
     HoldoutNotFrozenError,
     SuccessCriterion,
+    holdout_passed,
     holdout_verdict,
     load_frozen_holdout,
     parse_holdout_config,
@@ -111,3 +112,9 @@ def test_holdout_verdict_follows_the_frozen_criterion(
     sharpe: float, p_value: float, expected: str
 ) -> None:
     assert holdout_verdict(_CRITERION, sharpe, p_value) == expected
+
+
+def test_holdout_passed_uses_validation_result_terms() -> None:
+    assert holdout_passed("passed") is True
+    assert holdout_passed("rejected") is False
+    assert holdout_passed("inconclusive") is None

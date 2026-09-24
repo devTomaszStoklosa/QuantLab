@@ -70,6 +70,22 @@ class Hypothesis(BaseModel):
         return self.model_copy(update={"status": new_status})
 
 
+def concluded_status(
+    walk_forward_passed: bool | None, holdout_passed: bool | None
+) -> Literal["confirmed", "rejected", "inconclusive"]:
+    """Terminal status from the two pre-registered gates (02-spec business rules).
+
+    Each gate is passed (True), failed (False) or inconclusive (None), as in
+    ValidationResult.passed. Confirmed needs both gates passed (REQ-090), a
+    failed gate rejects, and anything else is inconclusive.
+    """
+    if walk_forward_passed is True and holdout_passed is True:
+        return "confirmed"
+    if walk_forward_passed is False or holdout_passed is False:
+        return "rejected"
+    return "inconclusive"
+
+
 def _load_all() -> dict[str, Hypothesis]:
     if not REGISTRY_PATH.exists():
         return {}

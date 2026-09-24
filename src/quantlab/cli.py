@@ -25,6 +25,7 @@ from quantlab.costs.realistic import RealisticCostModel
 from quantlab.costs.zero import ZeroCostModel
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
 from quantlab.reporting.tear_sheet import TearSheet, render_html
+from quantlab.research.hypothesis import concluded_status
 from quantlab.risk.conditional import regime_conditional_metrics
 from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier, label_periods
 from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
@@ -33,6 +34,7 @@ from quantlab.validation.holdout import (
     FrozenHoldout,
     HoldoutAlreadyOpenedError,
     HoldoutRecord,
+    holdout_passed,
     holdout_verdict,
     load_frozen_holdout,
     read_holdout_record,
@@ -434,9 +436,20 @@ def run(
     _print_groups("Holding", group_pnl(trades, by_holding_period), HOLDING_PERIOD_BUCKETS)
     typer.echo("Regime = market regime as of the entry close. Descriptive only.")
 
+    # The holdout's result comes only from the record of its one-time opening.
+    holdout = read_holdout_record(_HOLDOUT_RECORD) if _HOLDOUT_RECORD.exists() else None
+    typer.echo("")
+    if holdout is None:
+        typer.echo(f"Hypothesis {_HYPOTHESIS}: no verdict until the frozen holdout is opened")
+    else:
+        status = concluded_status(walk_forward.passed, holdout_passed(holdout.verdict))
+        typer.echo(
+            f"Hypothesis {_HYPOTHESIS}: {status.upper()} "
+            f"(walk-forward {outcome}, holdout {holdout.verdict} "
+            f"as recorded {holdout.opened_at:%Y-%m-%d})"
+        )
+
     if tear_sheet is not None:
-        # The holdout's numbers come only from the record of its one-time opening.
-        holdout = read_holdout_record(_HOLDOUT_RECORD) if _HOLDOUT_RECORD.exists() else None
         sheet = TearSheet(
             hypothesis=_HYPOTHESIS,
             run=runs[2],

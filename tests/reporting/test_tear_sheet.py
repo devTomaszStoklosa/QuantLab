@@ -289,3 +289,34 @@ def test_low_confidence_permutation_is_flagged() -> None:
     page = render_html(_sheet(permutation=permutation))
 
     assert "Niska wiarygodność: tylko 120 dni z pozycją" in page
+
+
+@pytest.mark.parametrize(
+    ("walk_forward_passed", "holdout_verdict", "status"),
+    [
+        (True, "inconclusive", "inconclusive"),
+        (True, "passed", "confirmed"),
+        (False, "passed", "rejected"),
+        (True, "rejected", "rejected"),
+    ],
+)
+def test_verdict_leads_with_the_status_the_gates_give(
+    walk_forward_passed: bool, holdout_verdict: str, status: str
+) -> None:
+    walk_forward = _sheet().walk_forward.model_copy(update={"passed": walk_forward_passed})
+
+    page = render_html(_sheet(walk_forward=walk_forward, holdout=_holdout(verdict=holdout_verdict)))
+
+    verdict = _section(page, "verdict")
+    assert page.index('<section id="verdict"') < page.index('<section id="training"')
+    assert f'<strong class="verdict verdict-{status}">{status}</strong>' in verdict
+    assert f"holdout: <strong>{holdout_verdict}</strong>" in verdict
+
+
+def test_sealed_holdout_gives_no_verdict() -> None:
+    page = render_html(_sheet(holdout=None))
+
+    verdict = _section(page, "verdict")
+    assert "Brak werdyktu" in verdict
+    for status in ("confirmed", "rejected", "inconclusive"):
+        assert f"verdict-{status}" not in verdict

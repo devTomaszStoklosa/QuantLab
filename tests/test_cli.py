@@ -1,5 +1,6 @@
 import importlib.metadata
 from datetime import date, timedelta
+from pathlib import Path
 
 import numpy as np
 from typer.testing import CliRunner
@@ -10,6 +11,7 @@ from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument, Universe
 from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.zero import ZeroCostModel
+from quantlab.validation.holdout import read_holdout_record, write_holdout_record
 
 runner = CliRunner()
 
@@ -182,3 +184,31 @@ def test_run_writes_tear_sheet_of_the_realistic_cost_run(tmp_path, monkeypatch) 
     assert "Okres treningowy 2022-01-01 \u2192 2023-12-31" in page
     assert "realistic-10bps-k0.05-vol30d</code> *" in page
     assert "nie został jeszcze otwarty" in page
+    assert "Hypothesis momentum_v1: no verdict until the frozen holdout is opened" in result.output
+
+
+def test_run_reports_the_status_from_the_recorded_holdout(tmp_path, monkeypatch) -> None:
+    record_path = tmp_path / "momentum_v1.opened.json"
+    record = read_holdout_record(
+        Path(__file__).parents[1] / "config/holdout/momentum_v1.opened.json"
+    )
+    write_holdout_record(record_path, record)
+    monkeypatch.setattr(cli, "BinanceProvider", _RandomWalkProvider)
+    monkeypatch.setattr(cli, "_TRAINING_START", date(2022, 1, 1))
+    monkeypatch.setattr(cli, "_TRAINING_END", date(2023, 12, 31))
+    monkeypatch.setattr(cli, "_PERMUTATIONS", 20)
+    monkeypatch.setattr(cli, "_HOLDOUT_RECORD", record_path)
+    output = tmp_path / "tear-sheet.html"
+
+    result = runner.invoke(app, ["run", "--tear-sheet", str(output)])
+
+    assert result.exit_code == 0, result.output
+    # The recorded holdout is inconclusive, so no walk-forward result can make it confirmed.
+    status_line = next(
+        line for line in result.output.splitlines() if line.startswith("Hypothesis momentum_v1:")
+    )
+    assert "holdout inconclusive as recorded 2026-09-23" in status_line
+    assert "CONFIRMED" not in status_line
+    page = output.read_text(encoding="utf-8")
+    assert '<section id="holdout"' in page
+    assert "0.37" in page[page.index('<section id="holdout"') :]

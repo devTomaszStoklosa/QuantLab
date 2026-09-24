@@ -17,6 +17,8 @@ lab-foundation
 
 q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
 
+**Po zamknięciu q1 (2026-09-24):** hipoteza `momentum_v1` zakończyła się wynikiem `inconclusive` — walk-forward zaliczony, holdout bez istotnego efektu timingu (p = 0.61), patrz [RESEARCH_LOG.md](RESEARCH_LOG.md). Momentum nie przeszło walidacji, więc zgodnie z regułą powyżej następny jest `q3-mean-reversion-hypothesis`. Silnik wektorowy nie okazał się wąskim gardłem (pełny przebieg z 10 000 permutacji ok. 11 s), więc nie ma powodu, by `q6` wyprzedzał kolejkę.
+
 ## Epiki
 
 ### lab-foundation
@@ -74,7 +76,7 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | Epik | 01-story | 02-spec | 03-design | Kod |
 |---|---|---|---|---|
 | lab-foundation | Ready for dev | Ready for dev | Ready for dev | gotowe (F-1..F-4) |
-| q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | nie zaczęty |
+| q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | gotowe (S1..S16), MVP zamknięte: `momentum_v1` inconclusive |
 | q2-event-driven-engine | nie napisany | nie napisany | nie napisany | — |
 | q3-mean-reversion-hypothesis | nie napisany | nie napisany | nie napisany | — |
 | q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
