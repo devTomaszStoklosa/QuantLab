@@ -27,6 +27,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 
 **Po `q4`-P5 (2026-09-24):** `q2`, `q3`, `q4` i `q6` czekają na lokalne przebiegi (Binance), `q5` na decyzję o źródle danych akcji. Odblokował się `q7-dotnet-react-presentation`: .NET 10 SDK jest w archiwum Ubuntu, dostępnym w środowisku chmurowym. Epik nie zależy od danych rynkowych — API i UI testowane są na syntetycznym magazynie wyników wygenerowanym pełnym pipeline'em.
 
+**Po `q7`-W5 (2026-09-24):** jedyny nierozpoczęty epik to `q5-equities-cross-section`. Kod niezależny od źródła danych (point-in-time uniwersum, corporate actions, delisting, polityka rebalansu, momentum przekrojowe) powstaje na danych syntetycznych; adapter i zamrożenie hipotezy czekają na decyzje o źródle danych, uniwersum i parametrach (pytania w [01-story](specs/q5-equities-cross-section/01-story.md)).
+
 ## Epiki
 
 ### lab-foundation
@@ -59,9 +61,11 @@ Kointegracja (Engle-Granger), spread trading na parze ETH-USDT / BTC-USDT, wagi 
 
 Slice'y: P1 narzędzia kointegracji · P2 kontrakt wag (`Sizer`) · P3 strategia par · P4 diagnostyka kointegracji w raporcie · P5 zamrożenie `pairs_v1` · P6 przebieg treningowy · P7 otwarcie holdoutu · P8 wpis w dzienniku.
 
-### q5-equities-cross-section (rozszerzenie, nierozpisane)
+### q5-equities-cross-section (rozszerzenie, w toku)
 
-Point-in-time uniwersum, `CorporateAction` i korekta cen, obsługa survivorship bias.
+Point-in-time uniwersum, `CorporateAction` i korekta cen, delisting i pomiar survivorship bias, polityka rebalansu, momentum przekrojowe (Jegadeesh i Titman 1993). Pełna specyfikacja: [specs/q5-equities-cross-section/](specs/q5-equities-cross-section/).
+
+Slice'y: X1 point-in-time uniwersum · X2 corporate actions · X3 delisting i survivorship bias · X4 polityka rebalansu · X5 momentum przekrojowe · X6 hipoteza demonstracyjna w magazynie wyników · X7 adapter źródła danych · X8 zamrożenie hipotezy · X9 przebieg treningowy · X10 otwarcie holdoutu · X11 wpis w dzienniku.
 
 ### q6-advanced-validation-cpcv (rozszerzenie, w toku)
 
@@ -98,6 +102,6 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q2-event-driven-engine | Ready for dev | Ready for dev | Ready for dev | E1–E5 gotowe; E6 wymaga lokalnego przebiegu (Binance) |
 | q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
 | q4-pairs-trading-stat-arb | Ready for dev | Ready for dev | Ready for dev | P1–P5 gotowe (`pairs_v1` zamrożona); P6 wymaga lokalnego przebiegu (Binance) |
-| q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
+| q5-equities-cross-section | Ready for dev | Ready for dev | Ready for dev | — |
 | q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
 | q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | W1–W5 gotowe (magazyn wyników, API .NET, aplikacja React); W6 wymaga weryfikacji na maszynie deweloperskiej |

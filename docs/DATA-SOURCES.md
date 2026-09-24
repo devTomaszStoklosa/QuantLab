@@ -14,6 +14,18 @@
 |---|---|---|---|---|---|
 | Binance public REST (`api.binance.com/api/v3/klines`) | historyczne świece krypto (OHLCV + timestampy ms), bez klucza dla danych publicznych. Format zweryfikowany na żywo 2026-09-23, patrz [ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md) | nie | limity wagowe per endpoint, patrz dokumentacja Binance | dane historyczne klines zwykle bez ograniczeń redystrybucji dla non-trading use — do potwierdzenia w aktualnym Terms of Use przed użyciem | lab-foundation, q1 |
 
+### Akcje (`q5`) — kandydaci, decyzja przed slice'em X7
+
+Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie dostawcy przed wyborem (środowisko chmurowe nie ma dostępu do tych stron).
+
+| Źródło | Co daje | Klucz | Ograniczenia | Uwagi |
+|---|---|---|---|---|
+| Tiingo (`api.tiingo.com`) | ceny dzienne z korektami, dywidendy i splity, także spółki zdjęte z obrotu | tak (darmowy) | limit symboli miesięcznie i zapytań na godzinę w darmowym tierze | propozycja; bez redystrybucji surowych danych |
+| Alpha Vantage | lista spółek zdjętych z obrotu; skorygowane dane dzienne w tierze płatnym | tak | 25 zapytań dziennie w darmowym tierze | za wolne na setki spółek |
+| Nasdaq Data Link (Sharadar) | pełne delistingi, akcje korporacyjne, point-in-time | tak (płatne) | koszt | poza budżetem projektu portfolio |
+| Wikipedia — zmiany składu S&P 500 | historyczny skład indeksu | nie | CC BY-SA 4.0 (atrybucja); kompletność przed ok. 2000 r. niepewna | tylko członkostwo, bez cen |
+| Yahoo Finance | ceny | nie | warunki użycia zabraniają dostępu programistycznego; brak spółek zdjętych z obrotu | odrzucone |
+
 Przed pierwszym użyciem źródła: sprawdzić aktualne warunki na stronie dostawcy (ten dokument nie jest źródłem prawdy dla licencji — zmieniają się bez ostrzeżenia), zapisać datę weryfikacji w tej tabeli.
 
 ## Nowe źródło — checklista
