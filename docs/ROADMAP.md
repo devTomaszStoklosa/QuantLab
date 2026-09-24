@@ -19,6 +19,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 
 **Po zamknięciu q1 (2026-09-24):** hipoteza `momentum_v1` zakończyła się wynikiem `inconclusive` — walk-forward zaliczony, holdout bez istotnego efektu timingu (p = 0.61), patrz [RESEARCH_LOG.md](RESEARCH_LOG.md). Momentum nie przeszło walidacji, więc zgodnie z regułą powyżej następny jest `q3-mean-reversion-hypothesis`. Silnik wektorowy nie okazał się wąskim gardłem (pełny przebieg z 10 000 permutacji ok. 11 s), więc nie ma powodu, by `q6` wyprzedzał kolejkę.
 
+**Po `q3`-M4 (2026-09-24):** `q3` czeka na lokalny przebieg treningowy (M5 — Binance jest zablokowany w środowisku chmurowym), więc równolegle rusza następny w kolejności `q2-event-driven-engine`. Nie zależy od wyników `q3` i nie zmienia parametrów ani werdyktów żadnej hipotezy.
+
 ## Epiki
 
 ### lab-foundation
@@ -33,9 +35,11 @@ Pełny pipeline na jednej hipotezie (time-series momentum, Moskowitz/Ooi/Pederse
 
 Slice'y: S1 rejestr `Hypothesis` · S2 sygnał momentum · S3 `Strategy` implementacja · S4 silnik wektorowy + `BacktestRun` · S5 metryki własnym kodem + testy golden-master · S6 pierwszy pełny przebieg end-to-end · S7 `NaiveCostModel` · S8 `RealisticCostModel` + porównanie wrażliwości · S9 `WalkForwardValidator` · S10 zamrożony holdout · S11 `PermutationTestValidator` · S12 `RegimeClassifier` + metryki warunkowe · S13 stress test scenariuszowy · S14 `TradeLedger` + cięcia P&L · S15 tear-sheet · S16 wpis w `docs/RESEARCH_LOG.md`.
 
-### q2-event-driven-engine (rozszerzenie, nierozpisane)
+### q2-event-driven-engine (rozszerzenie, w toku)
 
-Realistyczna egzekucja: kolejka zdarzeń, symulacja zleceń i częściowych wypełnień, brak look-ahead bias z konstrukcji. Porównanie wyniku z silnikiem wektorowym na tej samej hipotezie.
+Realistyczna egzekucja: symulacja zleceń i częściowych wypełnień, brak look-ahead bias z konstrukcji. Porównanie wyniku z silnikiem wektorowym na tej samej hipotezie; walidacja i werdykty zostają na silniku wektorowym. Pełna specyfikacja: [specs/q2-event-driven-engine/](specs/q2-event-driven-engine/).
+
+Slice'y: E1 wspólny kontrakt `BacktestRun` i reguła wag · E2 rdzeń event-driven + parytet z silnikiem wektorowym · E3 egzekucja na następnym barze · E4 limit udziału w wolumenie i kapitał graniczny · E5 `quantlab compare-engines` · E6 przebieg lokalny i uzupełnienie dziennika.
 
 ### q3-mean-reversion-hypothesis (rozszerzenie, następne po MVP)
 
@@ -79,7 +83,7 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 |---|---|---|---|---|
 | lab-foundation | Ready for dev | Ready for dev | Ready for dev | gotowe (F-1..F-4) |
 | q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | gotowe (S1..S16), MVP zamknięte: `momentum_v1` inconclusive |
-| q2-event-driven-engine | nie napisany | nie napisany | nie napisany | — |
+| q2-event-driven-engine | Ready for dev | Ready for dev | Ready for dev | — |
 | q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
 | q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
