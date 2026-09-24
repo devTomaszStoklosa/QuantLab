@@ -19,6 +19,7 @@ describe('RegistryScreen', () => {
       'demo_momentum',
       'demo_reversal',
       'demo_pairs',
+      'demo_xsmom',
     ]);
     expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '#/h/demo_momentum');
     expect(rows[0]).toHaveTextContent('Rejected');

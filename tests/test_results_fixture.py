@@ -23,8 +23,9 @@ import pyarrow.parquet as pq
 from typer.testing import CliRunner
 
 from quantlab import cli
-from quantlab.core.data.provider import PriceBar, WithoutEvents
-from quantlab.core.universe import Instrument
+from quantlab.core.data.events import Delisting, InstrumentEvents, Split
+from quantlab.core.data.provider import PriceBar
+from quantlab.core.universe import Instrument, Membership, Universe
 
 FIXTURE = Path(__file__).parents[1] / "presentation" / "fixtures" / "results"
 
@@ -61,6 +62,65 @@ success_criterion:
   max_p_value: 0.1
 """
 
+# Cross-sectional momentum on a synthetic point-in-time equity universe (q5).
+_EQUITY_DEFINITION = """hypothesis: demo_xsmom
+
+training_start: 2020-01-01
+training_end: 2022-12-31
+start: 2023-01-01
+end: 2023-06-30
+
+parameters:
+  strategy: cross_sectional_momentum
+  formation_months: 12
+  skip_months: 1
+  quantile: 0.2
+  long_short: true
+  min_price: 5.0
+  missing_delisting_return: -0.3
+  universe: demo-equities
+  cost_model:
+    name: realistic
+    fee_bps: 5
+    k: 0.05
+    vol_window: 30
+
+success_criterion:
+  description: >-
+    Synthetic demo. Holdout net Sharpe under the realistic cost model > 0 and
+    permutation-test p-value < 0.1.
+  min_sharpe: 0.0
+  max_p_value: 0.1
+"""
+
+_STOCKS = [f"eq{i:02d}" for i in range(30)]
+_SPLIT = date(2021, 3, 1)  # eq03, 4:1
+_DELISTINGS = {  # instrument -> (delisting date, return; None: the definition's assumption)
+    "eq28": (date(2021, 6, 15), -0.6),
+    "eq29": (date(2022, 3, 10), None),
+}
+_EQUITIES = Universe(
+    name="demo-equities",
+    asof_date=_LAST,
+    market_proxy="eq00",
+    instruments=[
+        Instrument(id=name, symbol=name.upper(), asset_class="equity", quote_asset="USD")
+        for name in _STOCKS
+    ],
+    memberships=[
+        *(Membership(instrument_id=name, start=_ORIGIN, end=None) for name in _STOCKS[:24]),
+        Membership(instrument_id="eq24", start=_ORIGIN, end=date(2021, 9, 30)),  # left the index
+        *(  # joined the index
+            Membership(instrument_id=name, start=date(2020, 7, 1), end=None)
+            for name in _STOCKS[25:28]
+        ),
+        *(
+            Membership(instrument_id=name, start=_ORIGIN, end=delisted)
+            for name, (delisted, _) in _DELISTINGS.items()
+        ),
+    ],
+)
+
 # Registered in this order; demo_reversal is never run.
 _HYPOTHESES = {
     "demo_momentum": "  strategy: time_series_momentum\n  lookback_days: 90\n",
@@ -72,9 +132,10 @@ _HYPOTHESES = {
 }
 
 
-class _SyntheticProvider(WithoutEvents):
+class _SyntheticProvider:
     """One fixed price path per instrument from 2019 to 2024, whatever range is asked:
-    BTC a random walk, ETH cointegrated with it (log-linear plus a mean-reverting spread)."""
+    BTC a random walk, ETH cointegrated with it (log-linear plus a mean-reverting spread);
+    stocks on business days, with a split and two delistings."""
 
     def __init__(self) -> None:
         rng = np.random.default_rng(20260924)
@@ -86,24 +147,48 @@ class _SyntheticProvider(WithoutEvents):
             spread[i] = 0.95 * spread[i - 1] + shocks[i]
         log_eth = np.log(150.0) + 1.1 * (log_btc - log_btc[0]) + spread
         self._closes = {"btc-usdt": np.exp(log_btc), "eth-usdt": np.exp(log_eth)}
+        drifts = rng.normal(0.0002, 0.0006, len(_STOCKS))
+        for name, drift in zip(_STOCKS, drifts, strict=True):
+            self._closes[name] = 40.0 * np.cumprod(1.0 + drift + rng.normal(0.0, 0.018, days))
 
     def fetch(self, instrument: Instrument, start: date, end: date) -> list[PriceBar]:
         closes = self._closes[instrument.id]
-        return [
-            PriceBar(
-                instrument_id=instrument.id,
-                ts=_ORIGIN + timedelta(days=i),
-                open=float(close),
-                high=float(close),
-                low=float(close),
-                close=float(close),
-                volume=1_000_000.0,
-                adj_close=None,
-                source="synthetic",
+        equity = instrument.asset_class == "equity"
+        last = (
+            _DELISTINGS[instrument.id][0] - timedelta(days=1)
+            if instrument.id in _DELISTINGS
+            else end
+        )
+        bars = []
+        for i, close in enumerate(closes):
+            day = _ORIGIN + timedelta(days=i)
+            if not start <= day <= min(end, last) or (equity and day.weekday() >= 5):
+                continue
+            quoted = float(close) / (4.0 if instrument.id == "eq03" and day >= _SPLIT else 1.0)
+            bars.append(
+                PriceBar(
+                    instrument_id=instrument.id,
+                    ts=day,
+                    open=quoted,
+                    high=quoted,
+                    low=quoted,
+                    close=quoted,
+                    volume=1_000_000.0,
+                    adj_close=None,
+                    source="synthetic",
+                )
             )
-            for i, close in enumerate(closes)
-            if start <= _ORIGIN + timedelta(days=i) <= end
-        ]
+        return bars
+
+    def events(self, instrument: Instrument, start: date, end: date) -> InstrumentEvents:
+        actions = []
+        if instrument.id == "eq03" and start <= _SPLIT <= end:
+            actions.append(Split(instrument_id="eq03", ex_date=_SPLIT, ratio=4.0))
+        delisting = None
+        if instrument.id in _DELISTINGS and start <= _DELISTINGS[instrument.id][0] <= end:
+            delisted, rate = _DELISTINGS[instrument.id]
+            delisting = Delisting(instrument_id=instrument.id, date=delisted, delisting_return=rate)
+        return InstrumentEvents(actions=actions, delisting=delisting)
 
 
 class _FixedClock(datetime):
@@ -134,7 +219,15 @@ def generate(directory: Path, monkeypatch) -> Path:
             datetime(2026, 9, 1 + day, 9, 0, tzinfo=UTC),
             f"{hypothesis}.yaml",
         )
+    (repo / "demo_xsmom.yaml").write_text(_EQUITY_DEFINITION, encoding="utf-8")
+    _commit(repo, "freeze demo_xsmom", datetime(2026, 9, 5, 9, 0, tzinfo=UTC), "demo_xsmom.yaml")
     provider = _SyntheticProvider()
+    load = Universe.load
+    monkeypatch.setattr(
+        Universe,
+        "load",
+        classmethod(lambda cls, name: _EQUITIES if name == _EQUITIES.name else load(name)),
+    )
     monkeypatch.setattr(cli, "_HOLDOUT_DIR", repo)
     monkeypatch.setattr(cli, "_RESULTS_DIR", store)
     monkeypatch.setattr(cli, "BinanceProvider", lambda: provider)
@@ -148,6 +241,7 @@ def generate(directory: Path, monkeypatch) -> Path:
         ["open-holdout", "demo_momentum"],
         ["run", "demo_momentum", "--contrast", "demo_pairs"],
         ["run", "demo_pairs"],
+        ["run", "demo_xsmom"],
         ["registry"],
     ):
         result = runner.invoke(cli.app, command)
@@ -195,9 +289,22 @@ def test_the_synthetic_store_covers_each_registry_state() -> None:
         "demo_momentum": (True, registry[0]["holdout_verdict"]),
         "demo_reversal": (False, None),
         "demo_pairs": (True, None),
+        "demo_xsmom": (True, None),
     }
     assert registry[0]["holdout_verdict"] is not None
-    assert [row["status"] for row in registry][1:] == ["proposed", "testing"]
-    for hypothesis in ("demo_momentum", "demo_pairs"):
+    assert [row["status"] for row in registry][1:] == ["proposed", "testing", "testing"]
+    for hypothesis in ("demo_momentum", "demo_pairs", "demo_xsmom"):
         [run] = pq.read_table(FIXTURE / hypothesis / "run.parquet").to_pylist()
         assert run["data_source"] == "synthetic"
+
+
+def test_the_equity_demo_is_a_point_in_time_cross_section() -> None:
+    [run] = pq.read_table(FIXTURE / "demo_xsmom" / "run.parquet").to_pylist()
+    trades = pq.read_table(FIXTURE / "demo_xsmom" / "trades.parquet").to_pylist()
+
+    assert run["strategy"] == "cross_sectional_momentum"
+    assert run["trials"] == ["demo_xsmom"]  # the only trial on this universe
+    assert {trade["side"] for trade in trades} == {"long", "short"}
+    for trade in trades:
+        membership = [m for m in _EQUITIES.memberships if m.instrument_id == trade["instrument_id"]]
+        assert any(m.covers(trade["entry_ts"]) for m in membership), trade
