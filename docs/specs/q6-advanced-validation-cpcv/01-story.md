@@ -26,7 +26,7 @@ Jako badacz testujący kolejne hipotezy na tych samych danych chcę, żeby rapor
 
 ## Acceptance criteria
 
-- AC-1 (PSR): Given dzienne zwroty netto przebiegu, when liczę PSR względem progu Sharpe, then wynik uwzględnia długość historii, skośność i kurtozę, a dla zwrotów normalnych sprowadza się do Φ(SR·√(T−1)).
+- AC-1 (PSR): Given dzienne zwroty netto przebiegu, when liczę PSR względem progu Sharpe, then wynik uwzględnia długość historii, skośność i kurtozę, a dla zwrotów normalnych (skośność 0, kurtoza 3) sprowadza się do Φ(SR·√(T−1)/√(1 + SR²/2)) — błędu standardowego Sharpe z Lo (2002).
 - AC-2 (rejestr prób): Given definicje hipotez w `config/holdout/`, when liczę próby na danych danej hipotezy, then liczą się wszystkie definicje kiedykolwiek zacommitowane (także później usunięte) z tym samym uniwersum i nachodzącym okresem treningowym, a niezacommitowany szkic się nie liczy.
 - AC-3 (DSR): Given N prób i dzienne zwroty przebiegu, when liczę DSR, then próg Sharpe to oczekiwane maksimum N prób bez przewagi, a przykład liczbowy z pracy Bailey i López de Prado (2014) daje opublikowany wynik.
 - AC-4 (PBO): Given macierz dziennych zwrotów N ≥ 2 konfiguracji na wspólnych datach, when liczę PBO metodą CSCV, then dostaję odsetek podziałów, w których konfiguracja najlepsza in-sample wypada poniżej mediany out-of-sample — ok. 0.5 dla czystego szumu i ok. 0 dla konfiguracji z wyraźną przewagą.
