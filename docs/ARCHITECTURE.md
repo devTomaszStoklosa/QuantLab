@@ -48,7 +48,12 @@ QuantLab/
 │   ├── risk/                      # reżimy, metryki warunkowe
 │   ├── attribution/                # Trade ledger, cięcia P&L
 │   └── reporting/                 # tear-sheet
-├── presentation/                  # rozszerzenie q7: ASP.NET Core + React (nie w MVP)
+├── global.json                     # .NET SDK 10.0.1xx, runner testów MTP (q7)
+├── presentation/                  # rozszerzenie q7 (ADR-0006, ADR-0008)
+│   ├── QuantLab.Api/               # ASP.NET Core minimal API, IResultsStore (DuckDB.NET)
+│   ├── QuantLab.Api.Tests/         # xUnit v3: kontrakt na syntetycznym magazynie, test środowiska DuckDB
+│   ├── fixtures/results/           # syntetyczny magazyn wyników (generowany przez tests/test_results_fixture.py)
+│   └── design-system/              # QuantForge: tokeny, komponenty React 18
 ├── data/
 │   ├── fixtures/                  # syntetyczne dane testowe (w repo)
 │   ├── raw/                       # pobrane dane publiczne (gitignored)

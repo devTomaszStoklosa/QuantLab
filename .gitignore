@@ -15,3 +15,9 @@ presentation/design-system/shots/
 
 # results store written by quantlab run (q7): the trade ledger carries market prices
 /results/
+
+# .NET and web build output (q7)
+bin/
+obj/
+node_modules/
+presentation/web/dist/
