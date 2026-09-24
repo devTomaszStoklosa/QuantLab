@@ -257,6 +257,30 @@ def test_costs_are_recorded_per_instrument_and_add_up_to_the_charge() -> None:
     )
 
 
+def test_traded_weights_are_recorded_per_instrument_against_drifted_holdings() -> None:
+    bars = {
+        "a": [_bar("a", _DAY1, 100.0), _bar("a", _DAY2, 110.0), _bar("a", _DAY3, 110.0)],
+        "b": [_bar("b", _DAY1, 100.0), _bar("b", _DAY2, 90.0), _bar("b", _DAY3, 90.0)],
+    }
+    long_a_short_b = [
+        Signal(instrument_id="a", ts=_DAY1, direction="long", strength=0.0),
+        Signal(instrument_id="b", ts=_DAY1, direction="short", strength=0.0),
+    ]
+    only_a = [Signal(instrument_id="a", ts=_DAY2, direction="long", strength=0.0)]
+    strategy = _FixedSignalsStrategy({_DAY1: long_a_short_b, _DAY2: only_a})
+
+    result = _run_with(NaiveCostModel(bps=100), bars, strategy)
+
+    assert result.snapshots[0].traded == {}
+    assert result.snapshots[1].traded == pytest.approx({"a": 0.5, "b": 0.5})
+    assert result.snapshots[2].traded == pytest.approx({"a": 1.0 - 0.55 / 1.09, "b": 0.45 / 1.09})
+    # The naive model charges bps on exactly the weight recorded as traded.
+    for snapshot in result.snapshots:
+        assert snapshot.costs == pytest.approx(
+            {instrument_id: 0.01 * weight for instrument_id, weight in snapshot.traded.items()}
+        )
+
+
 def test_cost_model_is_asked_at_the_rebalance_date() -> None:
     bars = {"a": [_bar("a", _DAY1, 100.0), _bar("a", _DAY2, 110.0), _bar("a", _DAY3, 110.0)]}
     strategy = _FixedSignalsStrategy(

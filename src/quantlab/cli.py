@@ -22,8 +22,9 @@ from quantlab.core.universe import Universe
 from quantlab.costs.base import CostModel
 from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.zero import ZeroCostModel
+from quantlab.reporting.contrast import return_correlation
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
-from quantlab.reporting.tear_sheet import TearSheet, render_html
+from quantlab.reporting.tear_sheet import Contrast, TearSheet, render_html
 from quantlab.research.definition import StudyParameters
 from quantlab.research.hypothesis import concluded_status
 from quantlab.risk.conditional import regime_conditional_metrics
@@ -246,13 +247,23 @@ def run(
         Path | None,
         typer.Option(help="Also write an HTML tear-sheet of the realistic-cost run to this file."),
     ] = None,
+    contrast: Annotated[
+        str | None,
+        typer.Option(
+            help="Also correlate the realistic-cost run's daily net returns with this "
+            "hypothesis's, over its own committed definition."
+        ),
+    ] = None,
 ) -> None:
     """Run a hypothesis under each cost model, over its training period only.
 
     Its holdout is never fetched here; that happens once, in open-holdout.
     """
     frozen = _load_definition(hypothesis)
+    # Both definitions are checked before any data is fetched (REQ-303).
+    contrast_definition = _load_definition(contrast).config if contrast is not None else None
     config = frozen.config
+    git_sha = _current_git_sha()
     parameters = config.parameters
     provider = BinanceProvider()
     universe = Universe.load(parameters.universe)
@@ -268,7 +279,7 @@ def run(
         start=config.training_start,
         end=config.training_end,
         seed=_SEED,
-        git_sha=_current_git_sha(),
+        git_sha=git_sha,
     )
     metrics = [run_metrics(result, _PERIODS_PER_YEAR) for result in runs]
     sensitivity = cost_sensitivity(lower_cost=metrics[1], higher_cost=metrics[2])
@@ -291,6 +302,7 @@ def run(
         ("Sortino", lambda m: f"{m.sortino:.2f}"),
         ("Calmar", lambda m: f"{m.calmar:.2f}"),
         ("Max drawdown", lambda m: f"{m.max_drawdown:.2%}"),
+        ("Turnover", lambda m: f"{m.turnover:.1f}x/yr"),
     ]
     for label, fmt in rows:
         typer.echo(f"{label:<14}" + "".join(f"{fmt(m):>{width}}" for m in metrics))
@@ -463,6 +475,34 @@ def run(
     _print_groups("Holding", group_pnl(trades, by_holding_period), HOLDING_PERIOD_BUCKETS)
     typer.echo("Regime = market regime as of the entry close. Descriptive only.")
 
+    contrast_result = None
+    if contrast_definition is not None:
+        other = contrast_definition.parameters
+        other_run = run_study(
+            provider,
+            other,
+            other.cost_model.build(),
+            Universe.load(other.universe),
+            contrast_definition.training_start,
+            contrast_definition.training_end,
+            _SEED,
+            git_sha,
+        )
+        contrast_result = Contrast(
+            hypothesis=contrast_definition.hypothesis,
+            cost_model_name=other_run.cost_model_name,
+            correlation=return_correlation(runs[2], other_run),
+        )
+        correlation = contrast_result.correlation
+        shown = "n/a" if correlation is None else f"{correlation:+.2f}"
+        typer.echo("")
+        typer.echo(
+            f"Contrast with {contrast_result.hypothesis} ({other_run.cost_model_name}, "
+            f"training {other_run.start} .. {other_run.end}): correlation of daily net returns "
+            f"on days both held a position {shown}"
+        )
+        typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
+
     # The holdout's result comes only from the record of its one-time opening.
     record_path = _record_path(hypothesis)
     holdout = read_holdout_record(record_path) if record_path.exists() else None
@@ -491,6 +531,7 @@ def run(
             walk_forward=walk_forward,
             permutation=permutation,
             holdout=holdout,
+            contrast=contrast_result,
             generated_at=datetime.now(tz=UTC),
         )
         tear_sheet.parent.mkdir(parents=True, exist_ok=True)

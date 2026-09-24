@@ -3,7 +3,14 @@ from typing import Literal
 from pydantic import BaseModel
 
 from quantlab.backtest.vectorized.engine import BacktestRun
-from quantlab.reporting.metrics import cagr, calmar, max_drawdown, sharpe, sortino
+from quantlab.reporting.metrics import (
+    annualized_turnover,
+    cagr,
+    calmar,
+    max_drawdown,
+    sharpe,
+    sortino,
+)
 
 # Costs mostly shift the mean return and barely move volatility, so a Sharpe
 # difference is the cost drag measured in units of result volatility - the
@@ -18,6 +25,7 @@ class RunMetrics(BaseModel):
     sortino: float
     calmar: float
     max_drawdown: float
+    turnover: float  # multiple of equity traded per year, counted from the first trade
 
 
 class CostSensitivity(BaseModel):
@@ -29,8 +37,13 @@ class CostSensitivity(BaseModel):
 
 
 def run_metrics(run: BacktestRun, periods_per_year: int) -> RunMetrics:
+    """Metrics of the whole run; turnover only from the first trade, so the
+    warm-up before any signal does not dilute it (as in walk-forward).
+    """
     equity = [snapshot.equity for snapshot in run.snapshots]
     returns = [equity[i] / equity[i - 1] - 1.0 for i in range(1, len(equity))]
+    traded = [sum(snapshot.traded.values()) for snapshot in run.snapshots[1:]]
+    first_trade = next((i for i, value in enumerate(traded) if value > 0.0), None)
     return RunMetrics(
         cost_model_name=run.cost_model_name,
         cagr=cagr(equity, periods_per_year),
@@ -38,6 +51,11 @@ def run_metrics(run: BacktestRun, periods_per_year: int) -> RunMetrics:
         sortino=sortino(returns, periods_per_year),
         calmar=calmar(equity, periods_per_year),
         max_drawdown=max_drawdown(equity),
+        turnover=(
+            0.0
+            if first_trade is None
+            else annualized_turnover(traded[first_trade:], periods_per_year)
+        ),
     )
 
 

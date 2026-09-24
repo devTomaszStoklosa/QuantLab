@@ -61,6 +61,17 @@ def max_drawdown(equity_curve: list[float]) -> float:
     return float(min(drawdown_series(equity_curve)))
 
 
+def annualized_turnover(traded: list[float], periods_per_year: int) -> float:
+    """Mean weight traded per period, as a multiple of equity per year.
+
+    `traded` holds each period's sum of absolute weight changes, so opening a
+    full position and later closing it adds 2.0.
+    """
+    if not traded:
+        raise ValueError("annualized_turnover requires at least 1 period")
+    return float(np.mean(traded) * periods_per_year)
+
+
 def calmar(equity_curve: list[float], periods_per_year: int) -> float:
     drawdown = max_drawdown(equity_curve)
     if drawdown == 0.0:

@@ -7,7 +7,7 @@ from quantlab.backtest.vectorized.engine import BacktestRun, PortfolioSnapshot
 from quantlab.core.data.provider import PriceBar
 from quantlab.reporting.cost_comparison import RunMetrics, run_metrics
 from quantlab.reporting.metrics import drawdown_series
-from quantlab.reporting.tear_sheet import DISCLAIMER, TearSheet, render_html
+from quantlab.reporting.tear_sheet import DISCLAIMER, Contrast, TearSheet, render_html
 from quantlab.risk.conditional import RegimeMetrics, regime_conditional_metrics
 from quantlab.validation.holdout import HoldoutRecord
 from quantlab.validation.permutation import PermutationTestValidator
@@ -269,7 +269,13 @@ def test_disclaimer_closes_the_page() -> None:
 def test_run_without_positions_renders() -> None:
     run = _run(held=False)
     flat = RunMetrics(
-        cost_model_name="realistic", cagr=0.0, sharpe=0.0, sortino=0.0, calmar=0.0, max_drawdown=0.0
+        cost_model_name="realistic",
+        cagr=0.0,
+        sharpe=0.0,
+        sortino=0.0,
+        calmar=0.0,
+        max_drawdown=0.0,
+        turnover=0.0,
     )
 
     page = render_html(_sheet(run, cost_comparison=[flat], regimes={}))
@@ -320,3 +326,33 @@ def test_sealed_holdout_gives_no_verdict() -> None:
     assert "Brak werdyktu" in verdict
     for status in ("confirmed", "rejected", "inconclusive"):
         assert f"verdict-{status}" not in verdict
+
+
+def test_metrics_table_shows_turnover() -> None:
+    sheet = _sheet()
+    turnover = f"{sheet.cost_comparison[1].turnover:.1f}\u00d7"
+
+    page = render_html(sheet)
+
+    assert "Obrót (\u00d7/rok)" in page
+    assert turnover in _section(page, "training")
+
+
+def test_contrast_is_shown_only_when_given() -> None:
+    contrast = Contrast(hypothesis="momentum_v1", cost_model_name="realistic", correlation=-0.42)
+
+    with_contrast = render_html(_sheet(contrast=contrast))
+    without_contrast = render_html(_sheet())
+
+    section = with_contrast[with_contrast.index('<h3 id="contrast">') :]
+    assert "<code>momentum_v1</code>" in section
+    assert "<strong>\u22120.42</strong>" in section
+    assert '<h3 id="contrast">' not in without_contrast
+
+
+def test_undefined_contrast_is_shown_as_a_dash() -> None:
+    contrast = Contrast(hypothesis="momentum_v1", cost_model_name="realistic", correlation=None)
+
+    page = render_html(_sheet(contrast=contrast))
+
+    assert "<strong>\u2014</strong>" in page[page.index('<h3 id="contrast">') :]

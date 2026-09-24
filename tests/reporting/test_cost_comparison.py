@@ -15,6 +15,7 @@ def _metrics(name: str, cagr_value: float, sharpe_value: float) -> RunMetrics:
         sortino=0.0,
         calmar=0.0,
         max_drawdown=-0.1,
+        turnover=0.0,
     )
 
 
@@ -68,3 +69,48 @@ def test_cagr_sign_flip_is_cost_dependent_even_with_small_sharpe_gap() -> None:
 
     assert result.cagr_sign_flip
     assert result.verdict == "cost-dependent"
+
+
+def _traded_run(traded: list[dict[str, float]]) -> BacktestRun:
+    start = date(2026, 1, 1)
+    equity = [1.0, 1.01, 0.99, 1.02, 1.0, 1.03][: len(traded)]
+    return BacktestRun(
+        id="r",
+        strategy_name="s",
+        strategy_params={},
+        cost_model_name="c",
+        universe_name="u",
+        start=start,
+        end=start + timedelta(days=len(traded) - 1),
+        seed=0,
+        git_sha="x",
+        snapshots=[
+            PortfolioSnapshot(
+                ts=start + timedelta(days=i), cash=0.0, positions={}, equity=value, traded=day
+            )
+            for i, (value, day) in enumerate(zip(equity, traded, strict=True))
+        ],
+    )
+
+
+def test_turnover_counts_from_the_first_trade() -> None:
+    run = _traded_run([{}, {}, {"a": 1.0}, {}, {"a": 0.5, "b": 0.5}, {}])
+
+    # Periods 2..5 after the warm-up: 2.0 traded over 4 periods.
+    assert run_metrics(run, periods_per_year=365).turnover == pytest.approx(2.0 / 4 * 365)
+
+
+def test_turnover_is_zero_without_trades() -> None:
+    run = _traded_run([{}, {}, {}, {}, {}, {}])
+    run = run.model_copy(
+        update={
+            "snapshots": [
+                snapshot.model_copy(update={"equity": value})
+                for snapshot, value in zip(
+                    run.snapshots, [1.0, 1.1, 0.9, 1.05, 1.2, 1.1], strict=True
+                )
+            ]
+        }
+    )
+
+    assert run_metrics(run, periods_per_year=365).turnover == 0.0
