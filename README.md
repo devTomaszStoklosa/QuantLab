@@ -30,6 +30,8 @@ dotnet run --project presentation/QuantLab.Api                          # czyta 
 dotnet run --project presentation/QuantLab.Api --launch-profile demo    # syntetyczny magazyn demo_* z presentation/fixtures/results
 ```
 
+Endpointy (tylko odczyt): `GET /api/health`, `/api/hypotheses`, `/api/hypotheses/{id}` (dowody przebiegu), `/api/hypotheses/{id}/equity`, `/api/hypotheses/{id}/trades?instrument=&side=&sort=&order=&offset=&limit=`.
+
 ## Stack
 
 Python 3.12 + uv, pandas/numpy, DuckDB + Parquet, statsmodels/scipy, pytest. Warstwa prezentacji (późniejsze rozszerzenie, epik `q7`): ASP.NET Core Web API + React, czytająca wyniki zapisane przez silnik Pythona.

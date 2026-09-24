@@ -1,4 +1,4 @@
-namespace QuantLab.Api.Results;
+namespace QuantLab.Api.Store;
 
 /// <summary>The store layout this API reads: docs/specs/q7-dotnet-react-presentation/02-spec.md.</summary>
 public static class StoreSchema

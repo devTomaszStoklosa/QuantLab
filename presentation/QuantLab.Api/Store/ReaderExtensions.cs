@@ -1,6 +1,6 @@
 using System.Data.Common;
 
-namespace QuantLab.Api.Results;
+namespace QuantLab.Api.Store;
 
 /// <summary>Typed column access by name; NULL stays null, never 0 (REQ-726).</summary>
 internal static class ReaderExtensions
