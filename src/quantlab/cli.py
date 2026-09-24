@@ -542,6 +542,21 @@ def run(
     if detail["low_confidence"]:
         typer.echo(f"Low confidence: only {detail['active_days']} days with a position")
 
+    for diagnostic in parameters.training_diagnostics(
+        bars, config.training_start, config.training_end
+    ):
+        typer.echo("")
+        typer.echo(
+            f"{diagnostic.title} (training {config.training_start} .. {config.training_end}):"
+        )
+        typer.echo(
+            "; ".join(
+                f"{label} {'n/a' if value is None else format(value, '.4g')}"
+                for label, value in diagnostic.values.items()
+            )
+        )
+        typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
+
     deflation = multiple_testing(
         runs[2],
         trials_on_same_data(config.hypothesis, registered_trials(_HOLDOUT_DIR)),

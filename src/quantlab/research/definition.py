@@ -7,13 +7,17 @@ own strategy: the runner never branches on the strategy type (REQ-301).
 """
 
 from abc import ABC, abstractmethod
+from datetime import date
 from typing import Annotated, Literal, Self
 
+import numpy as np
 from pydantic import BaseModel, Field, model_validator
 
 from quantlab.backtest.sizing import EqualWeightBySign, PairWeights, Sizer
+from quantlab.core.data.provider import PriceBar
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.strategy.base import Strategy
+from quantlab.strategy.cointegration import engle_granger
 from quantlab.strategy.pairs_spread import PairsSpreadReversion
 from quantlab.strategy.short_term_reversal import ShortTermReversal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
@@ -34,6 +38,13 @@ class CostModelParameters(BaseModel):
 
     def build(self) -> RealisticCostModel:
         return RealisticCostModel(fee_bps=self.fee_bps, k=self.k, vol_window=self.vol_window)
+
+
+class TrainingDiagnostic(BaseModel):
+    """A strategy-specific statistic of the training data, reported descriptively."""
+
+    title: str
+    values: dict[str, float | None]  # label -> value, in display order
 
 
 class StudyParametersBase(BaseModel, ABC):
@@ -58,6 +69,12 @@ class StudyParametersBase(BaseModel, ABC):
     def build_sizer(self) -> Sizer:
         """How the engines weight this strategy's signals: equally by sign by default."""
         return EqualWeightBySign()
+
+    def training_diagnostics(
+        self, bars: dict[str, list[PriceBar]], start: date, end: date
+    ) -> list[TrainingDiagnostic]:
+        """Statistics of the training data this strategy's reader needs; none by default."""
+        return []
 
 
 class TimeSeriesMomentumParameters(StudyParametersBase):
@@ -135,6 +152,36 @@ class PairsSpreadParameters(StudyParametersBase):
 
     def build_sizer(self) -> Sizer:
         return PairWeights()
+
+    def training_diagnostics(
+        self, bars: dict[str, list[PriceBar]], start: date, end: date
+    ) -> list[TrainingDiagnostic]:
+        """Engle-Granger test and half-life over the whole training period (REQ-430).
+
+        Descriptive: the strategy itself only ever tests trailing windows.
+        """
+        explanatory = {
+            bar.ts: bar.close for bar in bars[self.explanatory] if start <= bar.ts <= end
+        }
+        common = sorted(
+            (bar.ts, bar.close, explanatory[bar.ts])
+            for bar in bars[self.dependent]
+            if start <= bar.ts <= end and bar.ts in explanatory
+        )
+        result = engle_granger(np.log([y for _, y, _ in common]), np.log([x for _, _, x in common]))
+        return [
+            TrainingDiagnostic(
+                title=f"Cointegration of {self.dependent} on {self.explanatory}",
+                values={
+                    "days": float(result.n_observations),
+                    "hedge ratio": result.beta,
+                    "Engle-Granger statistic": result.statistic,
+                    "5% critical value": result.critical_values["5%"],
+                    "p-value": result.p_value,
+                    "half-life (days)": result.half_life,
+                },
+            )
+        ]
 
 
 # A definition's `strategy` field picks the variant; a new strategy is a new
