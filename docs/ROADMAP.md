@@ -23,6 +23,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 
 **Po `q2`-E5 (2026-09-24):** `q2` i `q3` czekają na lokalne przebiegi (E6, M5), więc rusza `q6-advanced-validation-cpcv` w zakresie, który nie wymaga danych: PSR, deflated Sharpe z liczbą prób liczoną z historii gita i PBO. CPCV/purged k-fold odłożone do pierwszej hipotezy z parametrami dopasowywanymi na danych (`q4`).
 
+**Po `q6`-V5 (2026-09-24):** jedyny epik z niezablokowaną pracą to `q4-pairs-trading-stat-arb` (`q5` czeka na decyzję o źródle danych akcji, `q7` na .NET SDK, którego środowisko chmurowe nie pobiera). Kod (kointegracja, kontrakt wag, strategia par) powstaje na danych syntetycznych; zamrożenie `pairs_v1` wymaga odpowiedzi na pytania pre-rejestracji. Współczynnik zabezpieczenia jest estymowany kroczącym oknem z przeszłości, więc CPCV nadal nie ma czego oceniać — zostaje odłożone bez epiku docelowego.
+
 ## Epiki
 
 ### lab-foundation
@@ -49,9 +51,11 @@ Druga rodzina hipotez — short-term mean reversion — jako kontrast do momentu
 
 Slice'y: M1 uogólniony runner (definicja hipotezy = zamrożony plik) · M2 `ShortTermReversal` · M3 obrót i korelacja z `momentum_v1` · M4 zamrożenie `mean_reversion_v1` · M5 przebieg treningowy · M6 otwarcie holdoutu · M7 wpis w dzienniku.
 
-### q4-pairs-trading-stat-arb (rozszerzenie, nierozpisane)
+### q4-pairs-trading-stat-arb (rozszerzenie, w toku)
 
-Kointegracja (Engle-Granger/Johansen), spread trading, rozszerzenie silnika na multi-asset.
+Kointegracja (Engle-Granger), spread trading na parze ETH-USDT / BTC-USDT, wagi z współczynnika zabezpieczenia w obu silnikach. Johansen i wybór par z szerszego koszyka wracają po `q5`. Pełna specyfikacja: [specs/q4-pairs-trading-stat-arb/](specs/q4-pairs-trading-stat-arb/).
+
+Slice'y: P1 narzędzia kointegracji · P2 kontrakt wag (`Sizer`) · P3 strategia par · P4 diagnostyka kointegracji w raporcie · P5 zamrożenie `pairs_v1` · P6 przebieg treningowy · P7 otwarcie holdoutu · P8 wpis w dzienniku.
 
 ### q5-equities-cross-section (rozszerzenie, nierozpisane)
 
@@ -89,7 +93,7 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | gotowe (S1..S16), MVP zamknięte: `momentum_v1` inconclusive |
 | q2-event-driven-engine | Ready for dev | Ready for dev | Ready for dev | E1–E5 gotowe; E6 wymaga lokalnego przebiegu (Binance) |
 | q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
-| q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
+| q4-pairs-trading-stat-arb | Ready for dev | Ready for dev | Ready for dev | — |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
 | q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
 | q7-dotnet-react-presentation | nie napisany | nie napisany | nie napisany | — |
