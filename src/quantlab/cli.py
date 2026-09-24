@@ -15,6 +15,8 @@ from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.costs.zero import ZeroCostModel
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
+from quantlab.risk.conditional import regime_conditional_metrics
+from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier, label_periods
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 from quantlab.validation.holdout import (
     FrozenHoldout,
@@ -45,6 +47,11 @@ _SEED = 0  # seeds the permutation test's shuffles, so reruns reproduce its p-va
 _PERMUTATIONS = 10_000
 _PERMUTATION_ALPHA = 0.1
 _PERIODS_PER_YEAR = 365  # crypto trades every calendar day
+# Market regime for the whole portfolio: BTC as the usual crypto market proxy,
+# 30-day volatility ranked against its own last 365 days.
+_REGIME_INSTRUMENT = "btc-usdt"
+_REGIME_VOL_WINDOW_DAYS = 30
+_REGIME_HISTORY_DAYS = 365
 _HOLDOUT_CONFIG = Path("config/holdout/momentum_v1.yaml")
 _HOLDOUT_RECORD = Path("config/holdout/momentum_v1.opened.json")
 
@@ -312,6 +319,34 @@ def run() -> None:
         typer.echo(f"Result: p = {detail['p_value']:.4f}, {significance}")
     if detail["low_confidence"]:
         typer.echo(f"Low confidence: only {detail['active_days']} days with a position")
+
+    classifier = VolatilityTercileClassifier(
+        vol_window=_REGIME_VOL_WINDOW_DAYS, history_days=_REGIME_HISTORY_DAYS
+    )
+    labels = label_periods(
+        classifier, bars[_REGIME_INSTRUMENT], [snapshot.ts for snapshot in runs[2].snapshots]
+    )
+    by_regime = regime_conditional_metrics(runs[2], labels, _PERIODS_PER_YEAR)
+    total_days = sum(regime.days for regime in by_regime.values())
+    typer.echo("")
+    typer.echo(
+        f"Regimes ({runs[2].cost_model_name}): {_REGIME_INSTRUMENT} {_REGIME_VOL_WINDOW_DAYS}-day "
+        f"volatility tercile vs its last {_REGIME_HISTORY_DAYS} days, "
+        "as of the day before each return"
+    )
+    typer.echo(f"{'Regime':<12}{'Days':>7}{'Share':>9}{'CAGR':>10}{'Sharpe':>10}{'Sortino':>10}")
+
+    def _fmt(value: float | None, pattern: str) -> str:
+        return "n/a" if value is None else format(value, pattern)
+
+    for label in (label for label in VOLATILITY_REGIMES if label in by_regime):
+        regime = by_regime[label]
+        typer.echo(
+            f"{label:<12}{regime.days:>7}{regime.days / total_days:>9.1%}"
+            f"{_fmt(regime.cagr, '.2%'):>10}{_fmt(regime.sharpe, '.2f'):>10}"
+            f"{_fmt(regime.sortino, '.2f'):>10}"
+        )
+    typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
 
 
 def _print_holdout(record: HoldoutRecord) -> None:
