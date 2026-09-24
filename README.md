@@ -22,12 +22,14 @@ uv run quantlab registry                                     # rejestr hipotez w
 
 `quantlab run` zapisuje też dowody hipotezy do magazynu wyników `results/` (Parquet, ignorowany przez gita), z którego czyta warstwa prezentacji (`q7`, [ADR-0008](docs/adr/0008-results-store-parquet-duckdb.md)).
 
-Warstwa prezentacji (`q7`, w toku) — API ASP.NET Core nad magazynem wyników, wymaga .NET 10 SDK:
+Warstwa prezentacji (`q7`, w toku) — API ASP.NET Core nad magazynem wyników i aplikacja React w design systemie QuantForge; wymaga .NET 10 SDK i Node.js ≥ 22.22:
 
 ```bash
 dotnet test --solution presentation/QuantLab.Presentation.slnx
+(cd presentation/web && npm ci && npm test && npm run build)            # aplikacja do presentation/web/dist, serwowana przez API
 dotnet run --project presentation/QuantLab.Api                          # czyta results/ z lokalnych przebiegów; http://localhost:5080/api/hypotheses
-dotnet run --project presentation/QuantLab.Api --launch-profile demo    # syntetyczny magazyn demo_* z presentation/fixtures/results
+dotnet run --project presentation/QuantLab.Api --launch-profile demo    # syntetyczny magazyn demo_* z presentation/fixtures/results; aplikacja: http://localhost:5080
+(cd presentation/web && npm run dev)                                    # serwer deweloperski Vite (:5173) z proxy /api do API na :5080
 ```
 
 Endpointy (tylko odczyt): `GET /api/health`, `/api/hypotheses`, `/api/hypotheses/{id}` (dowody przebiegu), `/api/hypotheses/{id}/equity`, `/api/hypotheses/{id}/trades?instrument=&side=&sort=&order=&offset=&limit=`.

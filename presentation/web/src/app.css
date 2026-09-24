@@ -1,0 +1,11 @@
+/* App-level touches on top of the QuantForge bundle. */
+.qf-content a {
+  color: var(--forge-ink);
+  text-decoration: none;
+}
+.qf-content a:hover {
+  text-decoration: underline;
+}
+.ql-nowrap {
+  white-space: nowrap;
+}

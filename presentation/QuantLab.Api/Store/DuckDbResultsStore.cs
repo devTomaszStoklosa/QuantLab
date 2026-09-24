@@ -170,7 +170,17 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
             TablePath(summary.Hypothesis, "equity"),
             "SELECT equity FROM read_parquet($path) ORDER BY ts",
             row => row.Number("equity"));
-        return summary with { TrainingSharpe = sharpe.Single(), Sparkline = Sparkline(equity, SparklinePoints) };
+        var source = Query(
+            db,
+            TablePath(summary.Hypothesis, "run"),
+            "SELECT data_source FROM read_parquet($path)",
+            row => row.Text("data_source"));
+        return summary with
+        {
+            TrainingSharpe = sharpe.Single(),
+            Sparkline = Sparkline(equity, SparklinePoints),
+            DataSource = source.Single(),
+        };
     }
 
     /// <summary>Evenly spaced values, first and last included: display sampling, not a metric.</summary>

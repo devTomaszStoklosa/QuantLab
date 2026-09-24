@@ -57,6 +57,7 @@ public class HypothesesTests
         Assert.Equal(equity[0], sparkline[0]);
         Assert.Equal(equity[^1], sparkline[^1]);
         Assert.All(sparkline, value => Assert.Contains(value, equity));
+        Assert.Equal("synthetic", pairs.GetProperty("dataSource").GetString());
     }
 
     [Fact]
@@ -68,6 +69,7 @@ public class HypothesesTests
         Assert.False(reversal.GetProperty("hasRun").GetBoolean());
         Assert.Equal(JsonValueKind.Null, reversal.GetProperty("trainingSharpe").ValueKind);
         Assert.Empty(reversal.GetProperty("sparkline").EnumerateArray());
+        Assert.Equal(JsonValueKind.Null, reversal.GetProperty("dataSource").ValueKind);
         Assert.Equal("proposed", reversal.GetProperty("status").GetString());
     }
 

@@ -92,8 +92,8 @@ export declare function LogEntry(props: LogEntryProps): React.ReactElement;
 export interface DialogProps { title: React.ReactNode; subtitle?: React.ReactNode; icon?: IconName; tone?: 'default' | 'holdout'; footer?: React.ReactNode; scrim?: boolean; children?: React.ReactNode }
 export declare function Dialog(props: DialogProps): React.ReactElement;
 
-export interface NavItem { key?: string; label?: string; icon?: IconName; group?: string }
-export interface AppShellProps { active?: string; crumbs?: string[]; counts?: Record<string, number>; workspace?: string; workspaceMeta?: string; nav?: NavItem[]; topActions?: React.ReactNode; overlay?: React.ReactNode; sideFoot?: React.ReactNode; children?: React.ReactNode; style?: React.CSSProperties }
+export interface NavItem { key?: string; label?: string; icon?: IconName; group?: string; href?: string }
+export interface AppShellProps { active?: string; crumbs?: string[]; counts?: Record<string, number>; workspace?: string; workspaceMeta?: string; nav?: NavItem[]; topActions?: React.ReactNode; overlay?: React.ReactNode; sideFoot?: React.ReactNode; search?: boolean; children?: React.ReactNode; style?: React.CSSProperties }
 export declare function AppShell(props: AppShellProps): React.ReactElement;
 
 /** Formatting only: U+2212 minus, fixed decimals, optional explicit sign. */

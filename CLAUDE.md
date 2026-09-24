@@ -30,6 +30,7 @@ Platforma do systematycznych badań inwestycyjnych (hipoteza, dane, sygnał, bac
 | CLI | `uv run quantlab <komenda>` |
 | Testy API .NET (`q7`) | `dotnet test --solution presentation/QuantLab.Presentation.slnx` |
 | API na syntetycznym magazynie | `dotnet run --project presentation/QuantLab.Api --launch-profile demo` |
+| UI React (`q7`, w `presentation/web`) | `npm ci`, `npm test`, `npm run build` (typecheck + build do `dist/`) |
 
 ## Twarde zasady
 
