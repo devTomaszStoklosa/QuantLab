@@ -312,6 +312,29 @@ def test_run_refuses_a_universe_whose_data_source_is_unknown(tmp_path, monkeypat
     assert provider.requests == []
 
 
+def test_run_before_the_sp500_universe_is_built_says_how_to_build_it(tmp_path, monkeypatch) -> None:
+    provider = _definition_repo(tmp_path / "definitions", monkeypatch)
+    definition = tmp_path / "definitions" / "momentum_v1.yaml"
+    definition.write_text(
+        definition.read_text(encoding="utf-8").replace("universe: mvp-crypto", "universe: sp500"),
+        encoding="utf-8",
+    )
+    _git(tmp_path / "definitions", "commit", "-q", "-am", "equities")
+
+    def not_built(cls, name: str) -> Universe:
+        raise ValueError(f"Universe '{name}' not found")
+
+    monkeypatch.setattr(Universe, "load", classmethod(not_built))
+
+    result = runner.invoke(app, ["run", "momentum_v1"])
+
+    assert result.exit_code == 1
+    assert "Universe 'sp500' not found - build it with `uv run quantlab build-universe`" in (
+        result.output
+    )
+    assert provider.requests == []
+
+
 def test_the_regime_windows_are_a_month_and_a_year_of_the_universes_sessions() -> None:
     crypto = Universe.load("mvp-crypto")
     equities = crypto.model_copy(update={"periods_per_year": 252})

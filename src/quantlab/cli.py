@@ -155,6 +155,21 @@ def _provider(universe: Universe) -> DataProvider:
         raise typer.Exit(1) from error
 
 
+def _universe(name: str) -> Universe:
+    """The universe a definition names, or exit before fetching anything; the S&P 500
+    file is built locally, so its absence says how to build it."""
+    try:
+        return Universe.load(name)
+    except ValueError as error:
+        hint = (
+            " - build it with `uv run quantlab build-universe` (needs network), then commit it"
+            if name == sp500.UNIVERSE_NAME
+            else ""
+        )
+        typer.echo(f"Error: {error}{hint}", err=True)
+        raise typer.Exit(1) from error
+
+
 def _regime_windows(universe: Universe) -> tuple[int, int]:
     """Market regime for the whole portfolio: the market proxy's volatility over a month
     of sessions, ranked against its last year of them (30 and 365 days for crypto)."""
@@ -580,7 +595,7 @@ def run(
     config = frozen.config
     git_sha = _current_git_sha()
     parameters = config.parameters
-    universe = Universe.load(parameters.universe)
+    universe = _universe(parameters.universe)
     provider = _provider(universe)
     periods_per_year = universe.periods_per_year
     market_proxy = universe.market_proxy
@@ -895,7 +910,7 @@ def run(
             provider,
             other,
             other.cost_model.build(),
-            Universe.load(other.universe),
+            _universe(other.universe),
             contrast_definition.training_start,
             contrast_definition.training_end,
             _SEED,
@@ -984,7 +999,7 @@ def compare_engines(
     config = frozen.config
     parameters = config.parameters
     git_sha = _current_git_sha()
-    universe = Universe.load(parameters.universe)
+    universe = _universe(parameters.universe)
     comparison = run_engine_comparison(
         provider=_provider(universe),
         parameters=parameters,
@@ -1072,7 +1087,7 @@ def trials_command(
             typer.echo(f"Error: {error}", err=True)
             raise typer.Exit(1) from error
 
-    provider = _provider(Universe.load(target.parameters.universe))
+    provider = _provider(_universe(target.parameters.universe))
     comparison = run_trials(provider, trials, _SEED, _current_git_sha())
 
     typer.echo(
@@ -1170,7 +1185,7 @@ def open_holdout(hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYP
     else:
         frozen = _load_definition(hypothesis)
         record = open_frozen_holdout(
-            provider=_provider(Universe.load(frozen.config.parameters.universe)),
+            provider=_provider(_universe(frozen.config.parameters.universe)),
             frozen=frozen,
             record_path=record_path,
             n_permutations=_PERMUTATIONS,
