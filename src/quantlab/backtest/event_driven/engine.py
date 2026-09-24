@@ -43,8 +43,12 @@ def run(
     open, mark-to-market and snapshot, fills due at the close, then signals and
     new orders - against a feed that has revealed nothing after that date.
     Weights follow the same rule as the vectorized engine, among instruments
-    with a bar at the decision close. No orders are placed on the last date:
-    there is no period left for them to carry.
+    with a bar at the decision close.
+
+    The run ends at the last date's snapshot: no orders are placed then (no
+    period is left for them to carry), and orders that could only fill after
+    it - next-close orders decided the day before - fall outside the run and
+    are not recorded, like any trade after the last close.
     """
     dates = trading_dates(bars, start, end)
     if not dates:
@@ -57,9 +61,9 @@ def run(
         feed.advance(ts)
         portfolio.apply(execution.due("open", feed, fills))
         portfolio.snapshot(ts)
-        portfolio.apply(execution.due("close", feed, fills))
         if ts == dates[-1]:
             break
+        portfolio.apply(execution.due("close", feed, fills))
         signals = strategy.generate_signals(feed.history(), ts)
         tradable = [signal for signal in signals if feed.bar(signal.instrument_id) is not None]
         orders = portfolio.rebalance(equal_weight_by_sign(tradable), ts)

@@ -52,3 +52,39 @@ class CloseExecution:
 
     def due(self, phase: Phase, feed: BarFeed, fills: FillPolicy) -> list[Execution]:
         return []
+
+
+_PRICE_AT: dict[Phase, Callable[[PriceBar], float]] = {
+    "open": lambda bar: bar.open,
+    "close": _close,
+}
+
+
+class NextBarExecution:
+    """Fill at the open or the close of the next trading date (REQ-221).
+
+    Orders decided at the close of t wait until the loop reaches the next date
+    and fill at that bar's `phase` price; an instrument with no bar that day
+    has its order cancelled. The open is the first price available once the
+    signal is known; the close is a full day late, which shows how fast the
+    signal loses its value.
+    """
+
+    def __init__(self, phase: Phase) -> None:
+        self.phase = phase
+        self.name = f"next-{phase}"
+        self._price = _PRICE_AT[phase]
+        self._pending: list[Order] = []
+
+    def submit(self, orders: list[Order], feed: BarFeed, fills: FillPolicy) -> list[Execution]:
+        if self._pending:
+            raise RuntimeError("New orders submitted while earlier ones are still pending")
+        self._pending = list(orders)
+        return []
+
+    def due(self, phase: Phase, feed: BarFeed, fills: FillPolicy) -> list[Execution]:
+        if phase != self.phase:
+            return []
+        executions = [execute(order, feed, fills, self._price) for order in self._pending]
+        self._pending = []
+        return executions
