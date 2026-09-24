@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from itertools import pairwise
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.base import CostModel
@@ -14,6 +14,9 @@ class PortfolioSnapshot(BaseModel):
     cash: float
     positions: dict[str, float]
     equity: float
+    # Cost charged per instrument in the period ending at ts, as a fraction of
+    # the previous snapshot's equity; includes instruments being closed.
+    costs: dict[str, float] = Field(default_factory=dict)
 
 
 class BacktestRun(BaseModel):
@@ -102,11 +105,14 @@ def run(
                     instrument_closes[current_date] - instrument_closes[previous_date]
                 ) / instrument_closes[previous_date]
 
-        total_cost = 0.0
+        instrument_costs: dict[str, float] = {}
         for instrument_id in held.keys() | weights.keys():
             traded_weight = abs(weights.get(instrument_id, 0.0) - held.get(instrument_id, 0.0))
             if traded_weight > 0.0:
-                total_cost += cost_model.cost(bars[instrument_id], previous_date, traded_weight)
+                instrument_costs[instrument_id] = cost_model.cost(
+                    bars[instrument_id], previous_date, traded_weight
+                )
+        total_cost = sum(instrument_costs.values())
 
         gross_return = sum(
             weight * instrument_returns[instrument_id] for instrument_id, weight in weights.items()
@@ -125,6 +131,7 @@ def run(
                 cash=equity * (1.0 - invested),
                 positions=weights,
                 equity=equity,
+                costs=instrument_costs,
             )
         )
 

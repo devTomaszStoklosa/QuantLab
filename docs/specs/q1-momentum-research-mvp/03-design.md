@@ -56,13 +56,13 @@ Recommended: **Option B (time-series momentum per-instrument)**. Rezygnujemy z: 
 Hypothesis (proposed)
   -> Strategy.generate_signals(PriceBar[]) -> Signal[]           (S2, S3)
   -> backtest.vectorized.run(Signal[], CostModel) -> BacktestRun  (S4)
-       -> PortfolioSnapshot[], Trade[]
+       -> PortfolioSnapshot[] (wagi, equity, koszt per instrument)
   -> reporting.metrics(BacktestRun) -> PerformanceMetrics         (S5)
   -> validation.WalkForwardValidator(BacktestRun) -> ValidationResult   (S9)
   -> validation.holdout (zamrożony config) -> ValidationResult          (S10)
   -> validation.PermutationTestValidator(BacktestRun) -> ValidationResult (S11)
   -> risk.RegimeClassifier(PriceBar[]) -> RegimeLabel[]            (S12)
-  -> attribution.TradeLedger(Trade[], RegimeLabel[]) -> cięcia P&L (S14)
+  -> attribution.build_trade_ledger(BacktestRun, PriceBar[], RegimeLabel[]) -> Trade[] -> group_pnl (S14)
   -> reporting.TearSheet(...) -> raport                            (S15)
   -> Hypothesis (confirmed / rejected / inconclusive) -> RESEARCH_LOG.md (S16)
 ```
@@ -95,7 +95,7 @@ src/quantlab/
     regime.py                       # RegimeClassifier, RegimeLabel
     stress.py                       # scenario shock
   attribution/
-    trade_ledger.py                 # Trade, TradeLedger, group_by(...)
+    trade_ledger.py                 # Trade, build_trade_ledger(), group_pnl(trades, key)
   reporting/
     metrics.py                      # cagr, sharpe, sortino, calmar, max_drawdown (własny kod)
     tear_sheet.py                   # generate_tear_sheet(BacktestRun, ValidationResult) -> plik HTML
@@ -135,8 +135,8 @@ class BacktestRun(BaseModel):
     end: date
     seed: int
     git_sha: str
-    snapshots: list[PortfolioSnapshot]
-    trades: list[Trade]
+    snapshots: list[PortfolioSnapshot]  # Trade[] budowane po przebiegu przez build_trade_ledger (S14):
+                                        # etykieta reżimu przy wejściu pochodzi spoza silnika
 
 class Validator(Protocol):
     def validate(self, run: BacktestRun) -> ValidationResult: ...
