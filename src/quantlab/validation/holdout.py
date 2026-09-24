@@ -8,6 +8,7 @@ from pydantic import BaseModel, model_validator
 
 from quantlab.research.definition import StudyParameters
 from quantlab.validation.base import SignificanceTest
+from quantlab.validation.cpcv import CpcvSettings
 
 
 class HoldoutNotFrozenError(Exception):
@@ -25,6 +26,16 @@ class SuccessCriterion(BaseModel):
     # Which test gives that p-value (REQ-563). The default is q1's day shuffle, so
     # every definition frozen before q5 keeps its meaning.
     significance_test: SignificanceTest = "day_shuffle"
+    # The in-sample gate of the status (q8, REQ-830): calendar walk-forward, the
+    # default for every definition frozen before q8, or CPCV of a parameter grid.
+    in_sample_validation: Literal["walk_forward", "cpcv"] = "walk_forward"
+    cpcv: CpcvSettings | None = None
+
+    @model_validator(mode="after")
+    def _cpcv_settings(self) -> Self:
+        if self.in_sample_validation == "cpcv" and self.cpcv is None:
+            raise ValueError("A cpcv in-sample validation needs its frozen cpcv settings")
+        return self
 
 
 class HoldoutConfig(BaseModel):
@@ -44,6 +55,11 @@ class HoldoutConfig(BaseModel):
             )
         if self.end < self.start:
             raise ValueError(f"Holdout end {self.end} is before its start {self.start}")
+        if (
+            self.success_criterion.in_sample_validation == "cpcv"
+            and self.parameters.configurations < 2
+        ):
+            raise ValueError("A cpcv in-sample validation needs a parameter grid to choose from")
         return self
 
 

@@ -14,6 +14,41 @@ from quantlab.strategy.base import Strategy
 from quantlab.strategy.signal import Signal
 
 
+def common_start(
+    bars: dict[str, list[PriceBar]], warm_up_days: int, not_before: date
+) -> date | None:
+    """The first day every grid value can signal on every instrument (the latest first
+    bar plus the longest warm-up), or `not_before` if later; None without bars."""
+    firsts = [series[0].ts for series in bars.values() if series]
+    if not firsts:
+        return None
+    return max(not_before, max(firsts) + timedelta(days=warm_up_days))
+
+
+def net_returns(
+    strategy: Strategy,
+    cost_model: CostModel,
+    bars: dict[str, list[PriceBar]],
+    start: date,
+    end: date,
+) -> list[float]:
+    """Daily net returns of a vectorized backtest of `strategy` over [start, end]."""
+    run = run_backtest(
+        strategy=strategy,
+        cost_model=cost_model,
+        bars=bars,
+        universe_name="selection",
+        start=start,
+        end=end,
+        seed=0,
+        git_sha="selection",
+        strategy_name="selection",
+        strategy_params={},
+    )
+    equity = [snapshot.equity for snapshot in run.snapshots]
+    return [after / before - 1.0 for before, after in pairwise(equity)]
+
+
 class SelectionRecord(BaseModel):
     """One yearly choice: every grid value's Sharpe on the history before it."""
 
@@ -76,12 +111,7 @@ class SelectedParameter:
             instrument_id: series[: count_through(series, last_day)]
             for instrument_id, series in bars.items()
         }
-        firsts = [series[0].ts for series in known.values() if series]
-        start = (
-            max(self.history_start, max(firsts) + timedelta(days=self.warm_up_days))
-            if firsts
-            else None
-        )
+        start = common_start(known, self.warm_up_days, self.history_start)
         days = 0 if start is None else (last_day - start).days + 1
         nothing = {label: None for label in self.variants}
         if start is None or days < self.min_history_days:
@@ -112,21 +142,8 @@ class SelectedParameter:
     def _sharpe(
         self, strategy: Strategy, bars: dict[str, list[PriceBar]], start: date, end: date
     ) -> float | None:
-        run = run_backtest(
-            strategy=strategy,
-            cost_model=self.cost_model,
-            bars=bars,
-            universe_name="selection",
-            start=start,
-            end=end,
-            seed=0,
-            git_sha="selection",
-            strategy_name="selection",
-            strategy_params={},
-        )
-        equity = [snapshot.equity for snapshot in run.snapshots]
         try:
-            return sharpe([after / before - 1.0 for before, after in pairwise(equity)], 1)
+            return sharpe(net_returns(strategy, self.cost_model, bars, start, end), 1)
         except ValueError:
             return None  # no variance: no position, or too few days
 
