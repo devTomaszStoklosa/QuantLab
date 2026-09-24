@@ -4,7 +4,7 @@ from typing import Protocol
 import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
-from quantlab.core.data.provider import PriceBar
+from quantlab.core.data.provider import PriceBar, count_through
 
 LOW = "low"
 MEDIUM = "medium"
@@ -36,11 +36,10 @@ class VolatilityTercileClassifier:
         self.history_days = history_days
 
     def label(self, bars: list[PriceBar], as_of: date) -> str:
+        known = count_through(bars, as_of)  # bars sorted by date, as the data layer returns them
+        window = self.history_days + self.vol_window
         closes = np.array(
-            [bar.close for bar in sorted(bars, key=lambda bar: bar.ts) if bar.ts <= as_of][
-                -(self.history_days + self.vol_window) :
-            ],
-            dtype=np.float64,
+            [bar.close for bar in bars[max(0, known - window) : known]], dtype=np.float64
         )
         returns = closes[1:] / closes[:-1] - 1.0
         if len(returns) < self.history_days + self.vol_window - 1:
