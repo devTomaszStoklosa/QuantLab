@@ -32,7 +32,11 @@ FIXTURE = Path(__file__).parents[1] / "presentation" / "fixtures" / "results"
 _ORIGIN = date(2019, 1, 1)
 _LAST = date(2024, 12, 31)
 _CLOCK = datetime(2026, 9, 24, 12, 0, tzinfo=UTC)
+# The definitions' commit hashes end up in the store, so the temporary repo must
+# not see the machine's git config: a signing key or hook there would change them.
 _GIT_ENV = {
+    "GIT_CONFIG_GLOBAL": os.devnull,
+    "GIT_CONFIG_NOSYSTEM": "1",
     "GIT_AUTHOR_NAME": "QuantLab fixtures",
     "GIT_AUTHOR_EMAIL": "fixtures@quantlab.invalid",
     "GIT_COMMITTER_NAME": "QuantLab fixtures",
@@ -213,10 +217,14 @@ def generate(directory: Path, monkeypatch) -> Path:
     """Write the synthetic store to `directory/results` and return its path."""
     repo, store = directory / "definitions", directory / "results"
     repo.mkdir(parents=True)
-    subprocess.run(["git", "init", "-q"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "init", "-q"], cwd=repo, env=os.environ | _GIT_ENV, check=True, capture_output=True
+    )
     for day, (hypothesis, strategy) in enumerate(_HYPOTHESES.items()):
         (repo / f"{hypothesis}.yaml").write_text(
-            _DEFINITION.format(hypothesis=hypothesis, strategy=strategy), encoding="utf-8"
+            _DEFINITION.format(hypothesis=hypothesis, strategy=strategy),
+            encoding="utf-8",
+            newline="\n",  # the same blobs, so the same commit hashes, on Windows
         )
         _commit(
             repo,
@@ -224,7 +232,7 @@ def generate(directory: Path, monkeypatch) -> Path:
             datetime(2026, 9, 1 + day, 9, 0, tzinfo=UTC),
             f"{hypothesis}.yaml",
         )
-    (repo / "demo_xsmom.yaml").write_text(_EQUITY_DEFINITION, encoding="utf-8")
+    (repo / "demo_xsmom.yaml").write_text(_EQUITY_DEFINITION, encoding="utf-8", newline="\n")
     _commit(repo, "freeze demo_xsmom", datetime(2026, 9, 5, 9, 0, tzinfo=UTC), "demo_xsmom.yaml")
     provider = _SyntheticProvider()
     load = Universe.load

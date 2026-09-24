@@ -23,7 +23,7 @@
     "minSharpe": 0,
     "maxPValue": 0.1,
     "significanceTest": "day_shuffle",
-    "frozenAtCommit": "556db55158d88667d0c5a69397cc37e1bc91f670",
+    "frozenAtCommit": "b5dbb40f111c4b78942bc1b661ca3f62588d651e",
     "registeredAt": "2026-09-01T09:00:00\u002B00:00",
     "trialsOnSameData": 3,
     "status": "rejected",
