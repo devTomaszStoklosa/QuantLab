@@ -389,6 +389,12 @@ def _permutation(result: ValidationResult) -> str:
     return header + body + warning
 
 
+def _no_edge(result: MultipleTesting) -> str:
+    if result.configurations == len(result.trials):
+        return f"{len(result.trials)} prób"
+    return f"{result.configurations} konfiguracji"
+
+
 def _multiple_testing(result: MultipleTesting | None, cost_model_name: str) -> str:
     if result is None:
         return ""
@@ -398,7 +404,7 @@ def _multiple_testing(result: MultipleTesting | None, cost_model_name: str) -> s
         ["Sharpe od pierwszej pozycji", _ratio(result.sharpe_annualized)],
         ["PSR: P(prawdziwy Sharpe > 0)", _ratio(result.psr)],
         [
-            f"Próg: oczekiwany najlepszy Sharpe {len(result.trials)} prób bez przewagi",
+            f"Próg: oczekiwany najlepszy Sharpe {_no_edge(result)} bez przewagi",
             _ratio(result.threshold_annualized),
         ],
         ["DSR: P(prawdziwy Sharpe > próg)", _ratio(result.dsr)],
@@ -407,7 +413,13 @@ def _multiple_testing(result: MultipleTesting | None, cost_model_name: str) -> s
         '<h3 id="multiple-testing">Wielokrotne testowanie</h3>'
         f"<p>Próby na tym uniwersum i okresie treningowym: "
         f"<strong>{len(result.trials)}</strong> ({trials}) — każda hipoteza, której "
-        "definicja została kiedykolwiek zacommitowana.</p>"
+        "definicja została kiedykolwiek zacommitowana"
+        + (
+            ""
+            if result.configurations == len(result.trials)
+            else f"; razem {result.configurations} konfiguracji parametrów (siatki, q8)"
+        )
+        + ".</p>"
         f"{_table(['Miara', 'Wartość'], rows)}"
         f'<p class="muted">Dzienne zwroty netto (<code>{_e(cost_model_name)}</code>) od '
         f"pierwszej pozycji, {days} dni; Sharpe w skali roku. PSR uwzględnia "

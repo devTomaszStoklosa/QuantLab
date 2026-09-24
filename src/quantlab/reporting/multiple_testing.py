@@ -58,6 +58,10 @@ class MultipleTesting(BaseModel):
     """
 
     trials: list[str]  # hypotheses on the same data, oldest first, the run's own included
+    # Parameter configurations those trials tried (q8, REQ-820): one per trial with
+    # fixed parameters, the grid's size for one choosing from a grid. The DSR
+    # threshold is the expected best of this many no-edge configurations.
+    configurations: int
     n_returns: int
     sharpe_annualized: float | None
     psr: float | None  # probability that the true Sharpe exceeds 0
@@ -73,9 +77,11 @@ def multiple_testing(
     returns = active_returns(run)
     statistics = sharpe_statistics(returns)
     names = [trial.hypothesis for trial in trials]
+    configurations = sum(trial.definition.parameters.configurations for trial in trials)
     if statistics is None:
         return MultipleTesting(
             trials=names,
+            configurations=configurations,
             n_returns=len(returns),
             sharpe_annualized=None,
             psr=None,
@@ -83,12 +89,13 @@ def multiple_testing(
             dsr=None,
         )
     annualize = math.sqrt(periods_per_year)
-    threshold = expected_max_sharpe(len(trials), null_sharpe_variance(statistics.n_returns))
+    threshold = expected_max_sharpe(configurations, null_sharpe_variance(statistics.n_returns))
     return MultipleTesting(
         trials=names,
+        configurations=configurations,
         n_returns=statistics.n_returns,
         sharpe_annualized=statistics.sharpe * annualize,
         psr=probabilistic_sharpe_ratio(statistics),
         threshold_annualized=threshold * annualize,
-        dsr=deflated_sharpe_ratio(statistics, len(trials)),
+        dsr=deflated_sharpe_ratio(statistics, configurations),
     )

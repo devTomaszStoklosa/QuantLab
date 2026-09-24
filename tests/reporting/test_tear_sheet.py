@@ -375,9 +375,28 @@ def test_undefined_contrast_is_shown_as_a_dash() -> None:
     assert "<strong>\u2014</strong>" in page[page.index('<h3 id="contrast">') :]
 
 
+def test_a_grid_s_configurations_are_named_next_to_the_trials() -> None:
+    deflation = MultipleTesting(
+        trials=["momentum_v1", "momentum_select_v1"],
+        configurations=7,
+        n_returns=1_961,
+        sharpe_annualized=0.45,
+        psr=0.84,
+        threshold_annualized=0.61,
+        dsr=0.30,
+    )
+
+    page = render_html(_sheet(multiple_testing=deflation))
+
+    section = page[page.index('<h3 id="multiple-testing">') :]
+    assert "razem 7 konfiguracji parametrów" in section
+    assert "najlepszy Sharpe 7 konfiguracji bez przewagi" in section
+
+
 def test_multiple_testing_is_shown_only_when_given() -> None:
     deflation = MultipleTesting(
         trials=["momentum_v1", "mean_reversion_v1"],
+        configurations=2,
         n_returns=1_961,
         sharpe_annualized=0.45,
         psr=0.84,

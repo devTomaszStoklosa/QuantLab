@@ -7,6 +7,7 @@ own strategy: the runner never branches on the strategy type (REQ-301).
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Annotated, Literal, Self
 
@@ -21,7 +22,12 @@ from quantlab.strategy.base import Strategy
 from quantlab.strategy.cointegration import engle_granger
 from quantlab.strategy.cross_sectional_momentum import CrossSectionalMomentum
 from quantlab.strategy.pairs_spread import PairsSpreadReversion
-from quantlab.strategy.selected_parameter import SelectedParameter
+from quantlab.strategy.selected_parameter import (
+    SelectedParameter,
+    SelectionRecord,
+    common_start,
+    net_returns,
+)
 from quantlab.strategy.short_term_reversal import ShortTermReversal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 
@@ -48,6 +54,17 @@ class TrainingDiagnostic(BaseModel):
 
     title: str
     values: dict[str, float | None]  # label -> value, in display order
+
+
+@dataclass(frozen=True)
+class GridEvidence:
+    """What a hypothesis choosing its parameter from a grid shows besides its run (q8)."""
+
+    labels: list[str]  # grid values, in grid order
+    start: date  # first day of the window every value can signal in
+    end: date
+    returns: np.ndarray  # T x K net daily returns of each value over the window
+    history: list[SelectionRecord]  # the yearly choices over the run's window
 
 
 class StudyParametersBase(BaseModel, ABC):
@@ -96,6 +113,12 @@ class StudyParametersBase(BaseModel, ABC):
     ) -> list[TrainingDiagnostic]:
         """Statistics of the training data this strategy's reader needs; none by default."""
         return []
+
+    def grid_evidence(
+        self, bars: dict[str, list[PriceBar]], start: date, end: date
+    ) -> GridEvidence | None:
+        """The grid's returns and choices over [start, end]; None without a grid (q8)."""
+        return None
 
 
 class TimeSeriesMomentumParameters(StudyParametersBase):
@@ -291,6 +314,30 @@ class TimeSeriesMomentumSelectedParameters(StudyParametersBase):
             "history_start": self.history_start.isoformat(),
             "min_history_days": self.min_history_days,
         }
+
+    def grid_evidence(
+        self, bars: dict[str, list[PriceBar]], start: date, end: date
+    ) -> GridEvidence | None:
+        """One backtest per lookback over the window all of them can signal in, under
+        this definition's cost model (REQ-813), and the procedure's yearly choices."""
+        window_start = common_start(bars, self.warm_up_days, start)
+        if window_start is None or window_start > end:
+            raise ValueError(f"No window between {start} and {end} in which every lookback signals")
+        cost_model = self.cost_model.build()
+        returns = np.array(
+            [
+                net_returns(TimeSeriesMomentum(lookback), cost_model, bars, window_start, end)
+                for lookback in self.lookback_grid
+            ]
+        ).T
+        selection = self.build_strategy()
+        return GridEvidence(
+            labels=[str(lookback) for lookback in self.lookback_grid],
+            start=window_start,
+            end=end,
+            returns=returns,
+            history=[selection.choice(bars, year) for year in range(start.year, end.year + 1)],
+        )
 
     def build_strategy(self) -> Strategy:
         return SelectedParameter(

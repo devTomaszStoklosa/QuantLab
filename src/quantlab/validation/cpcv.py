@@ -133,6 +133,19 @@ class CpcvResult(BaseModel):
         return sum(1 for sharpe in self.path_sharpes if sharpe is not None)
 
 
+CPCV_GATE_RULE = (
+    "median Sharpe of the CPCV paths > 0; inconclusive if fewer than half the paths "
+    "have a defined Sharpe"
+)
+
+
+def cpcv_gate(result: CpcvResult) -> bool | None:
+    """The in-sample gate of a hypothesis frozen with `cpcv` (REQ-830)."""
+    if result.defined_paths * 2 < result.n_paths or result.median_sharpe is None:
+        return None
+    return result.median_sharpe > 0.0
+
+
 def cpcv_of_selection(
     returns: np.ndarray, labels: list[str], settings: CpcvSettings, periods_per_year: int
 ) -> CpcvResult:

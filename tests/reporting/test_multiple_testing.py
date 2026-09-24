@@ -6,6 +6,7 @@ import pytest
 
 from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.reporting.multiple_testing import active_returns, multiple_testing
+from quantlab.research.definition import TimeSeriesMomentumSelectedParameters
 from quantlab.research.trials import Trial
 from quantlab.validation.holdout import parse_holdout_config
 from quantlab.validation.sharpe_inference import (
@@ -109,3 +110,26 @@ def test_a_run_without_positions_has_no_psr_or_dsr() -> None:
 def test_a_run_is_always_one_of_its_trials() -> None:
     with pytest.raises(ValueError, match="own trials"):
         multiple_testing(_run(_RETURNS), [], 365)
+
+
+def test_a_grid_counts_each_of_its_values_toward_the_threshold() -> None:
+    grid = TimeSeriesMomentumSelectedParameters(
+        strategy="time_series_momentum_selected",
+        lookback_grid=[30, 90, 180, 365],
+        history_start=date(2018, 1, 1),
+        min_history_days=365,
+        universe="mvp-crypto",
+        cost_model=_DEFINITION.parameters.cost_model,
+    )
+    selected = _trial("momentum_select_v1")
+    selected = selected.model_copy(
+        update={"definition": selected.definition.model_copy(update={"parameters": grid})}
+    )
+    run = _run(_RETURNS)
+
+    with_grid = multiple_testing(run, [_trial("momentum_v1"), selected], 365)
+    as_five_trials = multiple_testing(run, [_trial(f"t{i}") for i in range(5)], 365)
+
+    assert (len(with_grid.trials), with_grid.configurations) == (2, 5)
+    assert with_grid.threshold_annualized == pytest.approx(as_five_trials.threshold_annualized)
+    assert with_grid.dsr == pytest.approx(as_five_trials.dsr)

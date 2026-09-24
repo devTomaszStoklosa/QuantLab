@@ -133,6 +133,7 @@ def _evidence(
         generated_at=datetime(2026, 9, 24, 10, 0, tzinfo=UTC),
         multiple_testing=MultipleTesting(
             trials=["momentum_v1", "mean_reversion_v1"],
+            configurations=2,
             n_returns=700,
             sharpe_annualized=metrics.sharpe,
             psr=0.9,
