@@ -8,6 +8,7 @@ from quantlab.backtest.event_driven.feed import BarFeed
 from quantlab.backtest.event_driven.fills import FillPolicy, FullFill
 from quantlab.backtest.event_driven.orders import OrderRecord
 from quantlab.backtest.event_driven.portfolio import Portfolio
+from quantlab.backtest.rebalance import Daily, RebalancePolicy
 from quantlab.backtest.run import BacktestRun, trading_dates
 from quantlab.backtest.sizing import EqualWeightBySign, Sizer
 from quantlab.core.data.provider import PriceBar
@@ -37,6 +38,7 @@ def run(
     fill_policy: FillPolicy | None = None,
     capital: float = 1.0,
     sizer: Sizer | None = None,
+    rebalance: RebalancePolicy | None = None,
 ) -> EventDrivenResult:
     """Event-driven backtest: one trading date at a time, orders and fills.
 
@@ -44,7 +46,9 @@ def run(
     open, mark-to-market and snapshot, fills due at the close, then signals and
     new orders - against a feed that has revealed nothing after that date.
     Weights follow the same rule as the vectorized engine, among instruments
-    with a bar at the decision close: `sizer`, equal weight by sign by default.
+    with a bar at the decision close: `sizer`, equal weight by sign by default;
+    `rebalance` decides, as there, whether unchanged targets are traded back to
+    or the drifted positions are held without orders.
 
     A position held into a delisting bar (q5) is marked at the delisting value in
     that day's snapshot, then turned into cash at it: no order, no cost, the
@@ -60,6 +64,8 @@ def run(
         raise ValueError(f"No price data available between {start} and {end}")
     fills = fill_policy if fill_policy is not None else FullFill()
     sizer = sizer if sizer is not None else EqualWeightBySign()
+    rebalance = rebalance if rebalance is not None else Daily()
+    previous_targets: dict[str, float] | None = None
     feed = BarFeed(bars)
     portfolio = Portfolio(capital, cost_model, feed)
 
@@ -75,7 +81,13 @@ def run(
         tradable = [
             signal for signal in signals if feed.trading_bar(signal.instrument_id) is not None
         ]
-        orders = portfolio.rebalance(sizer.weights(tradable), ts)
+        targets = sizer.weights(tradable)
+        if rebalance.holds(previous_targets, targets):
+            portfolio.hold()
+            orders = []
+        else:
+            orders = portfolio.rebalance(targets, ts)
+        previous_targets = targets
         portfolio.apply(execution.submit(orders, feed, fills))
 
     return EventDrivenResult(

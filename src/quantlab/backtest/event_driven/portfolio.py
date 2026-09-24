@@ -80,6 +80,16 @@ class Portfolio:
             if bar is not None and bar.delisting:
                 self.cash += self.quantities.pop(instrument_id) * bar.close
 
+    def hold(self) -> None:
+        """Keep the holdings as they drifted: no orders, but today's close is the
+        decision point the next snapshot measures positions from, as in a rebalance."""
+        self._decision_equity = self.equity()
+        self._decision_prices = {
+            instrument_id: close
+            for instrument_id in sorted(self.quantities)
+            if (close := self.feed.last_close(instrument_id)) is not None
+        }
+
     def rebalance(self, weights: dict[str, float], ts: date) -> list[Order]:
         """Orders moving holdings to `weights` of the current equity.
 
