@@ -29,3 +29,24 @@ def write_cached_bars(
     tmp_path = path.with_suffix(".json.tmp")
     tmp_path.write_text(json.dumps(bars), encoding="utf-8")
     tmp_path.replace(path)
+
+
+def _json_path(namespace: str, *parts: str) -> Path:
+    key = hashlib.sha256(":".join((namespace, *parts)).encode()).hexdigest()
+    return CACHE_DIR / f"{key}.json"
+
+
+def read_cached_json(namespace: str, *parts: str) -> object | None:
+    """A source's raw response cached under `namespace` and `parts`, or None."""
+    path = _json_path(namespace, *parts)
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def write_cached_json(namespace: str, payload: object, *parts: str) -> None:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    path = _json_path(namespace, *parts)
+    tmp_path = path.with_suffix(".json.tmp")
+    tmp_path.write_text(json.dumps(payload), encoding="utf-8")
+    tmp_path.replace(path)

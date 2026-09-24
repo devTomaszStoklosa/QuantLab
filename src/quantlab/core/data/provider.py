@@ -30,6 +30,10 @@ class PriceBar(BaseModel):
         return self.close if self.unadjusted_close is None else self.unadjusted_close
 
 
+class DataSourceUnavailableError(Exception):
+    """The source cannot be used as configured, e.g. a missing API key or an exhausted quota."""
+
+
 class DataNotFoundError(Exception):
     def __init__(self, symbol: str) -> None:
         super().__init__(f"Unknown instrument '{symbol}'")
