@@ -46,7 +46,7 @@ ADRs: docs/adr/0002-dual-backtest-engine.md, docs/adr/0004-validation-first-froz
 
 ### Decyzja 4 — test istotności strategii przekrojowej (po X6)
 
-Test permutacyjny `q1` tasuje kolejność dni wspólnie dla wszystkich instrumentów: pyta o timing. Momentum przekrojowe zarabia na selekcji (które spółki, nie kiedy), więc na `demo_xsmom` daje p = 0.99 przy Sharpe 2.2.
+Test permutacyjny `q1` tasuje kolejność dni wspólnie dla wszystkich instrumentów: pyta o timing. Momentum przekrojowe zarabia na selekcji (które spółki, nie kiedy), więc na `demo_xsmom` daje p = 0.99 przy Sharpe treningowym 1.8 (2.2 przed annualizacją 252 sesjami w X7a).
 
 - **A. Losowe portfele z przekroju decyzji, symulowane macierzowo.** W każdej decyzji, w której przebieg handluje do nowych celów, N losowych portfeli dostaje te same wagi na instrumentach wylosowanych z przekroju decyzji i trzyma je z dryfem do następnej takiej decyzji. Wartość portfela w okresie trzymania to `1 + (G − 1) · w`, gdzie `G` to macierz wzrostu cen od dnia decyzji (dni × instrumenty przekroju), a `w` — wagi; dla N portfeli naraz to jedno mnożenie macierzy na okres trzymania. Harmonogram, wagi, dryf, delistingi i filtr ceny (przez przekrój) są wspólne z przebiegiem; losowy jest tylko wybór spółek.
 - B. Tasowanie dni (`q1`) — mierzy timing, nie selekcję (p = 0.99 na `demo_xsmom`).

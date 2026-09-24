@@ -5,7 +5,7 @@ from itertools import pairwise
 from typing import Literal, Self
 
 import yaml
-from pydantic import BaseModel, PrivateAttr, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 
 class Instrument(BaseModel):
@@ -33,6 +33,9 @@ class Membership(BaseModel):
     def covers(self, day: date) -> bool:
         return self.start <= day and (self.end is None or day <= self.end)
 
+    def overlaps(self, start: date, end: date) -> bool:
+        return self.start <= end and (self.end is None or start <= self.end)
+
 
 class Universe(BaseModel):
     """The instruments a hypothesis may trade, point-in-time when it has memberships.
@@ -45,10 +48,17 @@ class Universe(BaseModel):
 
     name: str
     asof_date: date
+    # The data provider, by the name the runner's registry knows it under (REQ-506).
+    source: str
+    # Trading periods in a year on this universe's market; every annualized
+    # statistic of its runs uses it: 365 for crypto, 252 for US equities.
+    periods_per_year: int = Field(gt=0)
     instruments: list[Instrument]
     memberships: list[Membership] = []
     # The instrument standing for the whole market: its volatility sets the
     # regimes and its worst day the stress scenario (q1). None: no such analysis.
+    # In a point-in-time universe it may have no membership: then it is a
+    # benchmark that no strategy sees or trades (REQ-501).
     market_proxy: str | None = None
 
     _periods: dict[str, list[Membership]] = PrivateAttr(default_factory=dict)
@@ -69,7 +79,7 @@ class Universe(BaseModel):
         unknown = sorted(periods.keys() - set(ids))
         if unknown:
             raise ValueError(f"Memberships of instruments not in universe '{self.name}': {unknown}")
-        without = sorted(set(ids) - periods.keys())
+        without = sorted(set(ids) - periods.keys() - {self.market_proxy})
         if without:
             raise ValueError(
                 f"Instruments without a membership in universe '{self.name}': {without}"
@@ -95,6 +105,22 @@ class Universe(BaseModel):
             for instrument_id, spans in self._periods.items()
             if any(span.covers(as_of) for span in spans)
         }
+
+    def instruments_between(self, start: date, end: date) -> list[Instrument]:
+        """What a run over [start, end] needs (REQ-505): the instruments that are members
+        on some date of the window, and the market proxy; all of them when static."""
+        if self.is_static:
+            return list(self.instruments)
+        needed = {
+            instrument_id
+            for instrument_id, spans in self._periods.items()
+            if any(span.overlaps(start, end) for span in spans)
+        }
+        return [
+            instrument
+            for instrument in self.instruments
+            if instrument.id in needed or instrument.id == self.market_proxy
+        ]
 
     @classmethod
     def load(cls, name: str) -> "Universe":

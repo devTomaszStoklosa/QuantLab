@@ -45,6 +45,8 @@ def _universe(*memberships: Membership) -> Universe:
     return Universe(
         name="pit",
         asof_date=_FIRST,
+        source="synthetic",
+        periods_per_year=252,
         instruments=[
             Instrument(id=i, symbol=i.upper(), asset_class="equity", quote_asset="USD") for i in ids
         ],
@@ -58,6 +60,8 @@ def test_a_static_universe_passes_the_bars_through_untouched() -> None:
     static = Universe(
         name="static",
         asof_date=_FIRST,
+        source="synthetic",
+        periods_per_year=252,
         instruments=[
             Instrument(id=i, symbol=i, asset_class="crypto", quote_asset="USDT")
             for i in ("aaa", "bbb")

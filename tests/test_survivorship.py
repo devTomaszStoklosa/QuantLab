@@ -80,6 +80,8 @@ def _stock(instrument_id: str) -> Instrument:
 _POINT_IN_TIME = Universe(
     name="pit-test",
     asof_date=_day(_LAST),
+    source="synthetic",
+    periods_per_year=252,
     market_proxy="aaa",
     instruments=[_stock(i) for i in ("aaa", "bbb", "ccc", "ddd")],
     memberships=[
@@ -90,6 +92,8 @@ _POINT_IN_TIME = Universe(
 _SURVIVORS = Universe(
     name="survivors-test",
     asof_date=_day(_LAST),
+    source="synthetic",
+    periods_per_year=252,
     instruments=[_stock(i) for i in ("aaa", "bbb", "ccc")],
 )
 
@@ -187,7 +191,7 @@ success_criterion: {description: test, min_sharpe: 0.0, max_p_value: 0.1}
             capture_output=True,
         )
     monkeypatch.setattr(cli, "_HOLDOUT_DIR", repo)
-    monkeypatch.setattr(cli, "BinanceProvider", lambda: _Stocks(None))
+    monkeypatch.setitem(cli._PROVIDERS, "synthetic", lambda: _Stocks(None))
     monkeypatch.setattr(cli, "_PERMUTATIONS", 20)
     monkeypatch.setattr(Universe, "load", classmethod(lambda cls, name: _POINT_IN_TIME))
 
@@ -243,4 +247,11 @@ def test_next_open_orders_never_fill_on_a_delisting_bar() -> None:
 
 def test_a_market_proxy_outside_the_universe_is_rejected() -> None:
     with pytest.raises(ValueError, match="Market proxy zzz is not in universe"):
-        Universe(name="x", asof_date=_DAY0, instruments=[_stock("aaa")], market_proxy="zzz")
+        Universe(
+            name="x",
+            asof_date=_DAY0,
+            source="synthetic",
+            periods_per_year=252,
+            instruments=[_stock("aaa")],
+            market_proxy="zzz",
+        )

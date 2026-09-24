@@ -232,3 +232,32 @@ def test_a_delisting_without_bars_ends_nothing() -> None:
 
     assert market.bars["aaa"] == []
     assert market.delistings == []
+
+
+def _other(days: list[int]) -> list[PriceBar]:
+    return [
+        bar.model_copy(update={"instrument_id": "bbb"})
+        for bar in _bars([50.0] * 10, None)
+        if (bar.ts - _FIRST).days in days
+    ]
+
+
+def test_a_delisting_dated_off_the_market_lands_on_the_next_session() -> None:
+    # The source gives the day after the last price (3); the market is closed on 3 and 4.
+    market = with_events(
+        {"aaa": _bars([100.0, 101.0, 102.0]), "bbb": _other([0, 1, 2, 5, 6])},
+        {"aaa": InstrumentEvents(delisting=_delisting(3, -0.5))},
+    )
+
+    assert [bar.ts for bar in market.bars["aaa"]] == [_day(0), _day(1), _day(2), _day(5)]
+    assert [delisting.date for delisting in market.delistings] == [_day(5)]
+    assert market.bars["bbb"] == _other([0, 1, 2, 5, 6])
+
+
+def test_a_delisting_on_a_session_keeps_its_date() -> None:
+    market = with_events(
+        {"aaa": _bars([100.0, 101.0]), "bbb": _other([0, 1, 2, 3])},
+        {"aaa": InstrumentEvents(delisting=_delisting(3, -0.5))},
+    )
+
+    assert market.bars["aaa"][-1].ts == _day(3)

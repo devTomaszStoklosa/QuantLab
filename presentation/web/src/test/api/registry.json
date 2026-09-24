@@ -390,7 +390,7 @@
     "status": "testing",
     "hasRun": true,
     "holdout": null,
-    "trainingSharpe": 2.223758533811905,
+    "trainingSharpe": 1.8477425754767285,
     "sparkline": [
       1,
       1,

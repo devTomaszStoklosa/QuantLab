@@ -80,7 +80,10 @@ def worst_day_scenario(
     """Replay of the reference instrument's worst daily return between start and end.
 
     Every instrument is shocked by the return it actually had that day, so the
-    scenario comes from the data rather than from hand-picked numbers.
+    scenario comes from the data rather than from hand-picked numbers. In a
+    point-in-time universe (q5) some instruments did not trade that day - not
+    yet listed or already delisted - yet may be held on other days; they move
+    with the reference instrument, and the description says how many did.
     """
     reference_bars = sorted(bars[reference_instrument], key=lambda bar: bar.ts)
     candidates = [
@@ -90,16 +93,21 @@ def worst_day_scenario(
     ]
     if not candidates:
         raise ValueError(f"No {reference_instrument} returns between {start} and {end}")
-    _, previous_ts, worst_ts = min(candidates)
+    worst, previous_ts, worst_ts = min(candidates)
 
     shocks = {}
+    without_prices = 0
     for instrument_id, instrument_bars in bars.items():
         closes = {bar.ts: bar.close for bar in instrument_bars}
-        if previous_ts not in closes or worst_ts not in closes:
-            raise ValueError(f"{instrument_id} has no bars for the worst day {worst_ts}")
-        shocks[instrument_id] = closes[worst_ts] / closes[previous_ts] - 1.0
-    return ShockScenario(
-        name=name,
-        description=f"replay of {reference_instrument}'s worst day in the period, {worst_ts}",
-        shocks=shocks,
-    )
+        if previous_ts in closes and worst_ts in closes:
+            shocks[instrument_id] = closes[worst_ts] / closes[previous_ts] - 1.0
+        else:
+            shocks[instrument_id] = worst
+            without_prices += 1
+    description = f"replay of {reference_instrument}'s worst day in the period, {worst_ts}"
+    if without_prices:
+        description += (
+            f"; {without_prices} instruments without prices that day move with "
+            f"{reference_instrument}"
+        )
+    return ShockScenario(name=name, description=description, shocks=shocks)

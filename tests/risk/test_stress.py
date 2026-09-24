@@ -126,8 +126,16 @@ def test_worst_day_scenario_stays_within_the_period() -> None:
     assert scenario.shocks["a"] == pytest.approx(50.0 / 55.0 - 1.0)
 
 
-def test_worst_day_scenario_with_missing_bars_raises() -> None:
+def test_an_instrument_without_prices_on_the_worst_day_moves_with_the_reference() -> None:
+    # "b" stopped trading before the worst day (day 2), as a delisted stock would (q5).
     bars = {"a": _bars("a", [100.0, 90.0, 60.0]), "b": _bars("b", [50.0, 45.0])}
 
-    with pytest.raises(ValueError, match="b has no bars"):
-        worst_day_scenario("worst", bars, "a", _day(0), _day(2))
+    scenario = worst_day_scenario("worst", bars, "a", _day(0), _day(2))
+
+    assert scenario.shocks == pytest.approx({"a": 60.0 / 90.0 - 1.0, "b": 60.0 / 90.0 - 1.0})
+    assert scenario.description.endswith("; 1 instruments without prices that day move with a")
+
+
+def test_worst_day_scenario_without_reference_returns_raises() -> None:
+    with pytest.raises(ValueError, match="No a returns"):
+        worst_day_scenario("worst", {"a": _bars("a", [100.0])}, "a", _day(0), _day(2))

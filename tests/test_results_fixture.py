@@ -94,6 +94,7 @@ success_criterion:
 """
 
 _STOCKS = [f"eq{i:02d}" for i in range(30)]
+_INDEX = "eqidx"  # the market proxy: a benchmark without membership, never traded (REQ-501)
 _SPLIT = date(2021, 3, 1)  # eq03, 4:1
 _DELISTINGS = {  # instrument -> (delisting date, return; None: the definition's assumption)
     "eq28": (date(2021, 6, 15), -0.6),
@@ -102,10 +103,12 @@ _DELISTINGS = {  # instrument -> (delisting date, return; None: the definition's
 _EQUITIES = Universe(
     name="demo-equities",
     asof_date=_LAST,
-    market_proxy="eq00",
+    source="synthetic",
+    periods_per_year=252,
+    market_proxy=_INDEX,
     instruments=[
         Instrument(id=name, symbol=name.upper(), asset_class="equity", quote_asset="USD")
-        for name in _STOCKS
+        for name in [*_STOCKS, _INDEX]
     ],
     memberships=[
         *(Membership(instrument_id=name, start=_ORIGIN, end=None) for name in _STOCKS[:24]),
@@ -135,7 +138,7 @@ _HYPOTHESES = {
 class _SyntheticProvider:
     """One fixed price path per instrument from 2019 to 2024, whatever range is asked:
     BTC a random walk, ETH cointegrated with it (log-linear plus a mean-reverting spread);
-    stocks on business days, with a split and two delistings."""
+    stocks on business days, with a split and two delistings, and their average as the index."""
 
     def __init__(self) -> None:
         rng = np.random.default_rng(20260924)
@@ -150,6 +153,7 @@ class _SyntheticProvider:
         drifts = rng.normal(0.0002, 0.0006, len(_STOCKS))
         for name, drift in zip(_STOCKS, drifts, strict=True):
             self._closes[name] = 40.0 * np.cumprod(1.0 + drift + rng.normal(0.0, 0.018, days))
+        self._closes[_INDEX] = np.mean([self._closes[name] for name in _STOCKS], axis=0)
 
     def fetch(self, instrument: Instrument, start: date, end: date) -> list[PriceBar]:
         closes = self._closes[instrument.id]
@@ -230,7 +234,8 @@ def generate(directory: Path, monkeypatch) -> Path:
     )
     monkeypatch.setattr(cli, "_HOLDOUT_DIR", repo)
     monkeypatch.setattr(cli, "_RESULTS_DIR", store)
-    monkeypatch.setattr(cli, "BinanceProvider", lambda: provider)
+    monkeypatch.setitem(cli._PROVIDERS, "binance", lambda: provider)
+    monkeypatch.setitem(cli._PROVIDERS, "synthetic", lambda: provider)
     monkeypatch.setattr(cli, "_PERMUTATIONS", 500)
     monkeypatch.setattr(cli, "_current_git_sha", lambda: "5e7f1c0de" + "0" * 31)
     monkeypatch.setattr(cli, "datetime", _FixedClock)
@@ -305,6 +310,7 @@ def test_the_equity_demo_is_a_point_in_time_cross_section() -> None:
     assert run["strategy"] == "cross_sectional_momentum"
     assert run["trials"] == ["demo_xsmom"]  # the only trial on this universe
     assert {trade["side"] for trade in trades} == {"long", "short"}
+    assert _INDEX not in {trade["instrument_id"] for trade in trades}
     for trade in trades:
         membership = [m for m in _EQUITIES.memberships if m.instrument_id == trade["instrument_id"]]
         assert any(m.covers(trade["entry_ts"]) for m in membership), trade

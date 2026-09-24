@@ -105,6 +105,16 @@ def test_short_series_is_flagged_low_confidence() -> None:
     assert result.detail["low_confidence"] is True
 
 
+def test_low_confidence_means_less_than_a_year_of_the_universes_sessions() -> None:
+    weights = [1.0 if r > 0 else -1.0 for r in _DAILY_RETURNS[:300]] + [0.0] * 100
+    equities = PermutationTestValidator(
+        bars={"a": _bars(_DAILY_RETURNS)}, n_permutations=20, alpha=0.1, periods_per_year=252
+    )
+
+    assert _validator(20).validate(_run(weights)).detail["low_confidence"] is True
+    assert equities.validate(_run(weights)).detail["low_confidence"] is False
+
+
 def test_no_positions_is_inconclusive_with_a_reason() -> None:
     result = _validator().validate(_run([0.0] * len(_DAILY_RETURNS)))
 

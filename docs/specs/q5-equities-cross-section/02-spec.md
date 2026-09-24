@@ -55,7 +55,7 @@ Delisting
 - REQ-522 (AC-3): When the delisting return is unknown, the hypothesis's frozen `missing_delisting_return` shall apply, and the run shall report how many delistings used it.
 - REQ-523 (AC-3): In both engines, a position held into the delisting date shall earn the delisting return and then turn into cash at that value, without an order or a cost; no order shall fill against a delisting bar and no position shall open on it.
 - REQ-525 (AC-3): The permutation test shall accept instruments that start or stop trading within the run: a shuffle pairing a position with a day its instrument did not trade shall earn nothing, and the count of such cells shall be reported; a held position without prices at both ends of its period shall be an error.
-- REQ-526 (AC-3): A universe shall name its market proxy (the instrument whose volatility sets the regimes and whose worst day is the stress scenario); `quantlab run` shall refuse a universe without one, and `mvp-crypto` shall name `btc-usdt`.
+- REQ-526 (AC-3): A universe shall name its market proxy (the instrument whose volatility sets the regimes and whose worst day is the stress scenario); `quantlab run` shall refuse a universe without one, and `mvp-crypto` shall name `btc-usdt`. An instrument without prices on the proxy's worst day (not yet listed or already delisted) shall move with the proxy in that scenario, and the scenario shall say how many did.
 - REQ-524 (AC-3): A synthetic test shall measure the survivorship bias: the same strategy on the same synthetic universe with dead companies (and their delisting returns) against the survivors only, with the difference known in advance.
 
 Rebalans
@@ -94,7 +94,7 @@ Test istotności
 
 - Ceny skorygowane służą tylko do stosunków cen (zwroty, momentum). Każda reguła na poziomie ceny (np. cena minimalna) używa `unadjusted_close`. Korekta wstecz zmienia poziomy historycznych cen, gdy pojawi się nowa akcja korporacyjna, ale nie zmienia żadnego zwrotu — dlatego nie wprowadza look-ahead do sygnałów opartych na zwrotach.
 - Status hipotezy — jak w `q1` (`concluded_status`). Liczba delistingów i założonych zwrotów z delistingu jest opisowa.
-- Dwa testy istotności odpowiadają na różne pytania. Tasowanie dni (`day_shuffle`) pyta o timing: czy pozycje trafiły w dni, które po nich nastąpiły. Losowe portfele (`random_portfolio`) pytają o selekcję: czy wybrane instrumenty zarobiły więcej niż wylosowane z tego samego przekroju, przy tym samym harmonogramie, tych samych wagach i tym samym trzymaniu. Strategia przekrojowa z trwałymi różnicami zwrotów między spółkami nie ma timingu do wykrycia (na `demo_xsmom` tasowanie daje p = 0.99 przy Sharpe 2.2), więc jej kryterium używa losowych portfeli. Który test wchodzi do kryterium, zapisuje zamrożona definicja.
+- Dwa testy istotności odpowiadają na różne pytania. Tasowanie dni (`day_shuffle`) pyta o timing: czy pozycje trafiły w dni, które po nich nastąpiły. Losowe portfele (`random_portfolio`) pytają o selekcję: czy wybrane instrumenty zarobiły więcej niż wylosowane z tego samego przekroju, przy tym samym harmonogramie, tych samych wagach i tym samym trzymaniu. Strategia przekrojowa z trwałymi różnicami zwrotów między spółkami nie ma timingu do wykrycia (na `demo_xsmom` tasowanie daje p = 0.99 przy Sharpe treningowym 1.8), więc jej kryterium używa losowych portfeli. Który test wchodzi do kryterium, zapisuje zamrożona definicja.
 - Oba testy liczą Sharpe brutto: koszty ocenia porównanie modeli kosztów i netto-połowa kryterium.
 
 ## Data and validation
