@@ -83,7 +83,7 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 |---|---|---|---|---|
 | lab-foundation | Ready for dev | Ready for dev | Ready for dev | gotowe (F-1..F-4) |
 | q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | gotowe (S1..S16), MVP zamknięte: `momentum_v1` inconclusive |
-| q2-event-driven-engine | Ready for dev | Ready for dev | Ready for dev | E1–E3 gotowe (kontrakt wspólny, rdzeń i parytet, egzekucja t+1) |
+| q2-event-driven-engine | Ready for dev | Ready for dev | Ready for dev | E1–E4 gotowe (kontrakt wspólny, rdzeń i parytet, egzekucja t+1, limit wolumenu i pojemność) |
 | q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
 | q4-pairs-trading-stat-arb | nie napisany | nie napisany | nie napisany | — |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
