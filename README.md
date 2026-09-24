@@ -16,6 +16,7 @@ uv run pytest -q
 uv run quantlab run --tear-sheet reports/momentum_v1.html   # okres treningowy; wymaga dostępu do api.binance.com
 uv run quantlab open-holdout                                 # holdout już otwarty: pokazuje zapisany wynik
 uv run quantlab compare-engines                              # silnik wektorowy vs event-driven, okres treningowy
+uv run quantlab trials                                       # wszystkie próby na tych samych danych: PSR, DSR, PBO
 ```
 
 ## Stack
