@@ -2,7 +2,7 @@ from collections.abc import Callable
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from quantlab.core.data.provider import PriceBar
 
@@ -12,6 +12,9 @@ class Signal(BaseModel):
     ts: date
     direction: Literal["long", "short", "flat"]
     strength: float
+    # Target weight magnitude for sizers that use it (REQ-410); the direction
+    # gives its sign. Strategies sized equally by sign leave it unset.
+    weight: float | None = Field(default=None, gt=0)
 
 
 def trailing_return(bars: list[PriceBar], as_of: date, days: int) -> float | None:

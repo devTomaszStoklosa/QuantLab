@@ -8,6 +8,7 @@ import pytest
 from quantlab.backtest.event_driven.engine import run as event_driven_run
 from quantlab.backtest.event_driven.execution import CloseExecution
 from quantlab.backtest.run import BacktestRun
+from quantlab.backtest.sizing import PairWeights
 from quantlab.backtest.vectorized.engine import run as vectorized_run
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.naive import NaiveCostModel
@@ -132,3 +133,43 @@ def test_normalized_run_does_not_depend_on_the_nominal_capital() -> None:
     large = event_driven_run(**args, capital=250_000_000.0)
 
     assert_same_run(unit.run, large.run)
+
+
+class _ScriptedPair:
+    """Long "a" / short "b" and the reverse by a fixed pattern, with uneven leg weights."""
+
+    _PATTERN = (1, 1, 0, -1, -1, -1, 0, 1)
+
+    def generate_signals(self, bars: dict[str, list[PriceBar]], as_of: date) -> list[Signal]:
+        side = self._PATTERN[(as_of - _START).days % len(self._PATTERN)]
+        if side == 0:
+            return []
+        long_leg, short_leg = ("a", "b") if side > 0 else ("b", "a")
+        return [
+            Signal(instrument_id=long_leg, ts=as_of, direction="long", strength=0.0, weight=0.6),
+            Signal(instrument_id=short_leg, ts=as_of, direction="short", strength=0.0, weight=0.4),
+        ]
+
+
+@pytest.mark.parametrize("cost_name", sorted(_COST_MODELS))
+def test_pair_weights_keep_the_engines_at_parity(cost_name: str) -> None:
+    args = {
+        "strategy": _ScriptedPair(),
+        "cost_model": _COST_MODELS[cost_name],
+        "bars": _random_walk_bars(("a", "b"), seed=13),
+        "universe_name": "parity",
+        "start": _START + timedelta(days=25),
+        "end": _START + timedelta(days=_DAYS - 1),
+        "seed": 0,
+        "git_sha": "parity",
+        "strategy_name": "pair",
+        "strategy_params": {},
+        "sizer": PairWeights(),
+    }
+
+    expected = vectorized_run(**args)
+    actual = event_driven_run(**args, execution=CloseExecution(), capital=100_000.0)
+
+    assert_same_run(expected, actual.run)
+    held = [snapshot.positions for snapshot in expected.snapshots if snapshot.positions]
+    assert {tuple(sorted(abs(w) for w in positions.values())) for positions in held} == {(0.4, 0.6)}

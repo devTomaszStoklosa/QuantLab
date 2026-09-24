@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
+from quantlab.backtest.sizing import EqualWeightBySign
 from quantlab.research.definition import (
     CostModelParameters,
     ShortTermReversalParameters,
@@ -108,3 +109,15 @@ def test_unknown_strategy_is_refused_when_a_definition_is_read() -> None:
         HoldoutConfig.model_validate(
             _definition({"strategy": "no_such_strategy", "lookback_days": 365})
         )
+
+
+def test_existing_strategies_are_sized_equally_by_sign() -> None:
+    reversal = ShortTermReversalParameters(
+        strategy="short_term_reversal",
+        formation_days=7,
+        universe="mvp-crypto",
+        cost_model=_COST_MODEL,
+    )
+
+    assert isinstance(_momentum().build_sizer(), EqualWeightBySign)
+    assert isinstance(reversal.build_sizer(), EqualWeightBySign)

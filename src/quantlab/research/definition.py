@@ -11,6 +11,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
+from quantlab.backtest.sizing import EqualWeightBySign, Sizer
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.strategy.base import Strategy
 from quantlab.strategy.short_term_reversal import ShortTermReversal
@@ -52,6 +53,10 @@ class StudyParametersBase(BaseModel, ABC):
 
     @abstractmethod
     def build_strategy(self) -> Strategy: ...
+
+    def build_sizer(self) -> Sizer:
+        """How the engines weight this strategy's signals: equally by sign by default."""
+        return EqualWeightBySign()
 
 
 class TimeSeriesMomentumParameters(StudyParametersBase):

@@ -3,7 +3,7 @@ from datetime import date
 from itertools import pairwise
 
 from quantlab.backtest.run import BacktestRun, PortfolioSnapshot, trading_dates
-from quantlab.backtest.sizing import equal_weight_by_sign
+from quantlab.backtest.sizing import EqualWeightBySign, Sizer
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.base import CostModel
 from quantlab.strategy.base import Strategy
@@ -24,14 +24,16 @@ def run(
     git_sha: str,
     strategy_name: str,
     strategy_params: dict,
+    sizer: Sizer | None = None,
 ) -> BacktestRun:
-    """Vectorized backtest: equal-weight by signal sign, daily rebalancing.
+    """Vectorized backtest: daily rebalancing to the sizer's weights.
 
     A signal computed as-of day t decides the position held from t to t+1; that
     position earns the close-to-close return realized over t..t+1 (REQ-010: no
     look-ahead). Equity starts at 1.0 ("growth of $1") and compounds daily.
-    Weights come from equal_weight_by_sign, shared with the event-driven
-    engine. An instrument missing a bar on either
+    Weights come from `sizer` (equal weight by sign unless the hypothesis
+    chooses another), shared with the event-driven engine. An instrument
+    missing a bar on either
     endpoint of a period is excluded from that period's weights and return,
     not treated as an error.
 
@@ -40,6 +42,7 @@ def run(
     previous period's price moves, not the previous targets: prices push the
     portfolio off equal weight every day, and trading it back is real trading.
     """
+    sizer = sizer if sizer is not None else EqualWeightBySign()
     dates = trading_dates(bars, start, end)
     if not dates:
         raise ValueError(f"No price data available between {start} and {end}")
@@ -59,7 +62,7 @@ def run(
             and current_date in closes[signal.instrument_id]
         ]
 
-        weights = equal_weight_by_sign(active)
+        weights = sizer.weights(active)
         instrument_returns = {
             instrument_id: (
                 closes[instrument_id][current_date] - closes[instrument_id][previous_date]

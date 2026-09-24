@@ -155,6 +155,7 @@ def _run_study(
         git_sha=git_sha,
         strategy_name=parameters.strategy,
         strategy_params=parameters.strategy_params(),
+        sizer=parameters.build_sizer(),
     )
 
 
@@ -232,6 +233,7 @@ def run_engine_comparison(
             execution=execution,
             fill_policy=fills,
             capital=capital,
+            sizer=parameters.build_sizer(),
         )
 
     close = event_driven(CloseExecution(), FullFill())
