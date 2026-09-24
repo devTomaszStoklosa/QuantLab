@@ -13,12 +13,13 @@ from typing import Annotated, Literal, Self
 import numpy as np
 from pydantic import BaseModel, Field, model_validator
 
-from quantlab.backtest.rebalance import Daily, RebalancePolicy
+from quantlab.backtest.rebalance import Daily, OnSignalChange, RebalancePolicy
 from quantlab.backtest.sizing import EqualWeightBySign, PairWeights, Sizer
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.strategy.base import Strategy
 from quantlab.strategy.cointegration import engle_granger
+from quantlab.strategy.cross_sectional_momentum import CrossSectionalMomentum
 from quantlab.strategy.pairs_spread import PairsSpreadReversion
 from quantlab.strategy.short_term_reversal import ShortTermReversal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
@@ -193,9 +194,58 @@ class PairsSpreadParameters(StudyParametersBase):
         ]
 
 
+class CrossSectionalMomentumParameters(StudyParametersBase):
+    """Momentum ranked across a point-in-time equity universe (q5, REQ-540)."""
+
+    strategy: Literal["cross_sectional_momentum"]
+    formation_months: int = Field(ge=2)
+    skip_months: int = Field(ge=0)
+    quantile: float = Field(gt=0, le=0.5)
+    long_short: bool
+    min_price: float = Field(ge=0)
+    # Required here: an equity universe has delistings, so the assumption is frozen upfront.
+    missing_delisting_return: float = Field(ge=-1.0)
+
+    @model_validator(mode="after")
+    def _window(self) -> Self:
+        if self.skip_months >= self.formation_months:
+            raise ValueError("skip_months must be below formation_months")
+        return self
+
+    @property
+    def warm_up_days(self) -> int:
+        # Back to the start of month m-1-formation_months for the first day of the window.
+        return (self.formation_months + 2) * 31
+
+    def strategy_params(self) -> dict:
+        return {
+            "formation_months": self.formation_months,
+            "skip_months": self.skip_months,
+            "quantile": self.quantile,
+            "long_short": self.long_short,
+            "min_price": self.min_price,
+        }
+
+    def build_strategy(self) -> Strategy:
+        return CrossSectionalMomentum(
+            formation_months=self.formation_months,
+            skip_months=self.skip_months,
+            quantile=self.quantile,
+            long_short=self.long_short,
+            min_price=self.min_price,
+        )
+
+    def build_rebalance_policy(self) -> RebalancePolicy:
+        """Signals change once a month, so drift between formations is held (REQ-543)."""
+        return OnSignalChange()
+
+
 # A definition's `strategy` field picks the variant; a new strategy is a new
 # variant here, never a branch in the runner.
 StudyParameters = Annotated[
-    TimeSeriesMomentumParameters | ShortTermReversalParameters | PairsSpreadParameters,
+    TimeSeriesMomentumParameters
+    | ShortTermReversalParameters
+    | PairsSpreadParameters
+    | CrossSectionalMomentumParameters,
     Field(discriminator="strategy"),
 ]

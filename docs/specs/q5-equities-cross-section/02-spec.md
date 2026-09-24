@@ -135,7 +135,7 @@ Pre-rejestracja i wynik
 
 ## Non-functional requirements
 
-- Performance: syntetyczny przebieg 500 instrumentów × 10 lat (wszystkie modele kosztów, walidacja, 10 000 permutacji) < 10 min i < 4 GB RAM na maszynie deweloperskiej — mierzone przy X5; przekroczenie → osobny slice z kolumnowym (numpy) przechowywaniem barów.
+- Performance: syntetyczny przebieg 500 instrumentów × 10 lat (wszystkie modele kosztów, walidacja, 10 000 permutacji) < 10 min i < 4 GB RAM na maszynie deweloperskiej — mierzone przy X5; przekroczenie → osobny slice z kolumnowym (numpy) przechowywaniem barów. **Pomiar X5 (2026-09-24, środowisko chmurowe):** 500 spółek × 2 608 dni roboczych, momentum 12-1, decyle long-short: trzy przebiegi wektorowe 35 s, walk-forward 11 s, 10 000 permutacji 22 s, reżimy i rejestr transakcji 2 s — łącznie 69 s, szczytowo 2,2 GB RSS. Na i5-2500K spodziewane 2–3× dłużej; pamięć w budżecie.
 - Reproducibility: deterministycznie (ranking z rozstrzyganiem remisów po id).
 - Compatibility: wyniki `momentum_v1`, `mean_reversion_v1` i `pairs_v1` bez zmian co do bitu (zrzut przed i po każdym slice'ie dotykającym silników lub danych).
 
