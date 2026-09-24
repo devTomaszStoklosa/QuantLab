@@ -37,6 +37,10 @@ def run(
     endpoint of a period is excluded from that period's weights and return,
     not treated as an error.
 
+    A delisting bar (q5) ends an instrument: the period into it earns the
+    delisting return, and the position then turns into cash at that value -
+    no trade, so no cost and no turnover (REQ-523).
+
     Rebalancing happens at the close of t and its cost is charged in the same
     period. Turnover is measured against the weights actually held after the
     previous period's price moves, not the previous targets: prices push the
@@ -47,6 +51,10 @@ def run(
     if not dates:
         raise ValueError(f"No price data available between {start} and {end}")
     closes = {instrument_id: _closes_by_date(instrument_bars) for instrument_id, instrument_bars in bars.items()}
+    delisted_on = {
+        instrument_id: {bar.ts for bar in instrument_bars if bar.delisting}
+        for instrument_id, instrument_bars in bars.items()
+    }
 
     equity = 1.0
     snapshots = [PortfolioSnapshot(ts=dates[0], cash=equity, positions={}, equity=equity)]
@@ -76,6 +84,8 @@ def run(
         # Sorted, so the cost sum has the same order in every process (set order
         # depends on string hashing, randomized per interpreter).
         for instrument_id in sorted(held.keys() | weights.keys()):
+            if previous_date in delisted_on[instrument_id]:
+                continue  # cashed out at its delisting value, not traded
             traded_weight = abs(weights.get(instrument_id, 0.0) - held.get(instrument_id, 0.0))
             if traded_weight > 0.0:
                 instrument_traded[instrument_id] = traded_weight

@@ -72,6 +72,14 @@ class Portfolio:
         self._period_costs = {}
         self._period_traded = {}
 
+    def settle_delistings(self) -> None:
+        """Holdings whose current bar is a delisting become cash at its close, the
+        value holders received; not an order, so no cost (REQ-523)."""
+        for instrument_id in sorted(self.quantities):
+            bar = self.feed.bar(instrument_id)
+            if bar is not None and bar.delisting:
+                self.cash += self.quantities.pop(instrument_id) * bar.close
+
     def rebalance(self, weights: dict[str, float], ts: date) -> list[Order]:
         """Orders moving holdings to `weights` of the current equity.
 

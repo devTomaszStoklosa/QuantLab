@@ -1,8 +1,12 @@
-"""Prices adjusted for corporate actions, so close-to-close returns are total returns."""
+"""Bars as the engines need them: adjusted for corporate actions, ended by a delisting."""
 
 from bisect import bisect_left
+from dataclasses import dataclass, field
+from datetime import date
 
-from quantlab.core.data.events import CorporateAction, InstrumentEvents
+from pydantic import BaseModel
+
+from quantlab.core.data.events import CorporateAction, Delisting, InstrumentEvents
 from quantlab.core.data.provider import PriceBar
 
 
@@ -47,14 +51,95 @@ def adjust_bars(bars: list[PriceBar], actions: list[CorporateAction]) -> list[Pr
     ]
 
 
-def with_events(
-    bars: dict[str, list[PriceBar]], events: dict[str, InstrumentEvents]
-) -> dict[str, list[PriceBar]]:
-    """Each instrument's bars with its events applied; an instrument without events keeps
-    its very list of bars, so crypto results are unchanged to the bit."""
-    return {
-        instrument_id: adjust_bars(
-            instrument_bars, events[instrument_id].actions if instrument_id in events else []
+class AppliedDelisting(BaseModel):
+    """A delisting ending an instrument's bars, and whether its return was assumed."""
+
+    instrument_id: str
+    date: date
+    delisting_return: float
+    assumed: bool
+
+
+@dataclass(frozen=True)
+class MarketData:
+    """The bars a run uses, with the delistings that ended some of them (REQ-522).
+
+    A plain dataclass, not a pydantic model: validating would copy every list of
+    bars, millions of them for an equity universe.
+    """
+
+    bars: dict[str, list[PriceBar]]
+    delistings: list[AppliedDelisting] = field(default_factory=list)
+
+    @property
+    def assumed_delistings(self) -> int:
+        return sum(1 for delisting in self.delistings if delisting.assumed)
+
+
+def delisted(
+    bars: list[PriceBar], delisting: Delisting, missing_return: float | None
+) -> tuple[list[PriceBar], AppliedDelisting | None]:
+    """The bars ended by one bar on the delisting date, at the last close times one plus the
+    delisting return, with no volume and nothing after it (REQ-521).
+
+    An unknown return takes `missing_return`, the hypothesis's frozen assumption;
+    with neither, the run cannot know what holders got and refuses. Without bars
+    there is nothing to end.
+    """
+    if not bars:
+        return bars, None
+    last = max(bars, key=lambda bar: bar.ts)
+    if delisting.date <= last.ts:
+        raise ValueError(
+            f"{delisting.instrument_id} delisted on {delisting.date} but has a bar on {last.ts}"
         )
-        for instrument_id, instrument_bars in bars.items()
-    }
+    known = delisting.delisting_return is not None
+    rate = delisting.delisting_return if known else missing_return
+    if rate is None:
+        raise ValueError(
+            f"{delisting.instrument_id}: unknown delisting return and no "
+            "missing_delisting_return in the hypothesis definition"
+        )
+    value = last.close * (1.0 + rate)
+    final = last.model_copy(
+        update={
+            "ts": delisting.date,
+            "open": value,
+            "high": value,
+            "low": value,
+            "close": value,
+            "volume": 0.0,
+            "unadjusted_close": last.raw_close * (1.0 + rate),
+            "delisting": True,
+        }
+    )
+    applied = AppliedDelisting(
+        instrument_id=delisting.instrument_id,
+        date=delisting.date,
+        delisting_return=rate,
+        assumed=not known,
+    )
+    return [*sorted(bars, key=lambda bar: bar.ts), final], applied
+
+
+def with_events(
+    bars: dict[str, list[PriceBar]],
+    events: dict[str, InstrumentEvents],
+    missing_delisting_return: float | None = None,
+) -> MarketData:
+    """Each instrument's bars with its events applied: adjusted for its corporate actions,
+    then ended by its delisting. An instrument without events keeps its very list of
+    bars, so crypto results are unchanged to the bit."""
+    adjusted: dict[str, list[PriceBar]] = {}
+    applied: list[AppliedDelisting] = []
+    for instrument_id, instrument_bars in bars.items():
+        instrument_events = events.get(instrument_id, InstrumentEvents())
+        series = adjust_bars(instrument_bars, instrument_events.actions)
+        if instrument_events.delisting is not None:
+            series, delisting = delisted(
+                series, instrument_events.delisting, missing_delisting_return
+            )
+            if delisting is not None:
+                applied.append(delisting)
+        adjusted[instrument_id] = series
+    return MarketData(bars=adjusted, delistings=applied)

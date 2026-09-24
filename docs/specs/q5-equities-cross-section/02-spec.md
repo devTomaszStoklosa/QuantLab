@@ -48,7 +48,9 @@ Delisting
 - REQ-520 (AC-3): A delisting shall have its instrument, its delisting date and its delisting return (unknown allowed).
 - REQ-521 (AC-3): The data layer shall end a delisted instrument's bars with one bar on the delisting date, priced at the last close times one plus the delisting return, with zero volume; nothing after it.
 - REQ-522 (AC-3): When the delisting return is unknown, the hypothesis's frozen `missing_delisting_return` shall apply, and the run shall report how many delistings used it.
-- REQ-523 (AC-3): In both engines, a position held into the delisting date shall earn the delisting return and then close.
+- REQ-523 (AC-3): In both engines, a position held into the delisting date shall earn the delisting return and then turn into cash at that value, without an order or a cost; no order shall fill against a delisting bar and no position shall open on it.
+- REQ-525 (AC-3): The permutation test shall accept instruments that start or stop trading within the run: a shuffle pairing a position with a day its instrument did not trade shall earn nothing, and the count of such cells shall be reported; a held position without prices at both ends of its period shall be an error.
+- REQ-526 (AC-3): A universe shall name its market proxy (the instrument whose volatility sets the regimes and whose worst day is the stress scenario); `quantlab run` shall refuse a universe without one, and `mvp-crypto` shall name `btc-usdt`.
 - REQ-524 (AC-3): A synthetic test shall measure the survivorship bias: the same strategy on the same synthetic universe with dead companies (and their delisting returns) against the survivors only, with the difference known in advance.
 
 Rebalans
@@ -143,7 +145,7 @@ Pre-rejestracja i wynik
 |---|---|
 | AC-1 | REQ-501, REQ-502, REQ-503, REQ-504 |
 | AC-2 | REQ-510, REQ-511, REQ-512, REQ-513, REQ-514 |
-| AC-3 | REQ-520, REQ-521, REQ-522, REQ-523, REQ-524 |
+| AC-3 | REQ-520, REQ-521, REQ-522, REQ-523, REQ-524, REQ-525, REQ-526 |
 | AC-4 | REQ-530, REQ-531, REQ-532 |
 | AC-5 | REQ-540, REQ-541, REQ-542, REQ-543 |
 | AC-6 | REQ-550, REQ-551 |

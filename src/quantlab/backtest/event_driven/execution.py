@@ -27,8 +27,8 @@ class ExecutionModel(Protocol):
 def execute(
     order: Order, feed: BarFeed, fills: FillPolicy, price: Callable[[PriceBar], float]
 ) -> Execution:
-    """Fill an order on the feed's current bar, or cancel it if there is none."""
-    bar = feed.bar(order.instrument_id)
+    """Fill an order on the feed's current bar, or cancel it if it does not trade today."""
+    bar = feed.trading_bar(order.instrument_id)
     if bar is None:
         return Execution.cancelled(order)
     filled = fills.fillable(order.quantity, bar)

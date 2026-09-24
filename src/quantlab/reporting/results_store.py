@@ -498,7 +498,9 @@ def registry_rows(store: Path, definitions_dir: Path) -> list[RegistryRow]:
                 strategy=parameters.strategy,
                 universe=parameters.universe,
                 cost_model=parameters.cost_model.build().name,
-                parameters=json.dumps(parameters.model_dump(mode="json"), sort_keys=True),
+                parameters=json.dumps(
+                    parameters.model_dump(mode="json", exclude_defaults=True), sort_keys=True
+                ),
                 training_start=config.training_start,
                 training_end=config.training_end,
                 holdout_start=config.start,

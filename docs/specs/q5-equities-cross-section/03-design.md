@@ -55,6 +55,8 @@ ADRs: docs/adr/0002-dual-backtest-engine.md, docs/adr/0004-validation-first-froz
 
 ## Decision
 
+**Korekta po X3 (2026-09-24):** test parytetu pokazał, że silniki nie mogą zostać całkiem bez zmian: silnik event-driven otwierał pozycję na barze delistingu (bar „handlowy" z ceną wartości delistingu), a wektorowy liczył koszt zamknięcia. Bar delistingu ma więc flagę `delisting`; oba silniki traktują go jako wypłatę gotówki bez zlecenia i kosztu, a event-driven nie wypełnia na nim zleceń. Poza tą jedną regułą decyzja 2A bez zmian.
+
 Recommended: **1A, 2A, 3A**. Filtr członków jako dekorator strategii zakładany przez runner, korekty jako czysta funkcja warstwy danych nad protokołem źródła zdarzeń, rebalans jako polityka przekazywana obu silnikom. Rezygnujemy ze zmian w silnikach dla uniwersum i danych (1B, 2B) — każda taka zmiana to ryzyko parytetu — i z rozproszenia odpowiedzialności po strategiach (1C) i dostawcach (2C). Revisit if: pomiar w X5 przekroczy budżet pamięci — wtedy kolumnowe bary (numpy) za tym samym interfejsem strategii, osobny slice.
 
 Uniwersa: jeden plik na uniwersum w `quantlab/config/universes/<name>.yaml`; plik uniwersum nazywa źródło danych (`source: binance`), a runner bierze dostawcę z rejestru nazw (słownik nazwa → fabryka), nie z `if` po klasie aktywów.

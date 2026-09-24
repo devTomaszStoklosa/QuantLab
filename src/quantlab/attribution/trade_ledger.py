@@ -43,8 +43,9 @@ class Trade(BaseModel):
     def _consistent(self) -> Self:
         if self.exit_ts <= self.entry_ts:
             raise ValueError(f"Trade exit {self.exit_ts} is not after its entry {self.entry_ts}")
-        if self.size <= 0 or self.entry_price <= 0 or self.exit_price <= 0:
-            raise ValueError("Trade size and prices must be positive")
+        # A delisting can leave nothing (exit price 0), never less (q5, REQ-521).
+        if self.size <= 0 or self.entry_price <= 0 or self.exit_price < 0:
+            raise ValueError("Trade size and entry price must be positive, exit price not negative")
         return self
 
 

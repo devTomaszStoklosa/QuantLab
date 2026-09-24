@@ -112,13 +112,34 @@ def test_no_positions_is_inconclusive_with_a_reason() -> None:
     assert "undefined" in result.detail["reason"]
 
 
-def test_misaligned_price_history_raises() -> None:
-    validator = PermutationTestValidator(
-        bars={"a": _bars(_DAILY_RETURNS), "b": _bars(_DAILY_RETURNS[:50])},
-        n_permutations=10,
+def _two_instrument_validator() -> PermutationTestValidator:
+    """ "a" trades throughout, "b" stops after 50 days, as a delisted stock would (q5)."""
+    shorter = [bar.model_copy(update={"instrument_id": "b"}) for bar in _bars(_DAILY_RETURNS[:50])]
+    return PermutationTestValidator(
+        bars={"a": _bars(_DAILY_RETURNS), "b": shorter},
+        n_permutations=200,
         alpha=0.1,
         periods_per_year=365,
     )
 
-    with pytest.raises(ValueError, match="aligned price history"):
-        validator.validate(_run([1.0] * len(_DAILY_RETURNS)))
+
+def test_a_shuffle_onto_days_an_instrument_did_not_trade_earns_nothing() -> None:
+    run = _run([1.0 if i % 3 else -1.0 for i in range(len(_DAILY_RETURNS))])
+
+    unaligned = _two_instrument_validator().validate(run)
+    aligned = _validator().validate(run)
+
+    assert unaligned.detail["missing_returns"] == len(_DAILY_RETURNS) - 50
+    assert "missing_returns" not in aligned.detail
+    # "b" is never held, so the same pairings give the same statistics.
+    for key in ("actual", "null_mean", "null_std", "p_value"):
+        assert unaligned.detail[key] == aligned.detail[key]
+
+
+def test_a_position_without_prices_at_both_ends_is_an_error() -> None:
+    run = _run([1.0] * len(_DAILY_RETURNS))
+    held = run.snapshots[60].model_copy(update={"positions": {"b": 1.0}})
+    run = run.model_copy(update={"snapshots": [*run.snapshots[:60], held, *run.snapshots[61:]]})
+
+    with pytest.raises(ValueError, match=f"b is held on {held.ts} without a price"):
+        _two_instrument_validator().validate(run)

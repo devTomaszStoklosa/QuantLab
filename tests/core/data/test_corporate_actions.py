@@ -6,7 +6,13 @@ import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from quantlab.core.data.corporate_actions import adjust_bars, with_events
-from quantlab.core.data.events import CashDividend, CorporateAction, InstrumentEvents, Split
+from quantlab.core.data.events import (
+    CashDividend,
+    CorporateAction,
+    Delisting,
+    InstrumentEvents,
+    Split,
+)
 from quantlab.core.data.provider import PriceBar
 
 _FIRST = date(2024, 1, 1)
@@ -120,7 +126,7 @@ def test_with_events_adjusts_only_instruments_that_have_events() -> None:
         "plain": InstrumentEvents(),
     }
 
-    result = with_events({"plain": plain, "split": split, "other": plain}, events)
+    result = with_events({"plain": plain, "split": split, "other": plain}, events).bars
 
     assert result["plain"] is plain
     assert result["other"] is plain
@@ -151,3 +157,78 @@ def test_actions_parse_by_kind_and_reject_nonsense() -> None:
 
 def test_a_bar_never_adjusted_has_its_close_as_raw_close() -> None:
     assert _bars([123.0])[0].raw_close == 123.0
+
+
+def _delisting(day: int, rate: float | None) -> Delisting:
+    return Delisting(instrument_id="aaa", date=_day(day), delisting_return=rate)
+
+
+def test_a_delisting_ends_the_bars_with_its_return() -> None:
+    raw = _bars([100.0, 101.0, 80.0])
+
+    market = with_events({"aaa": raw}, {"aaa": InstrumentEvents(delisting=_delisting(4, -0.5))})
+
+    bars = market.bars["aaa"]
+    assert [bar.ts for bar in bars] == [_day(0), _day(1), _day(2), _day(4)]
+    final = bars[-1]
+    assert (final.open, final.high, final.low, final.close) == (40.0, 40.0, 40.0, 40.0)
+    assert final.volume == 0.0
+    assert final.close / bars[-2].close - 1.0 == pytest.approx(-0.5)
+    assert [(d.instrument_id, d.delisting_return, d.assumed) for d in market.delistings] == [
+        ("aaa", -0.5, False)
+    ]
+
+
+def test_an_unknown_delisting_return_takes_the_definitions_assumption() -> None:
+    market = with_events(
+        {"aaa": _bars([100.0, 90.0])},
+        {"aaa": InstrumentEvents(delisting=_delisting(2, None))},
+        missing_delisting_return=-0.3,
+    )
+
+    assert market.bars["aaa"][-1].close == pytest.approx(63.0)
+    assert market.assumed_delistings == 1
+
+
+def test_an_unknown_delisting_return_without_an_assumption_is_refused() -> None:
+    with pytest.raises(ValueError, match="no missing_delisting_return"):
+        with_events(
+            {"aaa": _bars([100.0])}, {"aaa": InstrumentEvents(delisting=_delisting(1, None))}
+        )
+
+
+def test_a_delisting_before_the_last_bar_contradicts_the_data() -> None:
+    with pytest.raises(ValueError, match="delisted on 2024-01-02 but has a bar on 2024-01-03"):
+        with_events(
+            {"aaa": _bars([100.0, 101.0, 102.0])},
+            {"aaa": InstrumentEvents(delisting=_delisting(1, -0.1))},
+        )
+
+
+def test_a_total_loss_leaves_a_zero_price_and_nothing_less() -> None:
+    market = with_events(
+        {"aaa": _bars([100.0, 101.0])}, {"aaa": InstrumentEvents(delisting=_delisting(3, -1.0))}
+    )
+
+    assert market.bars["aaa"][-1].close == 0.0
+    with pytest.raises(ValidationError):
+        Delisting(instrument_id="aaa", date=_day(3), delisting_return=-1.5)
+
+
+def test_a_delisting_follows_the_adjusted_prices_and_keeps_the_raw_one() -> None:
+    events = InstrumentEvents(
+        actions=[Split(instrument_id="aaa", ex_date=_day(1), ratio=2.0)],
+        delisting=_delisting(3, -0.5),
+    )
+
+    bars = with_events({"aaa": _bars([100.0, 50.0, 60.0])}, {"aaa": events}).bars["aaa"]
+
+    assert [bar.close for bar in bars] == [50.0, 50.0, 60.0, 30.0]
+    assert bars[-1].unadjusted_close == 30.0
+
+
+def test_a_delisting_without_bars_ends_nothing() -> None:
+    market = with_events({"aaa": []}, {"aaa": InstrumentEvents(delisting=_delisting(3, -0.5))})
+
+    assert market.bars["aaa"] == []
+    assert market.delistings == []

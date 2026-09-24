@@ -46,6 +46,10 @@ def run(
     Weights follow the same rule as the vectorized engine, among instruments
     with a bar at the decision close: `sizer`, equal weight by sign by default.
 
+    A position held into a delisting bar (q5) is marked at the delisting value in
+    that day's snapshot, then turned into cash at it: no order, no cost, the
+    same as the vectorized engine (REQ-523).
+
     The run ends at the last date's snapshot: no orders are placed then (no
     period is left for them to carry), and orders that could only fill after
     it - next-close orders decided the day before - fall outside the run and
@@ -65,9 +69,12 @@ def run(
         portfolio.snapshot(ts)
         if ts == dates[-1]:
             break
+        portfolio.settle_delistings()
         portfolio.apply(execution.due("close", feed, fills))
         signals = strategy.generate_signals(feed.history(), ts)
-        tradable = [signal for signal in signals if feed.bar(signal.instrument_id) is not None]
+        tradable = [
+            signal for signal in signals if feed.trading_bar(signal.instrument_id) is not None
+        ]
         orders = portfolio.rebalance(sizer.weights(tradable), ts)
         portfolio.apply(execution.submit(orders, feed, fills))
 
