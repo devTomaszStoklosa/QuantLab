@@ -122,6 +122,8 @@ internal static class Rows
     public static MonthlyReturn Month(DbDataReader row) =>
         new(row.Integer("year"), row.Integer("month"), row.Number("net_return"));
 
+    public static YearlyReturn Year(DbDataReader row) => new(row.Integer("year"), row.Number("net_return"));
+
     public static PnlGroup Group(DbDataReader row) => new(
         row.Text("dimension"),
         row.Text("key"),

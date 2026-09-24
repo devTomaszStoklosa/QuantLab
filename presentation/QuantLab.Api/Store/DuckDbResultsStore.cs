@@ -80,7 +80,7 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
         summary = WithRunHeadline(db, summary);
         if (!summary.HasRun)
         {
-            return new HypothesisDetail(summary, null, [], [], [], [], [], []);
+            return new HypothesisDetail(summary, null, [], [], [], [], [], [], [], []);
         }
         var runPath = TablePath(summary.Hypothesis, "run");
         EnsureCompatible(db, runPath);
@@ -91,8 +91,14 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
             Table(db, summary.Hypothesis, "walk_forward", "position", Rows.Window),
             Table(db, summary.Hypothesis, "regimes", "position", Rows.Regime),
             Table(db, summary.Hypothesis, "monthly", "year, month", Rows.Month),
+            Table(db, summary.Hypothesis, "yearly", "year", Rows.Year),
             Table(db, summary.Hypothesis, "pnl_groups", orderBy: null, Rows.Group), // as written: regime, then holding period
-            Table(db, summary.Hypothesis, "diagnostics", "position", Rows.Diagnostic));
+            Table(db, summary.Hypothesis, "diagnostics", "position", Rows.Diagnostic),
+            Query(
+                db,
+                TablePath(summary.Hypothesis, "trades"),
+                "SELECT DISTINCT instrument_id FROM read_parquet($path) ORDER BY instrument_id",
+                row => row.Text("instrument_id")));
     }
 
     public IReadOnlyList<EquityPoint> Equity(string hypothesis)

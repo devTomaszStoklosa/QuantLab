@@ -71,7 +71,7 @@ export interface DataTableProps<R = any> { columns: Column<R>[]; rows: R[]; dens
 export declare function DataTable<R>(props: DataTableProps<R>): React.ReactElement;
 
 export interface PartitionBand { kind: Partition; from: number; to: number; sealed?: boolean; label?: string; note?: string }
-export interface EquityChartProps { series: number[]; benchmark?: number[]; partitions?: PartitionBand[]; xTicks?: Array<{ i: number; label: string }>; width?: number; height?: number; showDrawdown?: boolean; legend?: boolean; yFormat?: (v: number) => string; seriesLabel?: string; benchmarkLabel?: string; ariaLabel?: string }
+export interface EquityChartProps { series: number[]; drawdown?: number[]; benchmark?: number[]; partitions?: PartitionBand[]; xTicks?: Array<{ i: number; label: string }>; width?: number; height?: number; showDrawdown?: boolean; legend?: boolean; yFormat?: (v: number) => string; seriesLabel?: string; benchmarkLabel?: string; ariaLabel?: string }
 export declare function EquityChart(props: EquityChartProps): React.ReactElement;
 export interface SparklineProps { series: number[]; oosFrom?: number; holdoutFrom?: number; sealed?: boolean; width?: number; height?: number }
 export declare function Sparkline(props: SparklineProps): React.ReactElement;
@@ -83,7 +83,7 @@ export interface PermutationTestProps { nullDist: number[]; observed: number; pV
 export declare function PermutationTest(props: PermutationTestProps): React.ReactElement;
 export interface RegimeRow { regime: 'low' | 'mid' | 'high'; label?: string; share: number; sharpe: number; ret: number; maxdd: number; hit: number }
 export declare function RegimeTable(props: { rows: RegimeRow[] }): React.ReactElement;
-export interface MonthlyHeatmapProps { years: Array<{ year: number | string; months: Array<number | null>; holdoutFrom?: number }>; scale?: number }
+export interface MonthlyHeatmapProps { years: Array<{ year: number | string; months: Array<number | null>; total?: number | null; holdoutFrom?: number }>; scale?: number }
 export declare function MonthlyHeatmap(props: MonthlyHeatmapProps): React.ReactElement;
 
 export interface LogEntryProps { date: string; id: string; title: string; verdict: VerdictKind; conclusion: React.ReactNode; facts?: Array<[string, string]> }

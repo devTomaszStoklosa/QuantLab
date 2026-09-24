@@ -13,6 +13,7 @@ from quantlab.reporting.metrics import (
     monthly_returns,
     sharpe,
     sortino,
+    yearly_returns,
 )
 
 
@@ -146,3 +147,16 @@ def test_monthly_returns_of_an_empty_curve() -> None:
 def test_monthly_returns_require_matching_lengths() -> None:
     with pytest.raises(ValueError, match="one equity point per date"):
         monthly_returns([date(2024, 1, 1)], [1.0, 1.1])
+
+
+def test_yearly_returns_are_the_compounded_months() -> None:
+    dates = [date(2023, 11, 15) + timedelta(days=i) for i in range(500)]
+    equity = [1.0 + 0.02 * math.sin(i / 11.0) + 0.001 * i for i in range(500)]
+
+    years = yearly_returns(dates, equity)
+    months = monthly_returns(dates, equity)
+
+    assert [year for year, _ in years] == [2023, 2024, 2025]
+    for year, value in years:
+        compounded = math.prod(1.0 + r for y, _, r in months if y == year) - 1.0
+        assert value == pytest.approx(compounded)

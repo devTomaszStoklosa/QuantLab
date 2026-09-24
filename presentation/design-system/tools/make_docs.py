@@ -94,7 +94,7 @@ D = {
 - Format values in `format`; never compute metrics there.""",
 "EquityChart": """The equity curve with partition bands, a benchmark and a drawdown pane. While the holdout is sealed, its data is not drawn.
 
-- Props: `series` and `benchmark` (index levels), `partitions` (`[{kind: 'is'|'oos'|'holdout', from, to, sealed, label, note}]` as indices), `xTicks` (`[{i, label}]`), `height`, `width` (viewBox), `showDrawdown`, `yFormat`, `seriesLabel` and `benchmarkLabel`.
+- Props: `series` and `benchmark` (index levels), `drawdown` (drawdowns computed by quantlab, one per point; without it the chart derives them, for previews only), `partitions` (`[{kind: 'is'|'oos'|'holdout', from, to, sealed, label, note}]` as indices), `xTicks` (`[{i, label}]`), `height`, `width` (viewBox), `showDrawdown`, `yFormat`, `seriesLabel` and `benchmarkLabel`.
 - With `sealed: true`, the curve stops at the freeze point and the band says "Not yet observed". Name the cost model in the surrounding `Panel` subtitle.""",
 "Sparkline": """A tiny equity line for table rows. The out-of-sample stretch is drawn in `partition-oos`, and a sealed holdout is left blank.
 
@@ -115,7 +115,7 @@ D = {
 - Use it to show whether an average hides a regime where the strategy fails when it hurts most.""",
 "MonthlyHeatmap": """Monthly net returns by year, on a blue (gain) to red (loss) diverging scale, with a compounded year total.
 
-- Props: `years` (`[{year, months: [12 fractions or null], holdoutFrom}]`) and `scale` (the return at full intensity, default 0.08).
+- Props: `years` (`[{year, months: [12 fractions or null], total, holdoutFrom}]`; `total` is the year's return computed by quantlab, and only previews leave it out to have it compounded) and `scale` (the return at full intensity, default 0.08).
 - Holdout months are outlined in `partition-holdout`.""",
 "LogEntry": """One research-log entry on a timeline: date, ID, title, verdict, a serif conclusion and key facts.
 

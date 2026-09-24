@@ -123,6 +123,8 @@ public sealed record RegimeMetrics(
 
 public sealed record MonthlyReturn(long Year, long Month, double NetReturn);
 
+public sealed record YearlyReturn(long Year, double NetReturn);
+
 public sealed record PnlGroup(
     string Dimension,
     string Key,
@@ -145,8 +147,10 @@ public sealed record HypothesisDetail(
     IReadOnlyList<WalkForwardWindow> WalkForward,
     IReadOnlyList<RegimeMetrics> Regimes,
     IReadOnlyList<MonthlyReturn> Monthly,
+    IReadOnlyList<YearlyReturn> Yearly,
     IReadOnlyList<PnlGroup> PnlGroups,
-    IReadOnlyList<Diagnostic> Diagnostics);
+    IReadOnlyList<Diagnostic> Diagnostics,
+    IReadOnlyList<string> TradeInstruments);
 
 public sealed record EquityPoint(DateOnly Ts, double Equity, double Drawdown);
 

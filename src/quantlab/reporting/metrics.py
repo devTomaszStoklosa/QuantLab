@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import date
 
 import numpy as np
@@ -81,21 +82,36 @@ def calmar(equity_curve: list[float], periods_per_year: int) -> float:
     return cagr(equity_curve, periods_per_year) / abs(drawdown)
 
 
-def monthly_returns(dates: list[date], equity_curve: list[float]) -> list[tuple[int, int, float]]:
-    """Return of each calendar month as (year, month, return), oldest first.
-
-    A month's return is its last equity point over the previous month's last
-    point, minus 1; the first month is measured from the curve's first point,
-    so a curve starting mid-month gives a partial first month. A month with
-    no point is skipped and the next month's return spans it.
+def _period_returns[P](
+    dates: list[date], equity_curve: list[float], period: Callable[[date], P]
+) -> list[tuple[P, float]]:
+    """Return of each calendar period, oldest first: the period's last equity point
+    over the previous period's last point, minus 1. The first period is measured
+    from the curve's first point, so a curve starting mid-period gives a partial
+    first period; a period with no point is skipped and the next one spans it.
     """
     if len(dates) != len(equity_curve):
-        raise ValueError("monthly_returns requires one equity point per date")
-    months = []
+        raise ValueError("period returns require one equity point per date")
+    returns = []
     base = equity_curve[0] if equity_curve else 0.0
     for i, (day, value) in enumerate(zip(dates, equity_curve, strict=True)):
-        following = dates[i + 1] if i + 1 < len(dates) else None
-        if following is None or (following.year, following.month) != (day.year, day.month):
-            months.append((day.year, day.month, value / base - 1.0))
+        if i + 1 == len(dates) or period(dates[i + 1]) != period(day):
+            returns.append((period(day), value / base - 1.0))
             base = value
-    return months
+    return returns
+
+
+def monthly_returns(dates: list[date], equity_curve: list[float]) -> list[tuple[int, int, float]]:
+    """Return of each calendar month as (year, month, return), oldest first."""
+    return [
+        (year, month, value)
+        for (year, month), value in _period_returns(
+            dates, equity_curve, lambda day: (day.year, day.month)
+        )
+    ]
+
+
+def yearly_returns(dates: list[date], equity_curve: list[float]) -> list[tuple[int, float]]:
+    """Return of each calendar year as (year, return), oldest first; the months of
+    `monthly_returns` compound to it."""
+    return _period_returns(dates, equity_curve, lambda day: day.year)

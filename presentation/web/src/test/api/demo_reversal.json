@@ -37,6 +37,8 @@
   "walkForward": [],
   "regimes": [],
   "monthly": [],
+  "yearly": [],
   "pnlGroups": [],
-  "diagnostics": []
+  "diagnostics": [],
+  "tradeInstruments": []
 }

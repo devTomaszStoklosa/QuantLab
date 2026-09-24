@@ -308,7 +308,8 @@
     function X(i) { return pl + (W - pl - pr) * i / (n - 1); }
     function Y(y) { return pt + (mainB - pt) * (1 - (y - lo) / (hi - lo)); }
     var yt = niceTicks(lo, hi, 4);
-    var peak = -Infinity, dd = vis.map(function (x) { peak = Math.max(peak, x); return x / peak - 1; });
+    // Drawdowns computed by quantlab when given; the running-peak fallback is for previews only.
+    var peak = -Infinity, dd = p.drawdown ? p.drawdown.slice(0, visN) : vis.map(function (x) { peak = Math.max(peak, x); return x / peak - 1; });
     var ddMin = Math.min.apply(null, dd.concat([-0.01])), ddAt = dd.indexOf(Math.min.apply(null, dd));
     function YD(d) { return ddT + (ddB - ddT) * (d / ddMin); }
     var kids = [h('defs', { key: 'd' }, h(Hatch, { id: hid }))];
@@ -474,10 +475,11 @@
     return h('table', { className: cx('qf-heat', p.className) },
       h('thead', null, h('tr', null, h('th', { className: 'is-year' }), MONTHS.map(function (m, i) { return h('th', { key: i }, m); }), h('th', null, 'YEAR'))),
       h('tbody', null, p.years.map(function (y) {
-        var tot = y.months.reduce(function (a, b) { return b == null ? a : a * (1 + b); }, 1) - 1;
+        // The year total computed by quantlab when given; compounding is for previews only.
+        var tot = 'total' in y ? y.total : y.months.reduce(function (a, b) { return b == null ? a : a * (1 + b); }, 1) - 1;
         return h('tr', { key: y.year }, h('th', { className: 'is-year' }, y.year),
           y.months.map(function (v, i) { return cell(v, i, y.holdoutFrom != null && i >= y.holdoutFrom); }),
-          h('td', { className: 'is-total' }, num(tot * 100, 1)));
+          h('td', { className: 'is-total' }, tot == null ? '—' : num(tot * 100, 1)));
       })));
   }
 

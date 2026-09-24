@@ -6,7 +6,9 @@ Cel nie jest jedna działająca strategia — cel jest pokazanie procesu badawcz
 
 ## Status
 
-MVP zamknięte (`lab-foundation` + `q1-momentum-research-mvp`): pierwsza hipoteza — time-series momentum na BTC-USDT i ETH-USDT — przeszła pełny pipeline (sygnał, silnik wektorowy z testem golden-master, trzy modele kosztów, walk-forward, zamrożony holdout otwarty raz, test permutacyjny, reżimy, stress test, rejestr transakcji, tear-sheet). Wynik: `inconclusive`, opisany w [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md). W toku: `q3-mean-reversion-hypothesis` (druga hipoteza, zamrożona przed pierwszym przebiegiem; czeka na przebieg treningowy) i `q2-event-driven-engine` (drugi silnik z egzekucją zleceń, do opisowego porównania założeń egzekucji), patrz [docs/ROADMAP.md](docs/ROADMAP.md).
+MVP zamknięte (`lab-foundation` + `q1-momentum-research-mvp`): pierwsza hipoteza — time-series momentum na BTC-USDT i ETH-USDT — przeszła pełny pipeline (sygnał, silnik wektorowy z testem golden-master, trzy modele kosztów, walk-forward, zamrożony holdout otwarty raz, test permutacyjny, reżimy, stress test, rejestr transakcji, tear-sheet). Wynik: `inconclusive`, opisany w [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md).
+
+Rozszerzenia: dwie kolejne hipotezy są zamrożone przed pierwszym przebiegiem i czekają na lokalne przebiegi treningowe — `mean_reversion_v1` (`q3`) i `pairs_v1` (`q4`, pairs trading na kointegracji ETH/BTC). Gotowe są: drugi silnik z egzekucją zleceń (`q2`), PSR, deflated Sharpe i PBO z rejestrem prób liczonym z historii gita (`q6`) oraz warstwa prezentacji (`q7`): API ASP.NET Core i aplikacja React nad magazynem wyników. Szczegóły w [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Uruchomienie
 

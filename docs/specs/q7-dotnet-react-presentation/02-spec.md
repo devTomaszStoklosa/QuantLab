@@ -31,7 +31,7 @@ Magazyn wyników (Python)
 - REQ-701 (AC-1): When `quantlab run` finishes, the system shall write the primary run's evidence to `results/<hypothesis>/` as the Parquet tables of the schema below, replacing the previous run of that hypothesis.
 - REQ-702 (AC-1): The stored numbers shall be the numbers the run computed — no rounding — with undefined values stored as NULL, never as NaN, infinity or 0.
 - REQ-703 (AC-1): A hypothesis's tables shall be replaced as a whole: a reader shall never see tables from two different runs of one hypothesis once the write has finished.
-- REQ-704 (AC-1): Monthly net returns of the primary run shall be computed in `quantlab.reporting.metrics`: the equity at the month's last snapshot over the equity at the previous month's last snapshot (the run's first snapshot for the first month), minus 1.
+- REQ-704 (AC-1): Monthly and yearly net returns of the primary run shall be computed in `quantlab.reporting.metrics`: the equity at the period's last snapshot over the equity at the previous period's last snapshot (the run's first snapshot for the first period), minus 1.
 - REQ-705 (AC-1): `run.parquet` shall name the source of the bars the run read (`PriceBar.source`), so that synthetic results are distinguishable from market data.
 
 Rejestr
@@ -128,6 +128,7 @@ Tabele wielowierszowe w `results/<hipoteza>/` (kolumna `position` to kolejność
 | `walk_forward` | `position`, `start`, `end`, `partial`, `aggregate`, `cagr`?, `sharpe`?, `max_drawdown`? |
 | `regimes` | `position`, `regime`, `days`, `share`, `cagr`?, `sharpe`?, `sortino`? |
 | `monthly` | `year`, `month`, `net_return` |
+| `yearly` | `year`, `net_return` (miesiące składają się w rok; liczone w Pythonie, nie w UI) |
 | `pnl_groups` | `dimension` (`regime`, `holding_period`), `position`, `key`, `trades`, `win_rate`, `total_net_pnl`, `mean_net_pnl`, `median_net_pnl`, `worst_net_pnl`, `best_net_pnl`, `costs` |
 | `diagnostics` | `position`, `title`, `label`, `value`? |
 | `trades` | `trade_id`, `instrument_id`, `side`, `entry_ts`, `entry_price`, `exit_ts`, `exit_price`, `size`, `gross_pnl`, `costs`, `net_pnl`, `holding_days`, `regime_at_entry`, `open_at_end` |

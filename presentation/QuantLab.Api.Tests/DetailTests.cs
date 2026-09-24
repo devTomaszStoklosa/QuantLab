@@ -57,6 +57,14 @@ public class DetailTests
             monthly.Select(m => (double)m["net_return"]!),
             detail.GetProperty("monthly").EnumerateArray().Select(m => m.GetProperty("netReturn").GetDouble()));
 
+        var yearly = Fixture.Query($"SELECT year, net_return FROM {Table("demo_momentum", "yearly")} ORDER BY year");
+        Assert.Equal(
+            yearly.Select(y => ((long)y["year"]!, (double)y["net_return"]!)),
+            detail.GetProperty("yearly").EnumerateArray().Select(y => (y.GetProperty("year").GetInt64(), y.GetProperty("netReturn").GetDouble())));
+        Assert.Equal(
+            Fixture.Query($"SELECT DISTINCT instrument_id FROM {Table("demo_momentum", "trades")} ORDER BY 1").Select(r => (string)r["instrument_id"]!),
+            detail.GetProperty("tradeInstruments").EnumerateArray().Select(i => i.GetString()!));
+
         var groups = detail.GetProperty("pnlGroups").EnumerateArray().Select(g => g.GetProperty("dimension").GetString()).ToList();
         Assert.Equal("regime", groups[0]);
         Assert.Equal("holding_period", groups[^1]);
@@ -82,7 +90,7 @@ public class DetailTests
 
         Assert.Equal("proposed", detail.GetProperty("hypothesis").GetProperty("status").GetString());
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("run").ValueKind);
-        foreach (var list in new[] { "metrics", "walkForward", "regimes", "monthly", "pnlGroups", "diagnostics" })
+        foreach (var list in new[] { "metrics", "walkForward", "regimes", "monthly", "yearly", "pnlGroups", "diagnostics", "tradeInstruments" })
         {
             Assert.Empty(detail.GetProperty(list).EnumerateArray());
         }
