@@ -87,7 +87,7 @@ presentation (.NET + React, rozszerzenie q7)
 
 ### `core.universe`
 
-- `Universe`: nazwa, `asof_date`, lista `Instrument`. MVP: uniwersum statyczne (lista w configu). Point-in-time (zmienny skład w czasie) — rozszerzenie `q5`.
+- `Universe`: nazwa, `asof_date`, lista `Instrument`, opcjonalnie okresy członkostwa (`Membership`); jeden plik na uniwersum w `quantlab/config/universes/<nazwa>.yaml`. Bez okresów uniwersum jest statyczne (`mvp-crypto`); z okresami `members(t)` zwraca skład znany w dniu t (point-in-time, `q5`). Runner owija każdą strategię w `MembersOnly`, więc strategia widzi tylko członków w dniu sygnału.
 
 ### `backtest` (wspólny kontrakt obu silników)
 

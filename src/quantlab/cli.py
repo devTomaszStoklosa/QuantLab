@@ -63,6 +63,8 @@ from quantlab.research.trials import (
 from quantlab.risk.conditional import regime_conditional_metrics
 from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier, label_periods
 from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
+from quantlab.strategy.base import Strategy
+from quantlab.strategy.members_only import MembersOnly
 from quantlab.validation.holdout import (
     FrozenHoldout,
     HoldoutAlreadyOpenedError,
@@ -144,6 +146,11 @@ def _fetch_bars(
     }
 
 
+def _strategy(parameters: StudyParameters, universe: Universe) -> Strategy:
+    """The hypothesis's strategy, seeing only the universe's members on each date (REQ-503)."""
+    return MembersOnly(parameters.build_strategy(), universe)
+
+
 def _run_study(
     bars: dict[str, list[PriceBar]],
     parameters: StudyParameters,
@@ -155,7 +162,7 @@ def _run_study(
     git_sha: str,
 ) -> BacktestRun:
     return run_backtest(
-        strategy=parameters.build_strategy(),
+        strategy=_strategy(parameters, universe),
         cost_model=cost_model,
         bars=bars,
         universe_name=universe.name,
@@ -230,7 +237,7 @@ def run_engine_comparison(
 
     def event_driven(execution: ExecutionModel, fills: FillPolicy) -> EventDrivenResult:
         return run_event_driven(
-            strategy=parameters.build_strategy(),
+            strategy=_strategy(parameters, universe),
             cost_model=cost_model,
             bars=bars,
             universe_name=universe.name,
