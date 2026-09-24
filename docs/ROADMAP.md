@@ -33,3 +33,79 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 
 **Po `q5`-X8 (2026-09-24):** `xsmom_v1` zamrożona po decyzjach 1–7: momentum 12-1 na S&P 500 point-in-time (Tiingo, Wikipedia), trening 2005–2019, holdout 2020–2025, kryterium z testem losowych portfeli. Cały kod epiku gotowy; reszta wymaga sieci i dzieje się lokalnie, w tej kolejności: `uv run quantlab build-universe` (poprawki tickerów tylko z raportu budowy, potem commit `sp500.yaml` i `sp500-renames.yaml`), `uv run quantlab run xsmom_v1` z kluczem `TIINGO_API_KEY` (pobieranie rozłożone w czasie, patrz DATA-SOURCES), `uv run quantlab open-holdout xsmom_v1`, wpis w dzienniku (REQ-562). Wszystkie epiki mają już kod; otwarte są tylko przebiegi lokalne (`q2`–`q6` na Binance, `q5` na Tiingo) i weryfikacja `q7` na Windows.
 
+## Epiki
+
+### lab-foundation
+
+Szkielet repo, dostęp do danych, testy środowiska. Bez tego nic innego się nie zaczyna. Pełna specyfikacja: [specs/lab-foundation/](specs/lab-foundation/).
+
+Slice'y: F-1 szkielet (uv, ruff, pytest, CLI, test środowiska) · F-2 `core.data` z jednym adapterem (Binance, patrz [ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md)) i cache · F-3 `core.universe` statyczne · F-4 `core.storage` (DuckDB/Parquet I/O).
+
+### q1-momentum-research-mvp
+
+Pełny pipeline na jednej hipotezie (time-series momentum, Moskowitz/Ooi/Pedersen 2012): sygnał, silnik wektorowy, koszty, walidacja out-of-sample, ryzyko/reżimy, atrybucja transakcji, tear-sheet, wpis w dzienniku badawczym. **Granica MVP.** Pełna specyfikacja: [specs/q1-momentum-research-mvp/](specs/q1-momentum-research-mvp/).
+
+Slice'y: S1 rejestr `Hypothesis` · S2 sygnał momentum · S3 `Strategy` implementacja · S4 silnik wektorowy + `BacktestRun` · S5 metryki własnym kodem + testy golden-master · S6 pierwszy pełny przebieg end-to-end · S7 `NaiveCostModel` · S8 `RealisticCostModel` + porównanie wrażliwości · S9 `WalkForwardValidator` · S10 zamrożony holdout · S11 `PermutationTestValidator` · S12 `RegimeClassifier` + metryki warunkowe · S13 stress test scenariuszowy · S14 `TradeLedger` + cięcia P&L · S15 tear-sheet · S16 wpis w `docs/RESEARCH_LOG.md`.
+
+### q2-event-driven-engine (rozszerzenie, w toku)
+
+Realistyczna egzekucja: symulacja zleceń i częściowych wypełnień, brak look-ahead bias z konstrukcji. Porównanie wyniku z silnikiem wektorowym na tej samej hipotezie; walidacja i werdykty zostają na silniku wektorowym. Pełna specyfikacja: [specs/q2-event-driven-engine/](specs/q2-event-driven-engine/).
+
+Slice'y: E1 wspólny kontrakt `BacktestRun` i reguła wag · E2 rdzeń event-driven + parytet z silnikiem wektorowym · E3 egzekucja na następnym barze · E4 limit udziału w wolumenie i kapitał graniczny · E5 `quantlab compare-engines` · E6 przebieg lokalny i uzupełnienie dziennika.
+
+### q3-mean-reversion-hypothesis (rozszerzenie, następne po MVP)
+
+Druga rodzina hipotez — short-term mean reversion — jako kontrast do momentum na tym samym pipeline'ie. Pełna specyfikacja: [specs/q3-mean-reversion-hypothesis/](specs/q3-mean-reversion-hypothesis/).
+
+Slice'y: M1 uogólniony runner (definicja hipotezy = zamrożony plik) · M2 `ShortTermReversal` · M3 obrót i korelacja z `momentum_v1` · M4 zamrożenie `mean_reversion_v1` · M5 przebieg treningowy · M6 otwarcie holdoutu · M7 wpis w dzienniku.
+
+### q4-pairs-trading-stat-arb (rozszerzenie, w toku)
+
+Kointegracja (Engle-Granger), spread trading na parze ETH-USDT / BTC-USDT, wagi z współczynnika zabezpieczenia w obu silnikach. Johansen i wybór par z szerszego koszyka wracają po `q5`. Pełna specyfikacja: [specs/q4-pairs-trading-stat-arb/](specs/q4-pairs-trading-stat-arb/).
+
+Slice'y: P1 narzędzia kointegracji · P2 kontrakt wag (`Sizer`) · P3 strategia par · P4 diagnostyka kointegracji w raporcie · P5 zamrożenie `pairs_v1` · P6 przebieg treningowy · P7 otwarcie holdoutu · P8 wpis w dzienniku.
+
+### q5-equities-cross-section (rozszerzenie, w toku)
+
+Point-in-time uniwersum, `CorporateAction` i korekta cen, delisting i pomiar survivorship bias, polityka rebalansu, momentum przekrojowe (Jegadeesh i Titman 1993). Pełna specyfikacja: [specs/q5-equities-cross-section/](specs/q5-equities-cross-section/).
+
+Slice'y: X1 point-in-time uniwersum · X2 corporate actions · X3 delisting i survivorship bias · X4 polityka rebalansu · X5 momentum przekrojowe · X6 hipoteza demonstracyjna w magazynie wyników · X7 adapter źródła danych · X8 zamrożenie hipotezy · X9 przebieg treningowy · X10 otwarcie holdoutu · X11 wpis w dzienniku.
+
+### q6-advanced-validation-cpcv (rozszerzenie, w toku)
+
+Probabilistic i deflated Sharpe ratio, Probability of Backtest Overfitting (CSCV) i rejestr prób liczony z historii definicji hipotez — opisowo, bez zmiany zamrożonych kryteriów. Purged k-fold / CPCV wraca z pierwszą hipotezą z parametrami dopasowywanymi na danych (`q4`). Pełna specyfikacja: [specs/q6-advanced-validation-cpcv/](specs/q6-advanced-validation-cpcv/).
+
+Slice'y: V1 PSR i DSR · V2 rejestr prób z historii gita · V3 PBO (CSCV) · V4 PSR/DSR w `quantlab run` i tear-sheecie · V5 `quantlab trials` · V6 przebiegi lokalne i dziennik.
+
+### q7-dotnet-react-presentation (rozszerzenie, w toku)
+
+ASP.NET Core Web API nad wynikami w DuckDB/Parquet, React: rejestr hipotez, dowody hipotezy i rejestr transakcji, w design systemie QuantForge. Tylko odczyt — liczby wyłącznie z magazynu wyników zapisanego przez Pythona ([ADR-0008](adr/0008-results-store-parquet-duckdb.md)). Pełna specyfikacja: [specs/q7-dotnet-react-presentation/](specs/q7-dotnet-react-presentation/).
+
+Slice'y: W1 magazyn wyników w Pythonie · W2 szkielet API .NET · W3 endpointy dowodów i transakcji · W4 aplikacja React z rejestrem hipotez · W5 ekran hipotezy i rejestr transakcji · W6 weryfikacja lokalna.
+
+## Zakres MVP
+
+Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
+
+- Jedna hipoteza (momentum) przetestowana pełnym pipeline'em, z wynikiem zapisanym w dzienniku badawczym niezależnie od tego, czy się potwierdziła.
+- Silnik backtestu z testami golden-master na syntetycznych danych.
+- Co najmniej dwa modele kosztów z jawnym porównaniem wpływu na wynik.
+- Walk-forward + zamrożony holdout + test permutacyjny.
+- Metryki warunkowe na co najmniej dwóch reżimach zmienności.
+- Rejestr transakcji z cięciami P&L.
+- Jeden pełny tear-sheet z realnego przebiegu.
+
+Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momentum-research-mvp` 5–8 tygodni. Rozszerzenia q2–q7: 2–4 miesiące przyrostowo, po ustaleniu priorytetu.
+
+## Stan ticketów
+
+| Epik | 01-story | 02-spec | 03-design | Kod |
+|---|---|---|---|---|
+| lab-foundation | Ready for dev | Ready for dev | Ready for dev | gotowe (F-1..F-4) |
+| q1-momentum-research-mvp | Ready for architect | Ready for architect | Ready for dev | gotowe (S1..S16), MVP zamknięte: `momentum_v1` inconclusive |
+| q2-event-driven-engine | Ready for dev | Ready for dev | Ready for dev | E1–E5 gotowe; E6 wymaga lokalnego przebiegu (Binance) |
+| q3-mean-reversion-hypothesis | Ready for dev | Ready for dev | Ready for dev | M1–M4 gotowe; M5 wymaga lokalnego przebiegu (Binance) |
+| q4-pairs-trading-stat-arb | Ready for dev | Ready for dev | Ready for dev | P1–P5 gotowe (`pairs_v1` zamrożona); P6 wymaga lokalnego przebiegu (Binance) |
+| q5-equities-cross-section | Ready for dev | Ready for dev | Ready for dev | X1–X6 gotowe (point-in-time uniwersum, corporate actions, delisting i survivorship bias, polityka rebalansu, momentum przekrojowe, `demo_xsmom` w magazynie syntetycznym); decyzje 1–5 przyjęte 2026-09-24 (Tiingo, S&P 500 z Wikipedii, 12-1, test losowych portfeli); X7a (źródło i kalendarz w pliku uniwersum, proxy rynku bez członkostwa) i X7b (test losowych portfeli: `demo_xsmom` p = 0.002 wobec 0.99 z tasowania dni) gotowe; X7c (adapter Tiingo na odpowiedziach w udokumentowanym formacie) i X7d (`quantlab build-universe`: skład S&P 500 z zapisanej rewizji Wikipedii, raport sprzeczności, pokrycie cenami w `run`) gotowe — plik `sp500.yaml` do zbudowania lokalnie; pytania 6–7 rozstrzygnięte (zwrot z delistingu 0% z −30% opisowo, koszty 5 bps, k 0.05, 21 sesji); X8 gotowe: `xsmom_v1` zamrożona (`config/holdout/xsmom_v1.yaml`); X9–X11 lokalnie (budowa `sp500.yaml`, pobranie z Tiingo, trening, holdout, wpis w dzienniku) |
+| q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
+| q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | W1–W5 gotowe (magazyn wyników, API .NET, aplikacja React); W6 wymaga weryfikacji na maszynie deweloperskiej |
