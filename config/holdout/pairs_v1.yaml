@@ -1,0 +1,44 @@
+# Frozen definition of the pairs trading hypothesis (q4, REQ-440).
+# Committed before any run of this hypothesis reads market data: it is the
+# single source of its parameters, dates and success criterion. Do not edit:
+# a change after this commit makes it a different hypothesis.
+# frozen_at_commit is read from git (the last commit touching this file).
+#
+# Signal parameters from Gatev, Goetzmann and Rouwenhorst (2006): 12-month
+# formation window, entry at 2 standard deviations, exit when the spread
+# crosses its mean. Engle-Granger filter at 5% (Vidyamurthy 2004) gates new
+# positions only. ETH is regressed on BTC, BTC as the market factor.
+# Training is the period of momentum_v1 and mean_reversion_v1, so all three
+# are compared on identical data; 2024-2025 is left out because q1 already
+# looked at it. The holdout is mean_reversion_v1's, still unopened when this
+# file was committed: about 8 months, little power - accepted upfront.
+hypothesis: pairs_v1
+
+training_start: 2018-01-01
+training_end: 2023-12-31
+start: 2026-01-01
+end: 2026-08-31
+
+parameters:
+  strategy: pairs_spread
+  dependent: eth-usdt
+  explanatory: btc-usdt
+  formation_days: 365
+  entry_z: 2.0
+  exit_z: 0.0
+  max_coint_p_value: 0.05
+  universe: mvp-crypto
+  cost_model:
+    name: realistic
+    fee_bps: 10
+    k: 0.05
+    vol_window: 30
+
+success_criterion:
+  description: >-
+    Holdout net Sharpe under the realistic cost model > 0 and permutation-test
+    p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 ->
+    inconclusive; Sharpe > 0 and p < 0.1 -> passed; no position held (Sharpe
+    undefined) -> inconclusive.
+  min_sharpe: 0.0
+  max_p_value: 0.1

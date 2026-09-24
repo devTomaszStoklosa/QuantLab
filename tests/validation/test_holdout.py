@@ -6,6 +6,7 @@ import pytest
 
 from quantlab.research.definition import (
     CostModelParameters,
+    PairsSpreadParameters,
     ShortTermReversalParameters,
     TimeSeriesMomentumParameters,
 )
@@ -20,6 +21,7 @@ from quantlab.validation.holdout import (
 
 _FROZEN_CONFIG = Path(__file__).parents[2] / "config" / "holdout" / "momentum_v1.yaml"
 _REVERSAL_CONFIG = Path(__file__).parents[2] / "config" / "holdout" / "mean_reversion_v1.yaml"
+_PAIRS_CONFIG = Path(__file__).parents[2] / "config" / "holdout" / "pairs_v1.yaml"
 _CRITERION = SuccessCriterion(description="d", min_sharpe=0.0, max_p_value=0.1)
 
 
@@ -150,3 +152,34 @@ def test_frozen_mean_reversion_v1_reads_as_pre_registered() -> None:
         cost_model=momentum.parameters.cost_model,
     )
     assert config.success_criterion == momentum.success_criterion
+
+
+def test_frozen_pairs_v1_reads_as_pre_registered() -> None:
+    """The answers to the q4 story's open questions, as frozen (REQ-440)."""
+    config = parse_holdout_config(_PAIRS_CONFIG)
+    momentum = parse_holdout_config(_FROZEN_CONFIG)
+    reversal = parse_holdout_config(_REVERSAL_CONFIG)
+
+    assert config.hypothesis == "pairs_v1"
+    assert (config.training_start, config.training_end) == (
+        momentum.training_start,
+        momentum.training_end,
+    )
+    assert (config.start, config.end) == (reversal.start, reversal.end)
+    assert config.parameters == PairsSpreadParameters(
+        strategy="pairs_spread",
+        dependent="eth-usdt",
+        explanatory="btc-usdt",
+        formation_days=365,
+        entry_z=2.0,
+        exit_z=0.0,
+        max_coint_p_value=0.05,
+        universe=momentum.parameters.universe,
+        cost_model=momentum.parameters.cost_model,
+    )
+    criterion = config.success_criterion
+    assert (criterion.min_sharpe, criterion.max_p_value) == (
+        momentum.success_criterion.min_sharpe,
+        momentum.success_criterion.max_p_value,
+    )
+    assert "no position held (Sharpe undefined) -> inconclusive" in criterion.description

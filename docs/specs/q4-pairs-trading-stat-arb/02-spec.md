@@ -103,4 +103,4 @@ Status hipotezy — jak w `q1` (`concluded_status`). Test kointegracji na okresi
 
 | # | Question | Owner |
 |---|---|---|
-| 1 | Pytania 1–4 z [01-story.md](01-story.md) (para i parametry, filtr kointegracji, holdout, kryterium) blokują zamrożenie (P5) | Tomasz |
+| 1 | ~~Pytania 1–4 z [01-story.md](01-story.md)~~ — rozstrzygnięte 2026-09-24, zamrożone w `config/holdout/pairs_v1.yaml` | Tomasz |
