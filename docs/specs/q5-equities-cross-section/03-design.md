@@ -192,5 +192,6 @@ Rollback: `git revert` per slice; żaden slice nie zmienia plików w `config/hol
 
 ## Handoff notes
 
-- X1–X6 nie wymagają odpowiedzi na pytania z 01-story; X7 wymaga 1–2, X8 wymaga 3–7.
+- X1–X6 nie wymagają odpowiedzi na pytania z 01-story; X7 wymaga 1–2, X8 wymaga 3–7 (wszystkie rozstrzygnięte 2026-09-24).
+- Plik `sp500.yaml` powstaje lokalnie (`quantlab build-universe`) i jest commitowany przed pierwszym przebiegiem; poprawki w `sp500-renames.yaml` wynikają wyłącznie z raportu budowy, zanim jakikolwiek przebieg przeczyta ceny.
 - Nie uruchamiaj żadnej hipotezy akcyjnej na danych rynkowych przed X8.

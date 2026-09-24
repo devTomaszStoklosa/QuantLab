@@ -111,6 +111,10 @@ _PERMUTATION_ALPHA = 0.1
 # Annualization and the regime windows come from the universe's market (REQ-506):
 # universe.periods_per_year, 365 for crypto.
 _STRESS_SHOCK = 0.20  # the AC-10 example size, applied down and up
+# A delisting return a source does not give is a frozen assumption of the
+# hypothesis; the run also shows the result under Shumway's (1997) average for
+# performance-related delistings, so the assumption's weight is visible (q5 Q6).
+_DELISTING_STRESS_RETURN = -0.30
 # Execution simulation for the engine comparison (q2): lab-wide too, and they
 # only change how orders fill in a descriptive comparison, never a verdict.
 _NOMINAL_CAPITAL = 100_000.0  # USDT, a private researcher's scale
@@ -683,6 +687,30 @@ def run(
                 else ", all with the source's delisting return"
             )
         )
+        if assumed and parameters.missing_delisting_return != _DELISTING_STRESS_RETURN:
+            stressed = parameters.model_copy(
+                update={"missing_delisting_return": _DELISTING_STRESS_RETURN}
+            )
+            stressed_run = _run_study(
+                _fetch_bars(
+                    provider, universe, stressed, config.training_start, config.training_end
+                ),
+                stressed,
+                stressed.cost_model.build(),
+                universe,
+                config.training_start,
+                config.training_end,
+                _SEED,
+                git_sha,
+            )
+            stressed_metrics = run_metrics(stressed_run, periods_per_year)
+            typer.echo(
+                f"At an assumed delisting return of {_DELISTING_STRESS_RETURN:+.0%} "
+                f"(Shumway 1997) instead ({runs[2].cost_model_name}): Sharpe "
+                f"{_fmt_ratio(stressed_metrics.sharpe)} vs {_fmt_ratio(metrics[2].sharpe)}, "
+                f"CAGR {_fmt_pct(stressed_metrics.cagr)} vs {_fmt_pct(metrics[2].cagr)}"
+            )
+            typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
     if not universe.is_static:
         coverage = price_coverage(universe, bars, config.training_start, config.training_end)
         typer.echo("")
