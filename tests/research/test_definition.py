@@ -1,12 +1,14 @@
 import pytest
 from pydantic import ValidationError
 
-from quantlab.backtest.sizing import EqualWeightBySign
+from quantlab.backtest.sizing import EqualWeightBySign, PairWeights
 from quantlab.research.definition import (
     CostModelParameters,
+    PairsSpreadParameters,
     ShortTermReversalParameters,
     TimeSeriesMomentumParameters,
 )
+from quantlab.strategy.pairs_spread import PairsSpreadReversion
 from quantlab.strategy.short_term_reversal import ShortTermReversal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 from quantlab.validation.holdout import HoldoutConfig
@@ -121,3 +123,60 @@ def test_existing_strategies_are_sized_equally_by_sign() -> None:
 
     assert isinstance(_momentum().build_sizer(), EqualWeightBySign)
     assert isinstance(reversal.build_sizer(), EqualWeightBySign)
+
+
+def _pairs(**changes: object) -> PairsSpreadParameters:
+    fields = {
+        "strategy": "pairs_spread",
+        "dependent": "eth-usdt",
+        "explanatory": "btc-usdt",
+        "formation_days": 365,
+        "entry_z": 2.0,
+        "exit_z": 0.0,
+        "max_coint_p_value": 0.05,
+        "universe": "mvp-crypto",
+        "cost_model": _COST_MODEL,
+    }
+    return PairsSpreadParameters(**(fields | changes))
+
+
+def test_pairs_parameters_build_their_strategy_and_pair_sizer() -> None:
+    parameters = _pairs()
+
+    strategy = parameters.build_strategy()
+
+    assert isinstance(strategy, PairsSpreadReversion)
+    assert (strategy.dependent, strategy.explanatory) == ("eth-usdt", "btc-usdt")
+    assert strategy.max_coint_p_value == 0.05
+    assert isinstance(parameters.build_sizer(), PairWeights)
+    assert parameters.warm_up_days == 365
+    assert parameters.strategy_params()["entry_z"] == 2.0
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"explanatory": "eth-usdt"},
+        {"exit_z": 2.0},
+        {"formation_days": 20},
+        {"entry_z": 0.0},
+        {"max_coint_p_value": 1.0},
+    ],
+)
+def test_pairs_parameters_reject_inconsistent_values(changes: dict) -> None:
+    with pytest.raises(ValidationError):
+        _pairs(**changes)
+
+
+def test_the_cointegration_filter_must_be_stated_even_when_off() -> None:
+    assert _pairs(max_coint_p_value=None).build_strategy().max_coint_p_value is None
+    fields = _pairs().model_dump()
+    del fields["max_coint_p_value"]
+    with pytest.raises(ValidationError):
+        PairsSpreadParameters(**fields)
+
+
+def test_a_pairs_definition_parses_through_the_strategy_field() -> None:
+    config = HoldoutConfig.model_validate(_definition(_pairs().model_dump(mode="json")))
+
+    assert isinstance(config.parameters, PairsSpreadParameters)

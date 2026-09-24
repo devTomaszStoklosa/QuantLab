@@ -7,13 +7,14 @@ own strategy: the runner never branches on the strategy type (REQ-301).
 """
 
 from abc import ABC, abstractmethod
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from quantlab.backtest.sizing import EqualWeightBySign, Sizer
+from quantlab.backtest.sizing import EqualWeightBySign, PairWeights, Sizer
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.strategy.base import Strategy
+from quantlab.strategy.pairs_spread import PairsSpreadReversion
 from quantlab.strategy.short_term_reversal import ShortTermReversal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 
@@ -89,8 +90,56 @@ class ShortTermReversalParameters(StudyParametersBase):
         return ShortTermReversal(formation_days=self.formation_days)
 
 
+class PairsSpreadParameters(StudyParametersBase):
+    """A pair's log spread: `dependent` regressed on `explanatory` (q4)."""
+
+    strategy: Literal["pairs_spread"]
+    dependent: str
+    explanatory: str
+    formation_days: int = Field(ge=30)
+    entry_z: float = Field(gt=0)
+    exit_z: float = Field(ge=0)
+    max_coint_p_value: float | None = Field(gt=0, lt=1)  # required; null = no filter
+
+    @model_validator(mode="after")
+    def _consistent(self) -> Self:
+        if self.dependent == self.explanatory:
+            raise ValueError("A pair needs two different instruments")
+        if self.exit_z >= self.entry_z:
+            raise ValueError("exit_z must be below entry_z")
+        return self
+
+    @property
+    def warm_up_days(self) -> int:
+        return self.formation_days
+
+    def strategy_params(self) -> dict:
+        return {
+            "dependent": self.dependent,
+            "explanatory": self.explanatory,
+            "formation_days": self.formation_days,
+            "entry_z": self.entry_z,
+            "exit_z": self.exit_z,
+            "max_coint_p_value": self.max_coint_p_value,
+        }
+
+    def build_strategy(self) -> Strategy:
+        return PairsSpreadReversion(
+            dependent=self.dependent,
+            explanatory=self.explanatory,
+            formation_days=self.formation_days,
+            entry_z=self.entry_z,
+            exit_z=self.exit_z,
+            max_coint_p_value=self.max_coint_p_value,
+        )
+
+    def build_sizer(self) -> Sizer:
+        return PairWeights()
+
+
 # A definition's `strategy` field picks the variant; a new strategy is a new
 # variant here, never a branch in the runner.
 StudyParameters = Annotated[
-    TimeSeriesMomentumParameters | ShortTermReversalParameters, Field(discriminator="strategy")
+    TimeSeriesMomentumParameters | ShortTermReversalParameters | PairsSpreadParameters,
+    Field(discriminator="strategy"),
 ]
