@@ -121,6 +121,11 @@ def load_frozen_holdout(path: Path) -> FrozenHoldout:
     return FrozenHoldout(config=parse_holdout_config(path), frozen_at_commit=frozen_at_commit)
 
 
+def holdout_passed(verdict: HoldoutVerdict) -> bool | None:
+    """The verdict in ValidationResult.passed terms: None is inconclusive."""
+    return {"passed": True, "rejected": False, "inconclusive": None}[verdict]
+
+
 def holdout_verdict(criterion: SuccessCriterion, sharpe: float, p_value: float) -> HoldoutVerdict:
     if sharpe <= criterion.min_sharpe:
         return "rejected"

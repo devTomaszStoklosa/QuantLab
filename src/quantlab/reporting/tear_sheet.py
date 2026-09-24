@@ -18,10 +18,11 @@ from pydantic import BaseModel, model_validator
 from quantlab.backtest.vectorized.engine import BacktestRun
 from quantlab.reporting.cost_comparison import RunMetrics
 from quantlab.reporting.metrics import drawdown_series
+from quantlab.research.hypothesis import concluded_status
 from quantlab.risk.conditional import RegimeMetrics
 from quantlab.risk.regime import VOLATILITY_REGIMES
 from quantlab.validation.base import ValidationResult
-from quantlab.validation.holdout import HoldoutRecord
+from quantlab.validation.holdout import HoldoutRecord, holdout_passed
 
 DISCLAIMER = (
     "Symulacja historyczna na danych z przeszłości, wykonana w celach badawczych i "
@@ -228,6 +229,27 @@ def _header(sheet: TearSheet) -> str:
     return (
         '<header><p class="eyebrow">Tear-sheet</p>'
         f'<h1>{_e(sheet.hypothesis)}</h1><dl class="facts">{items}</dl></header>'
+    )
+
+
+def _verdict(sheet: TearSheet) -> str:
+    """The hypothesis status the pre-registered gates give, or why there is none yet."""
+    opening = '<section id="verdict"><p class="eyebrow">Werdykt hipotezy</p>'
+    walk_forward = _OUTCOME[sheet.walk_forward.passed]
+    if sheet.holdout is None:
+        return (
+            f"{opening}<p>Brak werdyktu: holdout nie został jeszcze otwarty. "
+            f"Walk-forward: <strong>{walk_forward}</strong>.</p></section>"
+        )
+    status = concluded_status(sheet.walk_forward.passed, holdout_passed(sheet.holdout.verdict))
+    return (
+        f'{opening}<p class="verdict-word"><strong class="verdict verdict-{status}">'
+        f"{status}</strong></p>"
+        f"<p>Walk-forward: <strong>{walk_forward}</strong>; holdout: "
+        f"<strong>{_e(sheet.holdout.verdict)}</strong>. Status wynika z reguł ustalonych przed "
+        "wynikiem: <code>confirmed</code> wymaga zaliczenia obu bramek, niezaliczona bramka "
+        "daje <code>rejected</code>, pozostałe przypadki \u2014 <code>inconclusive</code>.</p>"
+        "</section>"
     )
 
 
@@ -509,7 +531,10 @@ th code { text-transform: none; letter-spacing: 0; }
   background: var(--warning-soft); color: var(--warning); padding: 8px 12px; border-radius: 4px;
 }
 .verdict { padding: 2px 8px; border-radius: 3px; }
-.verdict-passed { background: var(--status-confirmed-soft); color: var(--status-confirmed); }
+.verdict-passed, .verdict-confirmed {
+  background: var(--status-confirmed-soft); color: var(--status-confirmed);
+}
+.verdict-word { font-size: 20px; margin: 8px 0; }
 .verdict-rejected { background: var(--status-rejected-soft); color: var(--status-rejected); }
 .verdict-inconclusive {
   background: var(--status-inconclusive-soft); color: var(--status-inconclusive);
@@ -529,7 +554,8 @@ def render_html(sheet: TearSheet) -> str:
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"<title>Tear-sheet {_e(sheet.hypothesis)}</title>\n<style>{_STYLE}</style>\n"
         "</head>\n<body>\n<main>\n"
-        f"{_header(sheet)}\n{_training_section(sheet)}\n{_holdout_section(sheet.holdout)}\n"
+        f"{_header(sheet)}\n{_verdict(sheet)}\n{_training_section(sheet)}\n"
+        f"{_holdout_section(sheet.holdout)}\n"
         f'<p class="disclaimer">{DISCLAIMER}</p>\n'
         "</main>\n</body>\n</html>\n"
     )

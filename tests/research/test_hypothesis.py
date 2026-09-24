@@ -5,6 +5,7 @@ from quantlab.research.hypothesis import (
     HypothesisNotFoundError,
     HypothesisNotValidatedError,
     InvalidStatusTransitionError,
+    concluded_status,
     get,
     register,
     update_status,
@@ -83,3 +84,33 @@ def test_terminal_status_cannot_transition_further(tmp_path, monkeypatch) -> Non
 
     with pytest.raises(InvalidStatusTransitionError):
         update_status("momentum-v1", "testing")
+
+
+@pytest.mark.parametrize(
+    ("walk_forward_passed", "holdout_passed", "expected"),
+    [
+        (True, True, "confirmed"),
+        (True, None, "inconclusive"),
+        (None, True, "inconclusive"),
+        (None, None, "inconclusive"),
+        (True, False, "rejected"),
+        (False, True, "rejected"),
+        (False, None, "rejected"),
+        (None, False, "rejected"),
+    ],
+)
+def test_concluded_status_follows_the_business_rules(
+    walk_forward_passed: bool | None, holdout_passed: bool | None, expected: str
+) -> None:
+    assert concluded_status(walk_forward_passed, holdout_passed) == expected
+
+
+def test_concluded_status_is_an_allowed_transition_from_testing(tmp_path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    register("momentum-v1", "Title", "Statement")
+    update_status("momentum-v1", "testing")
+
+    status = concluded_status(True, True)
+    concluded = update_status("momentum-v1", status, walk_forward_passed=True, holdout_passed=True)
+
+    assert concluded.status == "confirmed"
