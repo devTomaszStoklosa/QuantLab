@@ -121,6 +121,7 @@ Parametry symulacji (stałe metodologii, jak liczba permutacji — nie parametry
 - Instrument bez baru w dniu decyzji → strategia nie daje sygnału, więc waga docelowa 0; zlecenie zamknięcia czeka na bar wypełnienia jak każde inne.
 - Wolumen baru wypełnienia równy 0 przy limicie udziału → nic się nie wypełnia, zlecenie liczy się jako ograniczone limitem.
 - Zlecenie o zerowej ilości (pozycja już równa docelowej) → nie powstaje.
+- Zlecenie, które mogłoby się wypełnić dopiero po ostatnim snapshocie (tryb zamknięcie t+1, decyzja z przedostatniego dnia) → poza przebiegiem i niezapisywane, jak każda transakcja po ostatnim zamknięciu.
 - Zamknięcie pozycji do zera → ilość po wypełnieniu dokładnie 0 (bez resztek zmiennoprzecinkowych).
 - Brak sygnałów przez cały przebieg → equity stałe 1.0, brak zleceń, kapitał graniczny niezdefiniowany („—").
 - Pozycje krótkie → ujemna ilość; sprzedaż zwiększa gotówkę, equity = gotówka + Σ ilość × cena.

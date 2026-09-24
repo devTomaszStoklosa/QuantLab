@@ -60,11 +60,11 @@ for ts in trading_dates(start..end):
     feed.advance(ts)                                   # odsłania bary z datą <= ts
     portfolio.apply(execution.due("open", feed))       # zlecenia z t-1 w trybie otwarcie t+1
     portfolio.snapshot(ts)                             # wycena po last_close, PortfolioSnapshot
+    if ts is last: break                               # przebieg kończy się na ostatnim snapshocie
     portfolio.apply(execution.due("close", feed))      # zlecenia z t-1 w trybie zamknięcie t+1
-    if ts is not last:
-        signals = strategy.generate_signals(feed.history(), ts)
-        orders  = portfolio.orders(equal_weight_by_sign(active(signals)), ts)
-        portfolio.apply(execution.submit(orders, feed))  # tryb zamknięcie t: wypełnia od razu
+    signals = strategy.generate_signals(feed.history(), ts)
+    orders  = portfolio.orders(equal_weight_by_sign(active(signals)), ts)
+    portfolio.apply(execution.submit(orders, feed))    # tryb zamknięcie t: wypełnia od razu
 
 ExecutionModel:  CloseExecution | NextBarExecution(phase="open"|"close")
 FillPolicy:      FullFill | VolumeParticipationFill(max_participation=0.025)
@@ -72,7 +72,7 @@ CostModel:       bez zmian (as_of = dzień decyzji, historia z feed)
 wynik:           EventDrivenResult(run: BacktestRun, orders: list[OrderRecord])
 ```
 
-Na ostatnim dniu przebiegu nie powstają zlecenia (jak w silniku wektorowym: nie ma okresu, który by niosły).
+Przebieg kończy się na snapshocie ostatniego dnia: wtedy nie powstają zlecenia (jak w silniku wektorowym: nie ma okresu, który by niosły), a zlecenia, które wypełniłyby się dopiero po nim (zamknięcie t+1 z decyzji przedostatniego dnia), są poza przebiegiem.
 
 ## Contracts
 
