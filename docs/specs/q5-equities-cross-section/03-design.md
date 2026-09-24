@@ -83,6 +83,8 @@ Tiingo podaje tylko ostatni dzień z ceną. Dzień po nim bywa weekendem albo ś
 
 Po decyzjach 1–5 z 01-story (2026-09-24): **4A, 5A, 6A** — uzasadnienia przy opcjach powyżej.
 
+**Korekta po X8 (2026-09-24), warunek „Revisit if" spełniony:** przebieg w skali `xsmom_v1` (900 spółek × 16 lat) zajmował 6,0 GB, bo bar jako model pydantic to ok. 1 455 bajtów. Zamiast kolumnowych barów (zmiana interfejsu strategii i silników) `PriceBar` jest teraz zamrożonym dataclassem ze slotami: 298 bajtów, ten sam interfejs pól, 1,7 GB szczytowo. Kolumnowe bary wracają, gdyby uniwersum urosło kilkukrotnie.
+
 Recommended: **1A, 2A, 3A**. Filtr członków jako dekorator strategii zakładany przez runner, korekty jako czysta funkcja warstwy danych nad protokołem źródła zdarzeń, rebalans jako polityka przekazywana obu silnikom. Rezygnujemy ze zmian w silnikach dla uniwersum i danych (1B, 2B) — każda taka zmiana to ryzyko parytetu — i z rozproszenia odpowiedzialności po strategiach (1C) i dostawcach (2C). Revisit if: pomiar w X5 przekroczy budżet pamięci — wtedy kolumnowe bary (numpy) za tym samym interfejsem strategii, osobny slice.
 
 Uniwersa: jeden plik na uniwersum w `quantlab/config/universes/<name>.yaml`; plik uniwersum nazywa źródło danych (`source: binance`), a runner bierze dostawcę z rejestru nazw (słownik nazwa → fabryka), nie z `if` po klasie aktywów.

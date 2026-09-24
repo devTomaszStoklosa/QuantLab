@@ -24,7 +24,7 @@ def write_price_bars(bars: list[PriceBar]) -> None:
 
     for instrument_id, new_bars in by_instrument.items():
         path = _parquet_path(instrument_id)
-        new_df = pd.DataFrame([bar.model_dump(mode="json") for bar in new_bars])
+        new_df = pd.DataFrame([bar.to_json() for bar in new_bars])
 
         con = duckdb.connect()
         try:
@@ -58,4 +58,7 @@ def read_price_bars(instrument_id: str, start: date, end: date) -> list[PriceBar
     finally:
         con.close()
 
-    return [PriceBar(**row) for row in rows.to_dict(orient="records")]
+    return [
+        PriceBar.from_json({**row, "ts": pd.Timestamp(row["ts"]).date().isoformat()})
+        for row in rows.to_dict(orient="records")
+    ]

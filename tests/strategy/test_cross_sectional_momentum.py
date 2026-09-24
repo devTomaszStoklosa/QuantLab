@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import date, timedelta
 
 import numpy as np
@@ -251,8 +252,7 @@ class _Market:
         bars = self.economic(instrument.id, start, min(end, last))
         if instrument.id == "s03":
             bars = [
-                bar.model_copy(update={"close": bar.close / 4.0}) if bar.ts >= _SPLIT else bar
-                for bar in bars
+                replace(bar, close=bar.close / 4.0) if bar.ts >= _SPLIT else bar for bar in bars
             ]
         return bars
 

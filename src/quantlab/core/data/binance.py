@@ -38,7 +38,7 @@ class BinanceProvider(WithoutEvents):
     def fetch(self, instrument: Instrument, start: date, end: date) -> list[PriceBar]:
         cached = read_cached_bars(_SOURCE, instrument.id, start, end)
         if cached is not None:
-            return [PriceBar(**bar) for bar in cached]
+            return [PriceBar.from_json(bar) for bar in cached]
 
         bars: list[PriceBar] = []
         page_start = start
@@ -90,6 +90,6 @@ class BinanceProvider(WithoutEvents):
         bars.sort(key=lambda bar: bar.ts)
 
         write_cached_bars(
-            _SOURCE, instrument.id, start, end, [bar.model_dump(mode="json") for bar in bars]
+            _SOURCE, instrument.id, start, end, [bar.to_json() for bar in bars]
         )
         return bars

@@ -30,7 +30,7 @@ from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core import sp500
 from quantlab.core.data.binance import BinanceProvider
-from quantlab.core.data.corporate_actions import MarketData, with_events
+from quantlab.core.data.corporate_actions import MarketData, with_assumed_return, with_events
 from quantlab.core.data.coverage import price_coverage
 from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
 from quantlab.core.data.tiingo import TiingoProvider
@@ -688,15 +688,10 @@ def run(
             )
         )
         if assumed and parameters.missing_delisting_return != _DELISTING_STRESS_RETURN:
-            stressed = parameters.model_copy(
-                update={"missing_delisting_return": _DELISTING_STRESS_RETURN}
-            )
             stressed_run = _run_study(
-                _fetch_bars(
-                    provider, universe, stressed, config.training_start, config.training_end
-                ),
-                stressed,
-                stressed.cost_model.build(),
+                with_assumed_return(market, _DELISTING_STRESS_RETURN).bars,
+                parameters,
+                parameters.cost_model.build(),
                 universe,
                 config.training_start,
                 config.training_end,
