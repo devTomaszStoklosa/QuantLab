@@ -13,6 +13,7 @@ lab-foundation
        -> q5-equities-cross-section
        -> q6-advanced-validation-cpcv
        -> q7-dotnet-react-presentation
+       -> q8-parameter-selection-cpcv   (po q1–q7; korzysta z q2, q6, q7)
 ```
 
 q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
@@ -32,6 +33,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 **Po decyzjach `q5` 1–5 (2026-09-24):** adapter X7 dzieli się na cztery części na danych syntetycznych i nagranych odpowiedziach (kalendarz i źródło w pliku uniwersum, test losowych portfeli, Tiingo, budowa składu S&P 500). Zamrożenie `xsmom_v1` czeka na dwa pytania, które wynikły z wyboru źródła: zwrot z delistingu (Tiingo go nie podaje, a w S&P 500 delisting członka to prawie zawsze przejęcie) i model kosztów dla akcji. Budowa pliku uniwersum, pobranie cen i przebiegi — lokalnie.
 
 **Po `q5`-X8 (2026-09-24):** `xsmom_v1` zamrożona po decyzjach 1–7: momentum 12-1 na S&P 500 point-in-time (Tiingo, Wikipedia), trening 2005–2019, holdout 2020–2025, kryterium z testem losowych portfeli. Cały kod epiku gotowy; reszta wymaga sieci i dzieje się lokalnie, w tej kolejności: `uv run quantlab build-universe` (poprawki tickerów tylko z raportu budowy, potem commit `sp500.yaml` i `sp500-renames.yaml`), `uv run quantlab run xsmom_v1` z kluczem `TIINGO_API_KEY` (pobieranie rozłożone w czasie, patrz DATA-SOURCES), `uv run quantlab open-holdout xsmom_v1`, wpis w dzienniku (REQ-562). Wszystkie epiki mają już kod; otwarte są tylko przebiegi lokalne (`q2`–`q6` na Binance, `q5` na Tiingo) i weryfikacja `q7` na Windows.
+
+**Po CI (2026-09-24):** repozytorium ma CI na GitHub Actions (ruff, pytest, testy API .NET, testy i build aplikacji React — na Linuksie i Windowsie), co pokrywa część weryfikacji `q7` na Windows. Wszystkie epiki `q1`–`q7` mają kod; Tomasz wybrał jako następny epik **`q8-parameter-selection-cpcv`**: hipoteza z parametrem dobieranym na danych (siatka, reguła wyboru zamrożona zamiast wartości), walk-forward z re-optymalizacją i CPCV z purgingiem i embargo — odłożone w `q6` do pierwszej takiej hipotezy. Kod na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q8-parameter-selection-cpcv/01-story.md), przebiegi lokalnie (Binance).
 
 ## Epiki
 
@@ -73,7 +76,7 @@ Slice'y: X1 point-in-time uniwersum · X2 corporate actions · X3 delisting i su
 
 ### q6-advanced-validation-cpcv (rozszerzenie, w toku)
 
-Probabilistic i deflated Sharpe ratio, Probability of Backtest Overfitting (CSCV) i rejestr prób liczony z historii definicji hipotez — opisowo, bez zmiany zamrożonych kryteriów. Purged k-fold / CPCV wraca z pierwszą hipotezą z parametrami dopasowywanymi na danych (`q4`). Pełna specyfikacja: [specs/q6-advanced-validation-cpcv/](specs/q6-advanced-validation-cpcv/).
+Probabilistic i deflated Sharpe ratio, Probability of Backtest Overfitting (CSCV) i rejestr prób liczony z historii definicji hipotez — opisowo, bez zmiany zamrożonych kryteriów. Purged k-fold / CPCV wraca z pierwszą hipotezą z parametrami dopasowywanymi na danych — w `q8`. Pełna specyfikacja: [specs/q6-advanced-validation-cpcv/](specs/q6-advanced-validation-cpcv/).
 
 Slice'y: V1 PSR i DSR · V2 rejestr prób z historii gita · V3 PBO (CSCV) · V4 PSR/DSR w `quantlab run` i tear-sheecie · V5 `quantlab trials` · V6 przebiegi lokalne i dziennik.
 
@@ -82,6 +85,12 @@ Slice'y: V1 PSR i DSR · V2 rejestr prób z historii gita · V3 PBO (CSCV) · V4
 ASP.NET Core Web API nad wynikami w DuckDB/Parquet, React: rejestr hipotez, dowody hipotezy i rejestr transakcji, w design systemie QuantForge. Tylko odczyt — liczby wyłącznie z magazynu wyników zapisanego przez Pythona ([ADR-0008](adr/0008-results-store-parquet-duckdb.md)). Pełna specyfikacja: [specs/q7-dotnet-react-presentation/](specs/q7-dotnet-react-presentation/).
 
 Slice'y: W1 magazyn wyników w Pythonie · W2 szkielet API .NET · W3 endpointy dowodów i transakcji · W4 aplikacja React z rejestrem hipotez · W5 ekran hipotezy i rejestr transakcji · W6 weryfikacja lokalna.
+
+### q8-parameter-selection-cpcv (rozszerzenie, w toku)
+
+Hipoteza z parametrem dobieranym na danych: zamrożona procedura doboru (siatka, miara, harmonogram) zamiast wartości, wybór wyłącznie z danych sprzed dnia wyboru (walk-forward z re-optymalizacją) jako strategia dla obu silników, CPCV z purgingiem i embargo (López de Prado 2018) na macierzy zwrotów siatki, PBO siatki i próg DSR liczący konfiguracje. Pełna specyfikacja: [specs/q8-parameter-selection-cpcv/](specs/q8-parameter-selection-cpcv/).
+
+Slice'y: P1 dokumentacja · P2 CPCV · P3 strategia z doborem · P4 konfiguracje w DSR, PBO siatki i raport · P5 bramka in-sample w kryterium · P6 magazyn wyników i aplikacja · P7 zamrożenie `momentum_select_v1` · przebiegi lokalne i dziennik.
 
 ## Zakres MVP
 
@@ -108,4 +117,5 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q4-pairs-trading-stat-arb | Ready for dev | Ready for dev | Ready for dev | P1–P5 gotowe (`pairs_v1` zamrożona); P6 wymaga lokalnego przebiegu (Binance) |
 | q5-equities-cross-section | Ready for dev | Ready for dev | Ready for dev | X1–X6 gotowe (point-in-time uniwersum, corporate actions, delisting i survivorship bias, polityka rebalansu, momentum przekrojowe, `demo_xsmom` w magazynie syntetycznym); decyzje 1–5 przyjęte 2026-09-24 (Tiingo, S&P 500 z Wikipedii, 12-1, test losowych portfeli); X7a (źródło i kalendarz w pliku uniwersum, proxy rynku bez członkostwa) i X7b (test losowych portfeli: `demo_xsmom` p = 0.002 wobec 0.99 z tasowania dni) gotowe; X7c (adapter Tiingo na odpowiedziach w udokumentowanym formacie) i X7d (`quantlab build-universe`: skład S&P 500 z zapisanej rewizji Wikipedii, raport sprzeczności, pokrycie cenami w `run`) gotowe — plik `sp500.yaml` do zbudowania lokalnie; pytania 6–7 rozstrzygnięte (zwrot z delistingu 0% z −30% opisowo, koszty 5 bps, k 0.05, 21 sesji); X8 gotowe: `xsmom_v1` zamrożona (`config/holdout/xsmom_v1.yaml`); X9–X11 lokalnie (budowa `sp500.yaml`, pobranie z Tiingo, trening, holdout, wpis w dzienniku) |
 | q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
-| q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | W1–W5 gotowe (magazyn wyników, API .NET, aplikacja React); W6 wymaga weryfikacji na maszynie deweloperskiej |
+| q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | W1–W5 gotowe (magazyn wyników, API .NET, aplikacja React); W6: CI na Linuksie i Windowsie zielone; na maszynie deweloperskiej zostaje DuckDB bez AVX2 |
+| q8-parameter-selection-cpcv | Ready for dev | Ready for dev | Ready for dev | P1 (dokumentacja) gotowe; P2–P6 na danych syntetycznych; P7 czeka na pytania 1–6 (01-story) |
