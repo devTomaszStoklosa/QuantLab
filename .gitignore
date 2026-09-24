@@ -12,3 +12,6 @@ data/cache/
 # design system render checks
 presentation/design-system/test/
 presentation/design-system/shots/
+
+# results store written by quantlab run (q7): the trade ledger carries market prices
+/results/

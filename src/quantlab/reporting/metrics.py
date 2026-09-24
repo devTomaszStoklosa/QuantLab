@@ -1,3 +1,5 @@
+from datetime import date
+
 import numpy as np
 
 
@@ -77,3 +79,23 @@ def calmar(equity_curve: list[float], periods_per_year: int) -> float:
     if drawdown == 0.0:
         raise ValueError("calmar is undefined when there is no drawdown")
     return cagr(equity_curve, periods_per_year) / abs(drawdown)
+
+
+def monthly_returns(dates: list[date], equity_curve: list[float]) -> list[tuple[int, int, float]]:
+    """Return of each calendar month as (year, month, return), oldest first.
+
+    A month's return is its last equity point over the previous month's last
+    point, minus 1; the first month is measured from the curve's first point,
+    so a curve starting mid-month gives a partial first month. A month with
+    no point is skipped and the next month's return spans it.
+    """
+    if len(dates) != len(equity_curve):
+        raise ValueError("monthly_returns requires one equity point per date")
+    months = []
+    base = equity_curve[0] if equity_curve else 0.0
+    for i, (day, value) in enumerate(zip(dates, equity_curve, strict=True)):
+        following = dates[i + 1] if i + 1 < len(dates) else None
+        if following is None or (following.year, following.month) != (day.year, day.month):
+            months.append((day.year, day.month, value / base - 1.0))
+            base = value
+    return months
