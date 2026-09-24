@@ -26,6 +26,14 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
 | Wikipedia — *List of S&P 500 companies* | bieżący skład i tabela zmian składu, z których odtwarzamy skład wstecz | nie (API MediaWiki, nagłówek `User-Agent`) | CC BY-SA 4.0: plik uniwersum w repo z atrybucją i numerem rewizji; kompletność przed ok. 2000 r. niepewna | **wybrane**; tylko członkostwo, bez cen |
 | Yahoo Finance | ceny | nie | warunki użycia zabraniają dostępu programistycznego; brak spółek zdjętych z obrotu | odrzucone |
 
+#### Tiingo lokalnie (`core.data.tiingo.TiingoProvider`, `q5`-X7c)
+
+- Klucz: zmienna środowiskowa `TIINGO_API_KEY`. Bez niej `quantlab run` kończy się przed pobraniem danych.
+- Odstęp żądań: domyślnie 90 s (mieści się w limitach darmowego tieru znanych przy pisaniu: ok. 50 zapytań na godzinę i 1 000 dziennie); płatny tier może go skrócić zmienną `TIINGO_REQUEST_INTERVAL_SECONDS`.
+- Każdy ticker to dwa zapytania (ceny w zakresie przebiegu, metadane z ostatnim dniem notowań); odpowiedzi trafiają do `data/cache/`, więc przerwane pobieranie wznawia się od miejsca przerwania, a limit zapytań kończy komendę jednym komunikatem, nie wyjątkiem.
+- Skala dla `xsmom_v1` (szacunek): trening ok. 875 tickerów członków S&P 500 z lat 2005–2019 plus SPY — ok. 1 750 zapytań, przy 90 s ok. 44 h; holdout ok. 650 tickerów — same ceny, ok. 16 h. Łącznie ok. 1 050 unikalnych tickerów, ponad limit ok. 500 unikalnych symboli miesięcznie w darmowym tierze: pobieranie rozłożone na 2–3 miesiące albo jeden miesiąc płatnego tieru.
+- Test bez sieci: odpowiedź w udokumentowanym formacie Tiingo z syntetycznymi liczbami (`tests/core/data/test_tiingo.py`) — środowisko chmurowe nie ma dostępu do API, więc to nie jest nagranie na żywo. Przy pierwszym lokalnym pobraniu warto porównać format z prawdziwą odpowiedzią (pola `date`, `open`, `high`, `low`, `close`, `volume`, `adjClose`, `divCash`, `splitFactor`; metadane `endDate`).
+
 Przed pierwszym użyciem źródła: sprawdzić aktualne warunki na stronie dostawcy (ten dokument nie jest źródłem prawdy dla licencji — zmieniają się bez ostrzeżenia), zapisać datę weryfikacji w tej tabeli.
 
 ## Nowe źródło — checklista

@@ -29,7 +29,8 @@ from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core.data.binance import BinanceProvider
 from quantlab.core.data.corporate_actions import MarketData, with_events
-from quantlab.core.data.provider import DataProvider, PriceBar
+from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
+from quantlab.core.data.tiingo import TiingoProvider
 from quantlab.core.universe import Universe
 from quantlab.costs.base import CostModel
 from quantlab.costs.naive import NaiveCostModel
@@ -87,6 +88,16 @@ from quantlab.validation.walk_forward import WalkForwardValidator
 
 app = typer.Typer()
 
+
+def entry() -> None:
+    """The `quantlab` command: the app, with a source that fails mid-download (a quota
+    reached) reported in one line; what was downloaded stays cached."""
+    try:
+        app()
+    except DataSourceUnavailableError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise SystemExit(1) from error
+
 # Lab-wide methodology, the same for every hypothesis. What a hypothesis itself
 # defines - strategy, parameters, universe, cost model, training and holdout
 # dates - comes only from its committed file in _HOLDOUT_DIR (REQ-301).
@@ -111,7 +122,10 @@ _HOLDOUT_DIR = Path("config/holdout")
 _RESULTS_DIR = Path("results")
 # Data providers by the source name a universe file gives (REQ-506): a new source
 # is a new entry here, never a branch on the asset class.
-_PROVIDERS: dict[str, Callable[[], DataProvider]] = {"binance": BinanceProvider}
+_PROVIDERS: dict[str, Callable[[], DataProvider]] = {
+    "binance": BinanceProvider,
+    "tiingo": TiingoProvider,
+}
 
 
 def _provider(universe: Universe) -> DataProvider:
@@ -124,7 +138,11 @@ def _provider(universe: Universe) -> DataProvider:
             err=True,
         )
         raise typer.Exit(1)
-    return factory()
+    try:
+        return factory()
+    except DataSourceUnavailableError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
 
 
 def _regime_windows(universe: Universe) -> tuple[int, int]:
