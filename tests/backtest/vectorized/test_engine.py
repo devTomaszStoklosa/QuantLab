@@ -2,6 +2,7 @@ from datetime import date
 
 import pytest
 
+from quantlab.backtest.sizing import PairWeights
 from quantlab.backtest.vectorized.engine import run
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.naive import NaiveCostModel
@@ -307,3 +308,33 @@ def test_raises_when_no_price_data_in_range() -> None:
             strategy_name="fixed",
             strategy_params={},
         )
+
+
+def test_a_pair_missing_one_leg_tomorrow_takes_no_position() -> None:
+    # "b" has no bar on day 2, so the vectorized engine cannot trade it over
+    # day 1 -> day 2; the pair sizer then drops the whole pair.
+    bars = {
+        "a": [_bar("a", _DAY1, 100.0), _bar("a", _DAY2, 110.0), _bar("a", _DAY3, 121.0)],
+        "b": [_bar("b", _DAY1, 100.0), _bar("b", _DAY3, 81.0)],
+    }
+    legs = [
+        Signal(instrument_id="a", ts=_DAY1, direction="long", strength=0.0, weight=0.5),
+        Signal(instrument_id="b", ts=_DAY1, direction="short", strength=0.0, weight=0.5),
+    ]
+
+    result = run(
+        strategy=_FixedSignalsStrategy({_DAY1: legs}),
+        cost_model=ZeroCostModel(),
+        bars=bars,
+        universe_name="test",
+        start=_DAY1,
+        end=_DAY3,
+        seed=0,
+        git_sha="test",
+        strategy_name="pair",
+        strategy_params={},
+        sizer=PairWeights(),
+    )
+
+    assert result.snapshots[1].positions == {}
+    assert result.snapshots[1].equity == 1.0

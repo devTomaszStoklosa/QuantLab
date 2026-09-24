@@ -1,6 +1,8 @@
 from datetime import date
 
-from quantlab.backtest.sizing import equal_weight_by_sign
+import pytest
+
+from quantlab.backtest.sizing import EqualWeightBySign, PairWeights, equal_weight_by_sign
 from quantlab.strategy.signal import Signal
 
 _DAY = date(2026, 1, 1)
@@ -33,3 +35,41 @@ def test_strength_does_not_change_the_weight() -> None:
 def test_no_active_signal_gives_no_weights() -> None:
     assert equal_weight_by_sign([]) == {}
     assert equal_weight_by_sign([_signal("a", "flat")]) == {}
+
+
+def _leg(instrument_id: str, direction: str, weight: float | None) -> Signal:
+    return Signal(
+        instrument_id=instrument_id, ts=_DAY, direction=direction, strength=0.0, weight=weight
+    )
+
+
+def test_equal_weight_sizer_is_the_shared_rule() -> None:
+    signals = [_signal("a", "long"), _signal("b", "short"), _signal("c", "flat")]
+
+    assert EqualWeightBySign().weights(signals) == equal_weight_by_sign(signals)
+
+
+def test_pair_weights_come_from_the_signals_with_their_direction() -> None:
+    weights = PairWeights().weights([_leg("eth", "long", 0.55), _leg("btc", "short", 0.45)])
+
+    assert weights == {"eth": 0.55, "btc": -0.45}
+
+
+def test_a_pair_trades_both_legs_or_none() -> None:
+    sizer = PairWeights()
+
+    assert sizer.weights([_leg("eth", "long", 0.55)]) == {}
+    assert sizer.weights([_leg("eth", "long", 0.55), _leg("btc", "flat", None)]) == {}
+    assert sizer.weights([]) == {}
+    three = [_leg("a", "long", 0.3), _leg("b", "short", 0.3), _leg("c", "long", 0.4)]
+    assert sizer.weights(three) == {}
+
+
+def test_pair_signals_without_a_weight_are_an_error() -> None:
+    with pytest.raises(ValueError, match="carry a weight"):
+        PairWeights().weights([_leg("eth", "long", None), _leg("btc", "short", 0.45)])
+
+
+def test_a_signal_weight_must_be_positive() -> None:
+    with pytest.raises(ValueError):
+        _leg("eth", "long", 0.0)

@@ -9,7 +9,7 @@ from quantlab.backtest.event_driven.fills import FillPolicy, FullFill
 from quantlab.backtest.event_driven.orders import OrderRecord
 from quantlab.backtest.event_driven.portfolio import Portfolio
 from quantlab.backtest.run import BacktestRun, trading_dates
-from quantlab.backtest.sizing import equal_weight_by_sign
+from quantlab.backtest.sizing import EqualWeightBySign, Sizer
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.base import CostModel
 from quantlab.strategy.base import Strategy
@@ -36,6 +36,7 @@ def run(
     execution: ExecutionModel,
     fill_policy: FillPolicy | None = None,
     capital: float = 1.0,
+    sizer: Sizer | None = None,
 ) -> EventDrivenResult:
     """Event-driven backtest: one trading date at a time, orders and fills.
 
@@ -43,7 +44,7 @@ def run(
     open, mark-to-market and snapshot, fills due at the close, then signals and
     new orders - against a feed that has revealed nothing after that date.
     Weights follow the same rule as the vectorized engine, among instruments
-    with a bar at the decision close.
+    with a bar at the decision close: `sizer`, equal weight by sign by default.
 
     The run ends at the last date's snapshot: no orders are placed then (no
     period is left for them to carry), and orders that could only fill after
@@ -54,6 +55,7 @@ def run(
     if not dates:
         raise ValueError(f"No price data available between {start} and {end}")
     fills = fill_policy if fill_policy is not None else FullFill()
+    sizer = sizer if sizer is not None else EqualWeightBySign()
     feed = BarFeed(bars)
     portfolio = Portfolio(capital, cost_model, feed)
 
@@ -66,7 +68,7 @@ def run(
         portfolio.apply(execution.due("close", feed, fills))
         signals = strategy.generate_signals(feed.history(), ts)
         tradable = [signal for signal in signals if feed.bar(signal.instrument_id) is not None]
-        orders = portfolio.rebalance(equal_weight_by_sign(tradable), ts)
+        orders = portfolio.rebalance(sizer.weights(tradable), ts)
         portfolio.apply(execution.submit(orders, feed, fills))
 
     return EventDrivenResult(
