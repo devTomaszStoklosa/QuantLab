@@ -122,6 +122,12 @@ def delisted(
     return [*sorted(bars, key=lambda bar: bar.ts), final], applied
 
 
+def next_session(sessions: list[date], day: date) -> date:
+    """The first of the sorted `sessions` on or after `day`; `day` itself after the last."""
+    index = bisect_left(sessions, day)
+    return sessions[index] if index < len(sessions) else day
+
+
 def with_events(
     bars: dict[str, list[PriceBar]],
     events: dict[str, InstrumentEvents],
@@ -129,17 +135,27 @@ def with_events(
 ) -> MarketData:
     """Each instrument's bars with its events applied: adjusted for its corporate actions,
     then ended by its delisting. An instrument without events keeps its very list of
-    bars, so crypto results are unchanged to the bit."""
+    bars, so crypto results are unchanged to the bit.
+
+    A source may date a delisting on the day after the last price, a weekend or a
+    holiday; the delisting bar goes on the run's next session from that date, so
+    it never adds a day on which no other instrument trades (REQ-521).
+    """
     adjusted: dict[str, list[PriceBar]] = {}
     applied: list[AppliedDelisting] = []
+    sessions: list[date] | None = None
     for instrument_id, instrument_bars in bars.items():
         instrument_events = events.get(instrument_id, InstrumentEvents())
         series = adjust_bars(instrument_bars, instrument_events.actions)
         if instrument_events.delisting is not None:
-            series, delisting = delisted(
-                series, instrument_events.delisting, missing_delisting_return
+            if sessions is None:
+                sessions = sorted({bar.ts for other in bars.values() for bar in other})
+            source_date = instrument_events.delisting.date
+            delisting = instrument_events.delisting.model_copy(
+                update={"date": next_session(sessions, source_date)}
             )
-            if delisting is not None:
-                applied.append(delisting)
+            series, result = delisted(series, delisting, missing_delisting_return)
+            if result is not None:
+                applied.append(result)
         adjusted[instrument_id] = series
     return MarketData(bars=adjusted, delistings=applied)

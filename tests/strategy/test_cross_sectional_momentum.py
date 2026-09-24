@@ -248,6 +248,8 @@ class _Market:
 _UNIVERSE = Universe(
     name="pit-xs",
     asof_date=_END,
+    source="synthetic",
+    periods_per_year=252,
     market_proxy="s00",
     instruments=[
         Instrument(id=n, symbol=n.upper(), asset_class="equity", quote_asset="USD") for n in _NAMES

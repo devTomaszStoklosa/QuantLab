@@ -81,14 +81,14 @@ presentation (.NET + React, rozszerzenie q7)
 
 ### `core.data`
 
-- `DataProvider` (interfejs): `fetch(instrument, start, end) -> list[PriceBar]`. Implementacja: `BinanceProvider` ([ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md) — Stooq odrzucony, blokuje dostęp programistyczny).
+- `DataProvider` (interfejs): `fetch(instrument, start, end) -> list[PriceBar]`. Implementacja: `BinanceProvider` ([ADR-0007](adr/0007-binance-not-stooq-for-first-adapter.md) — Stooq odrzucony, blokuje dostęp programistyczny). Runner bierze dostawcę z rejestru nazw (`cli._PROVIDERS`) po polu `source` pliku uniwersum, bez `if` po klasie aktywów.
 - Kanoniczny schemat `PriceBar`: instrument_id, ts, open, high, low, close, volume, adj_close, source, `unadjusted_close` (surowe zamknięcie baru skorygowanego; `raw_close` do reguł na poziomie ceny).
 - `DataProvider.events` podaje corporate actions (`Split`, `CashDividend`, `core.data.events`; krypto: brak), a runner koryguje nimi każde pobrane bary (`core.data.corporate_actions.with_events`): ceny wstecz, tak że zwrot przez ex-date jest zwrotem całkowitym. Delisting kończy bary barem wartości delistingu (flaga `delisting`, zwrot ze źródła albo zamrożone `missing_delisting_return` definicji); oba silniki zamieniają trzymaną pozycję na gotówkę po tej wartości, bez kosztu.
 - Cache na dysku (`data/cache/`), throttling po stronie klienta, nigdy retry-on-429 jako jedyna ochrona.
 
 ### `core.universe`
 
-- `Universe`: nazwa, `asof_date`, lista `Instrument`, opcjonalnie okresy członkostwa (`Membership`); jeden plik na uniwersum w `quantlab/config/universes/<nazwa>.yaml`. Bez okresów uniwersum jest statyczne (`mvp-crypto`); z okresami `members(t)` zwraca skład znany w dniu t (point-in-time, `q5`). Runner owija każdą strategię w `MembersOnly`, więc strategia widzi tylko członków w dniu sygnału. `market_proxy` uniwersum wyznacza reżimy zmienności i scenariusz najgorszego dnia (BTC dla `mvp-crypto`).
+- `Universe`: nazwa, `asof_date`, lista `Instrument`, opcjonalnie okresy członkostwa (`Membership`); jeden plik na uniwersum w `quantlab/config/universes/<nazwa>.yaml`. Bez okresów uniwersum jest statyczne (`mvp-crypto`); z okresami `members(t)` zwraca skład znany w dniu t (point-in-time, `q5`). Runner owija każdą strategię w `MembersOnly`, więc strategia widzi tylko członków w dniu sygnału. `market_proxy` uniwersum wyznacza reżimy zmienności i scenariusz najgorszego dnia (BTC dla `mvp-crypto`); w uniwersum point-in-time może nie mieć członkostwa (benchmark, np. SPY), wtedy żadna strategia go nie widzi. Plik uniwersum nazywa też źródło danych (`source`) i liczbę sesji w roku (`periods_per_year`: 365 krypto, 252 akcje) — z niej annualizacja wszystkich statystyk i okna reżimu (miesiąc i rok sesji). Przebieg pobiera tylko członków swojego okna i proxy.
 
 ### `backtest` (wspólny kontrakt obu silników)
 

@@ -1,5 +1,6 @@
 import importlib.metadata
 import subprocess
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Annotated
@@ -89,11 +90,8 @@ app = typer.Typer()
 _SEED = 0  # seeds the permutation test's shuffles, so reruns reproduce its p-value
 _PERMUTATIONS = 10_000
 _PERMUTATION_ALPHA = 0.1
-_PERIODS_PER_YEAR = 365  # crypto trades every calendar day
-# Market regime for the whole portfolio: the universe's market proxy (BTC for
-# crypto), 30-day volatility ranked against its own last 365 days.
-_REGIME_VOL_WINDOW_DAYS = 30
-_REGIME_HISTORY_DAYS = 365
+# Annualization and the regime windows come from the universe's market (REQ-506):
+# universe.periods_per_year, 365 for crypto.
 _STRESS_SHOCK = 0.20  # the AC-10 example size, applied down and up
 # Execution simulation for the engine comparison (q2): lab-wide too, and they
 # only change how orders fill in a descriptive comparison, never a verdict.
@@ -108,6 +106,28 @@ _HOLDOUT_DIR = Path("config/holdout")
 # What the presentation layer reads (q7, ADR-0008); gitignored, since the trade
 # ledger carries market prices.
 _RESULTS_DIR = Path("results")
+# Data providers by the source name a universe file gives (REQ-506): a new source
+# is a new entry here, never a branch on the asset class.
+_PROVIDERS: dict[str, Callable[[], DataProvider]] = {"binance": BinanceProvider}
+
+
+def _provider(universe: Universe) -> DataProvider:
+    """The universe's data provider, or exit before fetching anything."""
+    factory = _PROVIDERS.get(universe.source)
+    if factory is None:
+        typer.echo(
+            f"Error: universe {universe.name} names data source '{universe.source}'; "
+            f"known sources: {', '.join(sorted(_PROVIDERS))}",
+            err=True,
+        )
+        raise typer.Exit(1)
+    return factory()
+
+
+def _regime_windows(universe: Universe) -> tuple[int, int]:
+    """Market regime for the whole portfolio: the market proxy's volatility over a month
+    of sessions, ranked against its last year of them (30 and 365 days for crypto)."""
+    return round(universe.periods_per_year / 12), universe.periods_per_year
 
 
 def _definition_path(hypothesis: str) -> Path:
@@ -143,16 +163,17 @@ def _fetch_market_data(
     """History from the hypothesis's warm-up before `start`, so a signal can exist
     from the window's first day where data allows; nothing after `end` is
     requested. Bars come adjusted for corporate actions and ended by delistings,
-    unknown delisting returns taking the definition's assumption (q5).
+    unknown delisting returns taking the definition's assumption (q5). Only the
+    window's members and the market proxy are fetched (REQ-505).
     """
     fetch_start = start - timedelta(days=parameters.warm_up_days)
+    instruments = universe.instruments_between(start, end)
     bars = {
-        instrument.id: provider.fetch(instrument, fetch_start, end)
-        for instrument in universe.instruments
+        instrument.id: provider.fetch(instrument, fetch_start, end) for instrument in instruments
     }
     events = {
         instrument.id: provider.events(instrument, fetch_start, end)
-        for instrument in universe.instruments
+        for instrument in instruments
     }
     return with_events(bars, events, parameters.missing_delisting_return)
 
@@ -288,9 +309,9 @@ def run_engine_comparison(
     ]
     return EngineComparison(
         rows=[
-            comparison_row("vectorized, close t", vectorized, None, _PERIODS_PER_YEAR),
+            comparison_row("vectorized, close t", vectorized, None, universe.periods_per_year),
             *(
-                comparison_row(label, result.run, result.orders, _PERIODS_PER_YEAR)
+                comparison_row(label, result.run, result.orders, universe.periods_per_year)
                 for label, result in event_driven_rows
             ),
         ],
@@ -320,16 +341,18 @@ def run_trials(
     under its own realistic cost model; PBO compares their net daily returns on
     the dates all of them hold a position.
     """
-    runs = []
+    runs, universes = [], []
     for trial in trials:
         definition = trial.definition
         parameters = definition.parameters
+        universe = Universe.load(parameters.universe)
+        universes.append(universe)
         runs.append(
             run_study(
                 provider,
                 parameters,
                 parameters.cost_model.build(),
-                Universe.load(parameters.universe),
+                universe,
                 definition.training_start,
                 definition.training_end,
                 seed,
@@ -342,8 +365,11 @@ def run_trials(
         pbo = probability_of_backtest_overfitting(returns, _PBO_BLOCKS)
     return TrialsComparison(
         trials=[
-            TrialResult(trial=trial, deflation=multiple_testing(run, trials, _PERIODS_PER_YEAR))
-            for trial, run in zip(trials, runs, strict=True)
+            TrialResult(
+                trial=trial,
+                deflation=multiple_testing(run, trials, universe.periods_per_year),
+            )
+            for trial, run, universe in zip(trials, runs, universes, strict=True)
         ],
         pbo=pbo,
         common_days=len(dates),
@@ -383,12 +409,12 @@ def open_frozen_holdout(
         seed,
         git_sha,
     )
-    metrics = run_metrics(run, _PERIODS_PER_YEAR)
+    metrics = run_metrics(run, universe.periods_per_year)
     permutation = PermutationTestValidator(
         bars=bars,
         n_permutations=n_permutations,
         alpha=config.success_criterion.max_p_value,
-        periods_per_year=_PERIODS_PER_YEAR,
+        periods_per_year=universe.periods_per_year,
     ).validate(run)
     p_value = permutation.detail.get("p_value")  # absent when there was nothing to test
 
@@ -472,8 +498,9 @@ def run(
     config = frozen.config
     git_sha = _current_git_sha()
     parameters = config.parameters
-    provider = BinanceProvider()
     universe = Universe.load(parameters.universe)
+    provider = _provider(universe)
+    periods_per_year = universe.periods_per_year
     market_proxy = universe.market_proxy
     if market_proxy is None:
         typer.echo(
@@ -495,7 +522,7 @@ def run(
         seed=_SEED,
         git_sha=git_sha,
     )
-    metrics = [run_metrics(result, _PERIODS_PER_YEAR) for result in runs]
+    metrics = [run_metrics(result, periods_per_year) for result in runs]
     sensitivity = cost_sensitivity(lower_cost=metrics[1], higher_cost=metrics[2])
 
     first = runs[0]
@@ -534,7 +561,7 @@ def run(
         f"-> {sensitivity.verdict}: {meaning}"
     )
 
-    walk_forward = WalkForwardValidator(_PERIODS_PER_YEAR).validate(runs[2])
+    walk_forward = WalkForwardValidator(periods_per_year).validate(runs[2])
     typer.echo("")
     typer.echo(f"Walk-forward ({runs[2].cost_model_name}), calendar-year windows:")
     typer.echo(f"{'Window':<26}{'CAGR':>10}{'Sharpe':>10}{'Max DD':>10}")
@@ -582,7 +609,7 @@ def run(
         bars=bars,
         n_permutations=_PERMUTATIONS,
         alpha=_PERMUTATION_ALPHA,
-        periods_per_year=_PERIODS_PER_YEAR,
+        periods_per_year=periods_per_year,
     ).validate(runs[2])
     detail = permutation.detail
     typer.echo("")
@@ -623,7 +650,7 @@ def run(
     deflation = multiple_testing(
         runs[2],
         trials_on_same_data(config.hypothesis, registered_trials(_HOLDOUT_DIR)),
-        _PERIODS_PER_YEAR,
+        periods_per_year,
     )
     typer.echo("")
     typer.echo(
@@ -641,19 +668,18 @@ def run(
     )
     typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
 
-    classifier = VolatilityTercileClassifier(
-        vol_window=_REGIME_VOL_WINDOW_DAYS, history_days=_REGIME_HISTORY_DAYS
-    )
+    vol_window, regime_history = _regime_windows(universe)
+    classifier = VolatilityTercileClassifier(vol_window=vol_window, history_days=regime_history)
     labels = label_periods(
         classifier, bars[market_proxy], [snapshot.ts for snapshot in runs[2].snapshots]
     )
-    by_regime = regime_conditional_metrics(runs[2], labels, _PERIODS_PER_YEAR)
+    by_regime = regime_conditional_metrics(runs[2], labels, periods_per_year)
     total_days = sum(regime.days for regime in by_regime.values())
     typer.echo("")
     typer.echo(
-        f"Regimes ({runs[2].cost_model_name}): {market_proxy} {_REGIME_VOL_WINDOW_DAYS}-day "
-        f"volatility tercile vs its last {_REGIME_HISTORY_DAYS} days, "
-        "as of the day before each return"
+        f"Regimes ({runs[2].cost_model_name}): {market_proxy} {vol_window}-session "
+        f"volatility tercile vs its last {regime_history} sessions, "
+        "as of the session before each return"
     )
     typer.echo(f"{'Regime':<12}{'Days':>7}{'Share':>9}{'CAGR':>10}{'Sharpe':>10}{'Sortino':>10}")
 
@@ -669,7 +695,7 @@ def run(
         )
     typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
 
-    instrument_ids = [instrument.id for instrument in universe.instruments]
+    instrument_ids = list(bars)
     scenarios = [
         ShockScenario(
             name=f"crash-{_STRESS_SHOCK:.0%}",
@@ -795,9 +821,9 @@ def run(
         cost_comparison=metrics,
         regimes=by_regime,
         regime_method=(
-            f"Reżim rynku: tercyl {_REGIME_VOL_WINDOW_DAYS}-dniowej zmienności "
-            f"{market_proxy} względem jej ostatnich {_REGIME_HISTORY_DAYS} dni, "
-            "na dzień przed każdym zwrotem."
+            f"Reżim rynku: tercyl zmienności {market_proxy} z {vol_window} sesji "
+            f"względem jej wartości z ostatnich {regime_history} sesji, "
+            "na sesję przed każdym zwrotem."
         ),
         walk_forward=walk_forward,
         permutation=permutation,
@@ -843,10 +869,11 @@ def compare_engines(
     config = frozen.config
     parameters = config.parameters
     git_sha = _current_git_sha()
+    universe = Universe.load(parameters.universe)
     comparison = run_engine_comparison(
-        provider=BinanceProvider(),
+        provider=_provider(universe),
         parameters=parameters,
-        universe=Universe.load(parameters.universe),
+        universe=universe,
         start=config.training_start,
         end=config.training_end,
         seed=_SEED,
@@ -930,7 +957,8 @@ def trials_command(
             typer.echo(f"Error: {error}", err=True)
             raise typer.Exit(1) from error
 
-    comparison = run_trials(BinanceProvider(), trials, _SEED, _current_git_sha())
+    provider = _provider(Universe.load(target.parameters.universe))
+    comparison = run_trials(provider, trials, _SEED, _current_git_sha())
 
     typer.echo(
         f"Trials on {target.parameters.universe} with a training period overlapping "
@@ -1021,9 +1049,10 @@ def open_holdout(hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYP
             f"Showing the recorded result from {record_path}."
         )
     else:
+        frozen = _load_definition(hypothesis)
         record = open_frozen_holdout(
-            provider=BinanceProvider(),
-            frozen=_load_definition(hypothesis),
+            provider=_provider(Universe.load(frozen.config.parameters.universe)),
+            frozen=frozen,
             record_path=record_path,
             n_permutations=_PERMUTATIONS,
             seed=_SEED,

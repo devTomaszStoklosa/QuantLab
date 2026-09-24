@@ -7,8 +7,6 @@ from quantlab.core.data.provider import PriceBar
 from quantlab.reporting.metrics import sharpe
 from quantlab.validation.base import ValidationResult
 
-# 02-spec edge case: a permutation test on too short a series is flagged, not hidden.
-MIN_ACTIVE_DAYS = 365
 # Ties count as "at least as extreme": order-invariant statistics can differ from
 # the actual value only by floating-point summation order.
 _TIE_TOLERANCE = 1e-12
@@ -90,7 +88,8 @@ class PermutationTestValidator:
             "seed": run.seed,
             "alpha": self.alpha,
             "active_days": active_days,
-            "low_confidence": active_days < MIN_ACTIVE_DAYS,
+            # 02-spec edge case: fewer than a year of positions is flagged, not hidden.
+            "low_confidence": active_days < self.periods_per_year,
         }
         if missing.any():
             detail["missing_returns"] = int(missing.sum())

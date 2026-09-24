@@ -41,6 +41,8 @@ _CLOSES = {
 _UNIVERSE = Universe(
     name="test-universe",
     asof_date=_FIRST_DAY,
+    source="binance",
+    periods_per_year=365,
     instruments=[
         Instrument(id="a", symbol="AUSDT", asset_class="crypto", quote_asset="USDT"),
         Instrument(id="b", symbol="BUSDT", asset_class="crypto", quote_asset="USDT"),
@@ -267,7 +269,7 @@ def _definition_repo(repo: Path, monkeypatch) -> _RandomWalkProvider:
     _git(repo, "commit", "-q", "-m", "freeze")
     provider = _RandomWalkProvider()
     monkeypatch.setattr(cli, "_HOLDOUT_DIR", repo)
-    monkeypatch.setattr(cli, "BinanceProvider", lambda: provider)
+    monkeypatch.setitem(cli._PROVIDERS, "binance", lambda: provider)
     monkeypatch.setattr(cli, "_PERMUTATIONS", 20)
     return provider
 
@@ -295,6 +297,27 @@ def test_run_takes_the_hypothesis_from_its_committed_definition(tmp_path, monkey
     # The temporary repo holds one committed definition, so there is one trial.
     assert "Trials on this universe and training period: 1 (momentum_v1)" in result.output
     assert '<h3 id="multiple-testing">' in page
+    # Crypto's calendar: a month and a year of daily sessions (REQ-506).
+    assert "btc-usdt 30-session volatility tercile vs its last 365 sessions" in result.output
+
+
+def test_run_refuses_a_universe_whose_data_source_is_unknown(tmp_path, monkeypatch) -> None:
+    provider = _definition_repo(tmp_path / "definitions", monkeypatch)
+    monkeypatch.delitem(cli._PROVIDERS, "binance")
+
+    result = runner.invoke(app, ["run", "momentum_v1"])
+
+    assert result.exit_code == 1
+    assert "names data source 'binance'; known sources:" in result.output
+    assert provider.requests == []
+
+
+def test_the_regime_windows_are_a_month_and_a_year_of_the_universes_sessions() -> None:
+    crypto = Universe.load("mvp-crypto")
+    equities = crypto.model_copy(update={"periods_per_year": 252})
+
+    assert cli._regime_windows(crypto) == (30, 365)
+    assert cli._regime_windows(equities) == (21, 252)
 
 
 def test_run_reports_the_status_from_the_recorded_holdout(tmp_path, monkeypatch) -> None:

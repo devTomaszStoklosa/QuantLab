@@ -222,7 +222,7 @@
       "costModel": "realistic-10bps-k0.05-vol30d",
       "correlation": -0.4372355560871849
     },
-    "regimeMethod": "Re\u017Cim rynku: tercyl 30-dniowej zmienno\u015Bci btc-usdt wzgl\u0119dem jej ostatnich 365 dni, na dzie\u0144 przed ka\u017Cdym zwrotem.",
+    "regimeMethod": "Re\u017Cim rynku: tercyl zmienno\u015Bci btc-usdt z 30 sesji wzgl\u0119dem jej warto\u015Bci z ostatnich 365 sesji, na sesj\u0119 przed ka\u017Cdym zwrotem.",
     "trades": {
       "total": 108,
       "openAtEnd": 2,
