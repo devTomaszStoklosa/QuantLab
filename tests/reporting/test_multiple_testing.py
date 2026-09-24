@@ -1,4 +1,5 @@
 from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -6,6 +7,7 @@ import pytest
 from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.reporting.multiple_testing import active_returns, multiple_testing
 from quantlab.research.trials import Trial
+from quantlab.validation.holdout import parse_holdout_config
 from quantlab.validation.sharpe_inference import (
     deflated_sharpe_ratio,
     probabilistic_sharpe_ratio,
@@ -41,6 +43,11 @@ def _run(returns: list[float], warm_up_days: int = 0) -> BacktestRun:
     )
 
 
+_DEFINITION = parse_holdout_config(
+    Path(__file__).parents[2] / "config" / "holdout" / "momentum_v1.yaml"
+)
+
+
 def _trial(hypothesis: str) -> Trial:
     return Trial(
         hypothesis=hypothesis,
@@ -50,6 +57,8 @@ def _trial(hypothesis: str) -> Trial:
         registered_at=datetime(2026, 9, 23, tzinfo=UTC),
         last_commit="abc",
         deleted=False,
+        path=f"{hypothesis}.yaml",
+        definition=_DEFINITION.model_copy(update={"hypothesis": hypothesis}),
     )
 
 

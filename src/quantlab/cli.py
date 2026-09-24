@@ -39,11 +39,20 @@ from quantlab.reporting.engine_comparison import (
     comparison_row,
     max_equity_difference,
 )
-from quantlab.reporting.multiple_testing import multiple_testing
+from quantlab.reporting.multiple_testing import (
+    MultipleTesting,
+    aligned_active_returns,
+    multiple_testing,
+)
 from quantlab.reporting.tear_sheet import Contrast, TearSheet, render_html
 from quantlab.research.definition import StudyParameters
 from quantlab.research.hypothesis import concluded_status
-from quantlab.research.trials import registered_trials, trials_on_same_data
+from quantlab.research.trials import (
+    Trial,
+    TrialRegistryError,
+    registered_trials,
+    trials_on_same_data,
+)
 from quantlab.risk.conditional import regime_conditional_metrics
 from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier, label_periods
 from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
@@ -58,6 +67,7 @@ from quantlab.validation.holdout import (
     read_holdout_record,
     write_holdout_record,
 )
+from quantlab.validation.pbo import PboResult, probability_of_backtest_overfitting
 from quantlab.validation.permutation import PermutationTestValidator
 from quantlab.validation.walk_forward import WalkForwardValidator
 
@@ -80,6 +90,8 @@ _STRESS_SHOCK = 0.20  # the AC-10 example size, applied down and up
 # only change how orders fill in a descriptive comparison, never a verdict.
 _NOMINAL_CAPITAL = 100_000.0  # USDT, a private researcher's scale
 _MAX_PARTICIPATION = 0.025  # of the fill bar's volume; zipline's VolumeShareSlippage default
+# CSCV blocks for PBO: the example of Bailey, Borwein, Lopez de Prado and Zhu (2017).
+_PBO_BLOCKS = 16
 # Parity differences above this are not floating-point noise.
 _PARITY_NOISE = 1e-9
 _DEFAULT_HYPOTHESIS = "momentum_v1"
@@ -242,6 +254,58 @@ def run_engine_comparison(
         ],
         parity_difference=max_equity_difference(vectorized, close.run),
         capacity=capacity(next_open.orders, bars, capital, max_participation),
+    )
+
+
+class TrialResult(BaseModel):
+    trial: Trial
+    deflation: MultipleTesting
+
+
+class TrialsComparison(BaseModel):
+    trials: list[TrialResult]
+    pbo: PboResult | None  # None with fewer than 2 trials or too few common days
+    common_days: int
+    common_start: date | None
+
+
+def run_trials(
+    provider: DataProvider, trials: list[Trial], seed: int, git_sha: str
+) -> TrialsComparison:
+    """Each trial over its own training period, from its committed definition (REQ-641).
+
+    Each trial fetches only its own training data (with its warm-up) and runs
+    under its own realistic cost model; PBO compares their net daily returns on
+    the dates all of them hold a position.
+    """
+    runs = []
+    for trial in trials:
+        definition = trial.definition
+        parameters = definition.parameters
+        runs.append(
+            run_study(
+                provider,
+                parameters,
+                parameters.cost_model.build(),
+                Universe.load(parameters.universe),
+                definition.training_start,
+                definition.training_end,
+                seed,
+                git_sha,
+            )
+        )
+    dates, returns = aligned_active_returns(runs)
+    pbo = None
+    if len(trials) >= 2 and len(dates) >= _PBO_BLOCKS:
+        pbo = probability_of_backtest_overfitting(returns, _PBO_BLOCKS)
+    return TrialsComparison(
+        trials=[
+            TrialResult(trial=trial, deflation=multiple_testing(run, trials, _PERIODS_PER_YEAR))
+            for trial, run in zip(trials, runs, strict=True)
+        ],
+        pbo=pbo,
+        common_days=len(dates),
+        common_start=dates[0] if dates else None,
     )
 
 
@@ -730,6 +794,81 @@ def compare_engines(
         "Descriptive only: validation and verdicts stay on the vectorized engine "
         "and the frozen rules."
     )
+
+
+@app.command("trials")
+def trials_command(
+    hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYPOTHESIS,
+) -> None:
+    """Every trial on a hypothesis's data: Sharpe, PSR and DSR each, and PBO of picking one.
+
+    A trial is any hypothesis whose definition was ever committed, deleted ones
+    included. Training periods only; descriptive, no status changes.
+    """
+    target = _load_definition(hypothesis).config
+    try:
+        trials = trials_on_same_data(hypothesis, registered_trials(_HOLDOUT_DIR))
+    except TrialRegistryError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
+    # Every trial still on disk must match its committed version (REQ-642).
+    for trial in (trial for trial in trials if not trial.deleted):
+        try:
+            load_frozen_holdout(_HOLDOUT_DIR / trial.path)
+        except HoldoutNotFrozenError as error:
+            typer.echo(f"Error: {error}", err=True)
+            raise typer.Exit(1) from error
+
+    comparison = run_trials(BinanceProvider(), trials, _SEED, _current_git_sha())
+
+    typer.echo(
+        f"Trials on {target.parameters.universe} with a training period overlapping "
+        f"{hypothesis}'s ({target.training_start} .. {target.training_end}): {len(trials)}"
+    )
+    width = max(len(trial.hypothesis) for trial in trials) + 3
+    typer.echo(
+        f"{'Trial':<{width}}{'Registered':<12}{'Training':<26}{'Days':>6}{'Sharpe':>8}"
+        f"{'PSR(0)':>8}{'Threshold':>11}{'DSR':>7}"
+    )
+    for result in comparison.trials:
+        trial, deflation = result.trial, result.deflation
+        name = trial.hypothesis + ("*" if trial.deleted else "")
+        typer.echo(
+            f"{name:<{width}}{trial.registered_at:%Y-%m-%d}  "
+            f"{f'{trial.training_start} .. {trial.training_end}':<26}{deflation.n_returns:>6}"
+            f"{_fmt_ratio(deflation.sharpe_annualized):>8}{_fmt_ratio(deflation.psr):>8}"
+            f"{_fmt_ratio(deflation.threshold_annualized):>11}{_fmt_ratio(deflation.dsr):>7}"
+        )
+    typer.echo(
+        "Net daily returns from each trial's first position under its own cost model; "
+        f"Sharpe annualized. Threshold = expected best Sharpe of {len(trials)} no-edge trials."
+    )
+    if any(trial.deleted for trial in trials):
+        typer.echo(
+            "* definition deleted since; still a trial, run from its last committed version."
+        )
+
+    typer.echo("")
+    pbo = comparison.pbo
+    if pbo is None:
+        reason = (
+            "needs at least 2 trials"
+            if len(trials) < 2
+            else f"only {comparison.common_days} days on which every trial holds a position"
+        )
+        typer.echo(f"PBO: n/a ({reason})")
+    else:
+        typer.echo(
+            f"PBO of picking the best trial in-sample: {pbo.pbo:.2f} (CSCV: {pbo.n_blocks} "
+            f"blocks, {pbo.n_splits:,} splits, {pbo.rows_used:,} of {comparison.common_days:,} "
+            f"common days from {comparison.common_start}; median logit {pbo.logit_median:+.2f})"
+        )
+        if pbo.n_configurations == 2:
+            typer.echo(
+                "With 2 trials, PBO is the share of splits in which the in-sample winner is "
+                "the out-of-sample loser."
+            )
+    typer.echo("Descriptive only: not part of any pass rule or of any hypothesis verdict.")
 
 
 def _print_holdout(record: HoldoutRecord) -> None:

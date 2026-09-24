@@ -1,6 +1,8 @@
 import math
+from datetime import date
 from itertools import pairwise
 
+import numpy as np
 from pydantic import BaseModel
 
 from quantlab.backtest.run import BacktestRun
@@ -25,6 +27,28 @@ def active_returns(run: BacktestRun) -> list[float]:
         current.equity / previous.equity - 1.0
         for previous, current in pairwise(snapshots[first - 1 :])
     ]
+
+
+def aligned_active_returns(runs: list[BacktestRun]) -> tuple[list[date], np.ndarray]:
+    """Each run's net daily returns on the dates all of them have one, as a T x N matrix.
+
+    A return is dated by the snapshot it ends on, and a run's returns start at
+    its first held position, so the common dates begin once every run holds
+    something - no strategy is compared through another's warm-up.
+    """
+    by_date = []
+    for run in runs:
+        snapshots = run.snapshots
+        first = next((i for i in range(1, len(snapshots)) if snapshots[i].positions), None)
+        pairs = pairwise(snapshots[first - 1 :]) if first is not None else []
+        by_date.append(
+            {current.ts: current.equity / previous.equity - 1.0 for previous, current in pairs}
+        )
+    common = sorted(set.intersection(*(set(returns) for returns in by_date))) if by_date else []
+    matrix = np.array(
+        [[returns[day] for returns in by_date] for day in common], dtype=np.float64
+    ).reshape(len(common), len(runs))
+    return common, matrix
 
 
 class MultipleTesting(BaseModel):

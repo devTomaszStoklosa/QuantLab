@@ -437,3 +437,80 @@ def test_compare_engines_refuses_an_uncommitted_definition_before_fetching(
     assert result.exit_code == 1
     assert "uncommitted changes" in result.output
     assert provider.requests == []
+
+
+def _add_definition(repo: Path, hypothesis: str, strategy_lines: str) -> None:
+    """A second hypothesis on momentum_v1's data, committed next to it."""
+    text = (repo / "momentum_v1.yaml").read_text(encoding="utf-8")
+    text = text.replace("hypothesis: momentum_v1", f"hypothesis: {hypothesis}").replace(
+        "  strategy: time_series_momentum\n  lookback_days: 365\n", strategy_lines
+    )
+    assert f"hypothesis: {hypothesis}" in text and strategy_lines in text
+    (repo / f"{hypothesis}.yaml").write_text(text, encoding="utf-8")
+    _git(repo, "add", f"{hypothesis}.yaml")
+    _git(repo, "commit", "-q", "-m", f"freeze {hypothesis}")
+
+
+_REVERSAL = "  strategy: short_term_reversal\n  formation_days: 7\n"
+
+
+def test_trials_deflates_each_trial_and_reports_pbo(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "definitions"
+    provider = _definition_repo(repo, monkeypatch)
+    _add_definition(repo, "reversal_v1", _REVERSAL)
+
+    result = runner.invoke(app, ["trials", "momentum_v1"])
+
+    assert result.exit_code == 0, result.output
+    assert "overlapping momentum_v1's (2022-01-01 .. 2023-12-31): 2" in result.output
+    rows = [line.split()[0] for line in result.output.splitlines()[2:4]]
+    assert rows == ["momentum_v1", "reversal_v1"]
+    assert "PBO of picking the best trial in-sample:" in result.output
+    assert "12,870 splits" in result.output
+    # Each trial fetches its own training period with its own warm-up, nothing later.
+    assert set(provider.requests) == {
+        ("btc-usdt", date(2021, 1, 1), date(2023, 12, 31)),
+        ("eth-usdt", date(2021, 1, 1), date(2023, 12, 31)),
+        ("btc-usdt", date(2021, 12, 25), date(2023, 12, 31)),
+        ("eth-usdt", date(2021, 12, 25), date(2023, 12, 31)),
+    }
+
+
+def test_trials_keeps_a_deleted_definition(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "definitions"
+    _definition_repo(repo, monkeypatch)
+    _add_definition(repo, "abandoned_v1", _REVERSAL)
+    (repo / "abandoned_v1.yaml").unlink()
+    _git(repo, "commit", "-q", "-am", "drop abandoned_v1")
+
+    result = runner.invoke(app, ["trials", "momentum_v1"])
+
+    assert result.exit_code == 0, result.output
+    assert "abandoned_v1*" in result.output
+    assert "* definition deleted since" in result.output
+
+
+def test_trials_with_one_trial_has_no_pbo(tmp_path, monkeypatch) -> None:
+    _definition_repo(tmp_path / "definitions", monkeypatch)
+
+    result = runner.invoke(app, ["trials"])
+
+    assert result.exit_code == 0, result.output
+    assert "PBO: n/a (needs at least 2 trials)" in result.output
+
+
+def test_trials_refuses_an_edited_trial_before_fetching(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "definitions"
+    provider = _definition_repo(repo, monkeypatch)
+    _add_definition(repo, "reversal_v1", _REVERSAL)
+    edited = repo / "reversal_v1.yaml"
+    edited.write_text(
+        edited.read_text(encoding="utf-8").replace("formation_days: 7", "formation_days: 3"),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["trials", "momentum_v1"])
+
+    assert result.exit_code == 1
+    assert "reversal_v1.yaml has uncommitted changes" in result.output
+    assert provider.requests == []

@@ -20,8 +20,10 @@ class Trial(BaseModel):
     training_start: date
     training_end: date
     registered_at: datetime  # first commit adding its definition
-    last_commit: str  # last commit in which its definition existed
+    last_commit: str  # last commit that added or changed its definition
     deleted: bool  # its definition is gone from the current commit
+    path: str  # file name of that definition, in the definitions directory
+    definition: HoldoutConfig  # as committed in last_commit
 
 
 def _git(directory: Path, *args: str) -> str:
@@ -95,6 +97,8 @@ def registered_trials(definitions_dir: Path) -> list[Trial]:
             registered_at=first_added[name],
             last_commit=version_sha,
             deleted=latest_status[name] == "D",
+            path=name,
+            definition=config,
         )
         earlier = chosen.get(trial.hypothesis)
         if earlier is not None:

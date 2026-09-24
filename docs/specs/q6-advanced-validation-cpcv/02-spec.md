@@ -54,7 +54,7 @@ PBO
 Raport
 
 - REQ-640 (AC-5): `quantlab run` shall print, and the tear-sheet shall show, for the realistic-cost training run: PSR(0), the number of trials on the same data with their ids, SR₀ annualized and DSR, marked as descriptive and outside the status rules.
-- REQ-641 (AC-6): `quantlab trials [HYPOTHESIS]` shall run every trial on the hypothesis's data over its own training period with its own cost model, print each trial's annualized Sharpe, PSR(0) and DSR, and the PBO of choosing the best of them over the dates common to all trials; it shall fetch no data after any trial's training end.
+- REQ-641 (AC-6): `quantlab trials [HYPOTHESIS]` shall run every trial on the hypothesis's data — a deleted one from its last committed version — over its own training period with its own cost model, fetching for each trial only its own training period with its warm-up; it shall print each trial's annualized Sharpe, PSR(0) and DSR, and the PBO of choosing the best of them over the dates on which every trial holds a position.
 - REQ-642 (AC-6): When any trial's definition is not committed or has uncommitted changes, `quantlab trials` shall refuse before fetching any data.
 
 Granice
