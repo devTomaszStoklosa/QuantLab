@@ -59,6 +59,17 @@ describe('HypothesisScreen', () => {
     expect(within(panel('Regimes')).getAllByRole('row')).toHaveLength(1 + captured.momentum.regimes.length);
   });
 
+  it('names the significance test the criterion chose', async () => {
+    const detail = structuredClone(captured.momentum);
+    detail.run!.permutation.test = 'random_portfolio';
+    renderWith('demo_momentum', { ...ROUTES, '/api/hypotheses/demo_momentum': detail });
+
+    const test = within(await screen.findByRole('heading', { name: 'Random-portfolio test' }).then((h) => h.closest('section')!));
+    expect(test.getByText(/random portfolios from each decision's cross-section/)).toBeInTheDocument();
+    expect(test.getByText('Beats random portfolios')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Permutation test' })).not.toBeInTheDocument();
+  });
+
   it('shows the year totals quantlab computed, not compounded months', async () => {
     const detail = structuredClone(captured.momentum);
     detail.yearly[0].netReturn = 0.1234; // deliberately not the product of its months

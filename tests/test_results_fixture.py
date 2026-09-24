@@ -88,9 +88,10 @@ parameters:
 success_criterion:
   description: >-
     Synthetic demo. Holdout net Sharpe under the realistic cost model > 0 and
-    permutation-test p-value < 0.1.
+    random-portfolio test p-value < 0.1.
   min_sharpe: 0.0
   max_p_value: 0.1
+  significance_test: random_portfolio
 """
 
 _STOCKS = [f"eq{i:02d}" for i in range(30)]
@@ -301,6 +302,12 @@ def test_the_synthetic_store_covers_each_registry_state() -> None:
     for hypothesis in ("demo_momentum", "demo_pairs", "demo_xsmom"):
         [run] = pq.read_table(FIXTURE / hypothesis / "run.parquet").to_pylist()
         assert run["data_source"] == "synthetic"
+    assert {row["hypothesis"]: row["significance_test"] for row in registry} == {
+        "demo_momentum": "day_shuffle",
+        "demo_reversal": "day_shuffle",
+        "demo_pairs": "day_shuffle",
+        "demo_xsmom": "random_portfolio",
+    }
 
 
 def test_the_equity_demo_is_a_point_in_time_cross_section() -> None:
@@ -309,6 +316,9 @@ def test_the_equity_demo_is_a_point_in_time_cross_section() -> None:
 
     assert run["strategy"] == "cross_sectional_momentum"
     assert run["trials"] == ["demo_xsmom"]  # the only trial on this universe
+    # Selection, not timing: random portfolios from the ranking find the edge (REQ-564).
+    assert run["permutation_test"] == "random_portfolio"
+    assert run["permutation_p_value"] < 0.1
     assert {trade["side"] for trade in trades} == {"long", "short"}
     assert _INDEX not in {trade["instrument_id"] for trade in trades}
     for trade in trades:

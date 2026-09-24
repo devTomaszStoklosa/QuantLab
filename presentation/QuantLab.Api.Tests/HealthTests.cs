@@ -12,7 +12,7 @@ public class HealthTests
 
         var health = await api.CreateClient().GetFromJsonAsync<StoreHealth>("/api/health", TestContext.Current.CancellationToken);
 
-        Assert.Equal(new StoreHealth(Fixture.Store, true, 1, true), health);
+        Assert.Equal(new StoreHealth(Fixture.Store, true, StoreSchema.Version, true), health);
     }
 
     [Fact]

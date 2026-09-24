@@ -9,6 +9,7 @@ import type {
   PnlGroup,
   RegimeMetrics,
   RunSummary,
+  SignificanceTest,
   WalkForwardWindow,
 } from '../api';
 import { QF, type Column } from '../design-system';
@@ -16,6 +17,23 @@ import { cost, day, percent, pnl, probability, range, ratio, sha, significant } 
 
 const OUTCOME = { true: 'passed', false: 'failed', null: 'inconclusive' } as const;
 const outcome = (passed: boolean | null) => OUTCOME[String(passed) as keyof typeof OUTCOME];
+
+// How each significance test reads: the day shuffle asks about timing, random
+// portfolios from the same cross-section about selection.
+const TEST_WORDING: Record<SignificanceTest, { title: string; draws: string; nullMean: string; beats: string }> = {
+  day_shuffle: {
+    title: 'Permutation test',
+    draws: 'shuffles of returns against the positions held',
+    nullMean: 'Shuffled mean',
+    beats: 'Beats shuffles',
+  },
+  random_portfolio: {
+    title: 'Random-portfolio test',
+    draws: "random portfolios from each decision's cross-section",
+    nullMean: 'Random mean',
+    beats: 'Beats random portfolios',
+  },
+};
 
 const lossTone = (value: number | null) => (value == null ? 'dim' : value < 0 ? 'loss' : null);
 
@@ -172,11 +190,12 @@ export function WalkForwardPanel({ windows, run }: { windows: WalkForwardWindow[
 
 export function PermutationPanel({ run }: { run: RunSummary }) {
   const p = run.permutation;
+  const wording = TEST_WORDING[p.test];
   return (
     <QF.Panel
-      title="Permutation test"
+      title={wording.title}
       icon="shuffle"
-      subtitle={`${p.count.toLocaleString('en-US')} shuffles of returns against the positions held · seed ${p.seed} · ${p.statistic}`}
+      subtitle={`${p.count.toLocaleString('en-US')} ${wording.draws} · seed ${p.seed} · ${p.statistic}`}
       footer={
         p.reason
           ? `Inconclusive: ${p.reason}`
@@ -192,8 +211,8 @@ export function PermutationPanel({ run }: { run: RunSummary }) {
         columns={4}
         items={[
           { label: 'Gross Sharpe', partition: 'is', value: ratio(p.actual) },
-          { label: 'Shuffled mean', value: ratio(p.nullMean), hint: `sd ${ratio(p.nullStd)}` },
-          { label: 'Beats shuffles', value: percent(p.percentile) },
+          { label: wording.nullMean, value: ratio(p.nullMean), hint: `sd ${ratio(p.nullStd)}` },
+          { label: wording.beats, value: percent(p.percentile) },
           { label: 'p-value', value: probability(p.pValue) },
         ]}
       />
@@ -372,7 +391,10 @@ export function HoldoutPanel({ hypothesis }: { hypothesis: HypothesisSummary }) 
           ['Sortino', <span className="qf-num">{ratio(holdout.sortino)}</span>],
           ['Calmar', <span className="qf-num">{ratio(holdout.calmar)}</span>],
           ['Max drawdown', <span className="qf-num">{percent(holdout.maxDrawdown)}</span>],
-          ['p-value', <span className="qf-num">{probability(holdout.pValue)}</span>],
+          [
+            `p-value (${TEST_WORDING[hypothesis.significanceTest].title.toLowerCase()})`,
+            <span className="qf-num">{probability(holdout.pValue)}</span>,
+          ],
         ]}
       />
     </QF.Panel>

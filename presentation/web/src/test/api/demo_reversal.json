@@ -22,6 +22,7 @@
     "criterion": "Synthetic demo. Holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1.",
     "minSharpe": 0,
     "maxPValue": 0.1,
+    "significanceTest": "day_shuffle",
     "frozenAtCommit": "a9463b4e258a5b058f06a421273d7ae405b50cf2",
     "registeredAt": "2026-09-02T09:00:00\u002B00:00",
     "trialsOnSameData": 3,

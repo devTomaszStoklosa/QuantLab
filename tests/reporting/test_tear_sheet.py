@@ -288,6 +288,22 @@ def test_run_without_positions_renders() -> None:
     assert "<strong>inconclusive</strong>" in permutation
 
 
+def test_a_random_portfolio_test_is_named_and_described_as_one() -> None:
+    sheet = _sheet()
+    detail = {**sheet.permutation.detail, "test": "random_portfolio"}
+    permutation = sheet.permutation.model_copy(update={"detail": detail})
+    record = _holdout()
+    holdout = record.model_copy(update={"permutation": {**record.permutation, **detail}})
+
+    page = render_html(_sheet(permutation=permutation, holdout=holdout))
+
+    section = page[page.index('<h3 id="permutation">') :]
+    assert section.startswith('<h3 id="permutation">Test losowych portfeli</h3>')
+    assert "losowych portfeli z przekroju każdej decyzji" in section
+    assert "wobec średniej losowych portfeli" in section
+    assert "p-value (test losowych portfeli)" in page
+
+
 def test_low_confidence_permutation_is_flagged() -> None:
     sheet = _sheet()
     detail = {**sheet.permutation.detail, "low_confidence": True, "active_days": 120}

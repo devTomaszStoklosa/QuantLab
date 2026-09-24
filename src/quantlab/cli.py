@@ -1,9 +1,10 @@
 import importlib.metadata
 import subprocess
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, NamedTuple
 
 import typer
 from pydantic import BaseModel
@@ -67,6 +68,7 @@ from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier
 from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
 from quantlab.strategy.base import Strategy
 from quantlab.strategy.members_only import MembersOnly
+from quantlab.validation.base import SignificanceTest, Validator
 from quantlab.validation.holdout import (
     FrozenHoldout,
     HoldoutAlreadyOpenedError,
@@ -80,6 +82,7 @@ from quantlab.validation.holdout import (
 )
 from quantlab.validation.pbo import PboResult, probability_of_backtest_overfitting
 from quantlab.validation.permutation import PermutationTestValidator
+from quantlab.validation.random_portfolio import RandomPortfolioValidator
 from quantlab.validation.walk_forward import WalkForwardValidator
 
 app = typer.Typer()
@@ -191,6 +194,62 @@ def _fetch_bars(
 def _strategy(parameters: StudyParameters, universe: Universe) -> Strategy:
     """The hypothesis's strategy, seeing only the universe's members on each date (REQ-503)."""
     return MembersOnly(parameters.build_strategy(), universe)
+
+
+@dataclass(frozen=True)
+class _TestInputs:
+    """What a significance test may need: the run's bars and the hypothesis behind it."""
+
+    bars: dict[str, list[PriceBar]]
+    parameters: StudyParameters
+    universe: Universe
+    n_permutations: int
+    alpha: float
+
+
+# Significance tests by the name a success criterion gives (REQ-563); a new test is
+# a new entry here, never a branch on the strategy.
+_SIGNIFICANCE_TESTS: dict[SignificanceTest, Callable[[_TestInputs], Validator]] = {
+    "day_shuffle": lambda given: PermutationTestValidator(
+        bars=given.bars,
+        n_permutations=given.n_permutations,
+        alpha=given.alpha,
+        periods_per_year=given.universe.periods_per_year,
+    ),
+    "random_portfolio": lambda given: RandomPortfolioValidator(
+        bars=given.bars,
+        strategy=_strategy(given.parameters, given.universe),
+        sizer=given.parameters.build_sizer(),
+        rebalance=given.parameters.build_rebalance_policy(),
+        n_permutations=given.n_permutations,
+        alpha=given.alpha,
+        periods_per_year=given.universe.periods_per_year,
+    ),
+}
+
+
+class _Wording(NamedTuple):
+    title: str
+    draws: str
+    null_mean: str
+    beaten: str
+
+
+# How each significance test reads in the output.
+_TEST_WORDING: dict[str, _Wording] = {
+    "day_shuffle": _Wording(
+        "Permutation test",
+        "shuffles of returns against the positions held",
+        "shuffled mean",
+        "shuffles",
+    ),
+    "random_portfolio": _Wording(
+        "Random-portfolio test",
+        "random portfolios from each decision's cross-section",
+        "random-portfolio mean",
+        "random portfolios",
+    ),
+}
 
 
 def _run_study(
@@ -410,11 +469,9 @@ def open_frozen_holdout(
         git_sha,
     )
     metrics = run_metrics(run, universe.periods_per_year)
-    permutation = PermutationTestValidator(
-        bars=bars,
-        n_permutations=n_permutations,
-        alpha=config.success_criterion.max_p_value,
-        periods_per_year=universe.periods_per_year,
+    criterion = config.success_criterion
+    permutation = _SIGNIFICANCE_TESTS[criterion.significance_test](
+        _TestInputs(bars, parameters, universe, n_permutations, criterion.max_p_value)
     ).validate(run)
     p_value = permutation.detail.get("p_value")  # absent when there was nothing to test
 
@@ -605,17 +662,14 @@ def run(
                 else ", all with the source's delisting return"
             )
         )
-    permutation = PermutationTestValidator(
-        bars=bars,
-        n_permutations=_PERMUTATIONS,
-        alpha=_PERMUTATION_ALPHA,
-        periods_per_year=periods_per_year,
+    permutation = _SIGNIFICANCE_TESTS[config.success_criterion.significance_test](
+        _TestInputs(bars, parameters, universe, _PERMUTATIONS, _PERMUTATION_ALPHA)
     ).validate(runs[2])
     detail = permutation.detail
+    wording = _TEST_WORDING[detail["test"]]
     typer.echo("")
     typer.echo(
-        f"Permutation test ({detail['n_permutations']:,} shuffles of returns against the "
-        f"positions held, seed {detail['seed']}):"
+        f"{wording.title} ({detail['n_permutations']:,} {wording.draws}, seed {detail['seed']}):"
     )
     if "reason" in detail:
         typer.echo(f"Result: inconclusive ({detail['reason']})")
@@ -626,8 +680,9 @@ def run(
             else f"not significant at {detail['alpha']} -> inconclusive"
         )
         typer.echo(
-            f"Gross Sharpe {detail['actual']:.2f} vs shuffled mean {detail['null_mean']:.2f} "
-            f"(sd {detail['null_std']:.2f}); beats {detail['percentile']:.1%} of shuffles"
+            f"Gross Sharpe {detail['actual']:.2f} vs {wording.null_mean} "
+            f"{detail['null_mean']:.2f} (sd {detail['null_std']:.2f}); "
+            f"beats {detail['percentile']:.1%} of {wording.beaten}"
         )
         typer.echo(f"Result: p = {detail['p_value']:.4f}, {significance}")
     if detail["low_confidence"]:
@@ -1012,6 +1067,8 @@ def trials_command(
 
 def _print_holdout(record: HoldoutRecord) -> None:
     permutation = record.permutation
+    # Records opened before q5 name no test: they come from the day shuffle.
+    wording = _TEST_WORDING[permutation.get("test", "day_shuffle")]
     typer.echo("")
     typer.echo(f"HOLDOUT {record.start} .. {record.end} ({record.hypothesis})")
     typer.echo(f"Frozen at:      {record.frozen_at_commit[:7]}")
@@ -1028,9 +1085,9 @@ def _print_holdout(record: HoldoutRecord) -> None:
         typer.echo(f"Permutation:    inconclusive ({permutation['reason']})")
     else:
         typer.echo(
-            f"Permutation:    gross Sharpe {permutation['actual']:.2f} vs shuffled mean "
+            f"Permutation:    gross Sharpe {permutation['actual']:.2f} vs {wording.null_mean} "
             f"{permutation['null_mean']:.2f}; p = {record.p_value:.4f} "
-            f"({permutation['n_permutations']:,} shuffles, seed {permutation['seed']})"
+            f"({permutation['n_permutations']:,} {wording.beaten}, seed {permutation['seed']})"
         )
     if permutation["low_confidence"]:
         typer.echo(f"Low confidence: only {permutation['active_days']} days with a position")

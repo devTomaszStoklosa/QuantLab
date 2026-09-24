@@ -34,6 +34,28 @@ _MINUS = "\u2212"
 _MISSING = "\u2014"
 _THIN_SPACE = "\u2009"  # thousands separator, 10 000
 _OUTCOME = {True: "passed", False: "failed", None: "inconclusive"}
+# Each significance test (q5, REQ-563): its name, what was drawn, whose mean the
+# actual Sharpe is set against, what it beats. Results opened before q5 name no
+# test: they come from the day shuffle.
+_TEST_WORDING = {
+    "day_shuffle": (
+        "Test permutacyjny",
+        "przetasowań zwrotów względem trzymanych pozycji",
+        "średniej przetasowań",
+        "przetasowań",
+    ),
+    "random_portfolio": (
+        "Test losowych portfeli",
+        "losowych portfeli z przekroju każdej decyzji",
+        "średniej losowych portfeli",
+        "losowych portfeli",
+    ),
+}
+
+
+def _wording(detail: dict) -> tuple[str, str, str, str]:
+    return _TEST_WORDING[detail.get("test", "day_shuffle")]
+
 
 _CHART_WIDTH = 960
 _MARGIN_LEFT = 64
@@ -343,19 +365,19 @@ def _walk_forward(result: ValidationResult) -> str:
 
 def _permutation(result: ValidationResult) -> str:
     detail = result.detail
+    _, draws, null_mean, beaten = _wording(detail)
     shuffles = f"{detail['n_permutations']:,}".replace(",", _THIN_SPACE)
     header = (
-        f"<p>Statystyka: <q>{_e(detail['statistic'])}</q>; {shuffles} przetasowań zwrotów "
-        f"względem trzymanych pozycji, seed {detail['seed']}, "
-        f"α = {_p_value(detail['alpha'])}.</p>"
+        f"<p>Statystyka: <q>{_e(detail['statistic'])}</q>; {shuffles} {draws}, "
+        f"seed {detail['seed']}, α = {_p_value(detail['alpha'])}.</p>"
     )
     if "reason" in detail:
         body = f"<p>Wynik: <strong>inconclusive</strong> ({_e(detail['reason'])})</p>"
     else:
         body = (
-            f"<p>Sharpe brutto {_ratio(detail['actual'])} wobec średniej przetasowań "
+            f"<p>Sharpe brutto {_ratio(detail['actual'])} wobec {null_mean} "
             f"{_ratio(detail['null_mean'])} (odch. std. {_ratio(detail['null_std'])}); "
-            f"wyższy niż {_pct(detail['percentile'])} przetasowań.</p>"
+            f"wyższy niż {_pct(detail['percentile'])} {beaten}.</p>"
             f"<p>Wynik: p = {_p_value(detail['p_value'])}, "
             f"<strong>{_OUTCOME[result.passed]}</strong></p>"
         )
@@ -457,7 +479,7 @@ def _training_section(sheet: TearSheet) -> str:
         '<h3 id="walk-forward">Walk-forward</h3>'
         f'<p class="muted">Okna roczne, <code>{cost_model}</code>.</p>'
         f"{_walk_forward(sheet.walk_forward)}"
-        '<h3 id="permutation">Test permutacyjny</h3>'
+        f'<h3 id="permutation">{_wording(sheet.permutation.detail)[0]}</h3>'
         f"{_permutation(sheet.permutation)}"
         f"{_multiple_testing(sheet.multiple_testing, run.cost_model_name)}"
         f"{_contrast(sheet.contrast, run.cost_model_name)}"
@@ -481,7 +503,7 @@ def _holdout_section(holdout: HoldoutRecord | None) -> str:
         ["Sortino", _ratio(holdout.sortino)],
         ["Calmar", _ratio(holdout.calmar)],
         ["Max drawdown", _pct(holdout.max_drawdown)],
-        ["p-value (test permutacyjny)", _p_value(holdout.p_value)],
+        [f"p-value ({_wording(holdout.permutation)[0].lower()})", _p_value(holdout.p_value)],
     ]
     facts = [
         ("Zamrożony w commicie", f"<code>{_e(holdout.frozen_at_commit[:7])}</code>"),

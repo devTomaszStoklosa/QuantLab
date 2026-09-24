@@ -24,6 +24,9 @@ export interface HoldoutRecord {
   verdict: HoldoutVerdict;
 }
 
+// Which test gave a p-value (q5, REQ-563): timing (day shuffle) or selection.
+export type SignificanceTest = 'day_shuffle' | 'random_portfolio';
+
 export interface HypothesisSummary {
   hypothesis: string;
   strategy: string;
@@ -37,6 +40,7 @@ export interface HypothesisSummary {
   criterion: string;
   minSharpe: number;
   maxPValue: number;
+  significanceTest: SignificanceTest;
   frozenAtCommit: string;
   registeredAt: string;
   trialsOnSameData: number;
@@ -65,6 +69,7 @@ export interface RunSummary {
   walkForward: { passed: boolean | null; rule: string; positiveWindows: number; windowsWithSharpe: number };
   permutation: {
     passed: boolean | null;
+    test: SignificanceTest;
     statistic: string;
     count: number;
     seed: number;

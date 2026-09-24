@@ -36,7 +36,9 @@ class CrossSectionalMomentum:
     of month m-1 is at least `min_price`. The portfolio is long the top
     floor(n * quantile) and, when `long_short`, short as many at the bottom; ties
     go to the lower instrument id. With fewer than one instrument per leg there is
-    no position.
+    no position. Every ranked instrument in neither leg gets a flat signal, so the
+    signals are the whole ranking: the cross-section a significance test draws
+    random portfolios from (REQ-565); flat signals carry no weight.
 
     Everything is known at the end of month m-1, so the portfolio is formed on the
     first trading day of month m and the signals stay the same through the month;
@@ -86,13 +88,16 @@ class CrossSectionalMomentum:
             key=lambda item: (-item[0], item[1]),
         )
         per_leg = int(len(ranked) * self.quantile)
-        if per_leg < 1:
-            return []
-        legs = [(instrument_id, "long", value) for value, instrument_id in ranked[:per_leg]]
-        if self.long_short:
-            losers = sorted(ranked, key=lambda item: (item[0], item[1]))[:per_leg]
-            legs += [(instrument_id, "short", value) for value, instrument_id in losers]
-        return sorted(legs)
+        direction = {}
+        if per_leg >= 1:
+            direction = {instrument_id: "long" for _, instrument_id in ranked[:per_leg]}
+            if self.long_short:
+                losers = sorted(ranked, key=lambda item: (item[0], item[1]))[:per_leg]
+                direction |= {instrument_id: "short" for _, instrument_id in losers}
+        return sorted(
+            (instrument_id, direction.get(instrument_id, "flat"), value)
+            for value, instrument_id in ranked
+        )
 
     def generate_signals(self, bars: dict[str, list[PriceBar]], as_of: date) -> list[Signal]:
         key = (as_of.year, as_of.month, frozenset(bars))

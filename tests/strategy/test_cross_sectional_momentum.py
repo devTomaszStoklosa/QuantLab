@@ -6,6 +6,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from quantlab import cli
 from quantlab.backtest.rebalance import OnSignalChange
+from quantlab.backtest.sizing import EqualWeightBySign
 from quantlab.core.data.events import Delisting, InstrumentEvents, Split
 from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument, Membership, Universe
@@ -114,13 +115,30 @@ def test_long_the_top_quantile_and_short_the_bottom_one_ties_by_id() -> None:
 
     signals = _strategy().generate_signals(_cross_section(momenta), date(2023, 3, 1))
 
-    assert {(s.instrument_id, s.direction) for s in signals} == {
+    assert {(s.instrument_id, s.direction) for s in signals if s.direction != "flat"} == {
         ("s00", "long"),
         ("s01", "long"),
         ("s09", "short"),
         ("s07", "short"),  # tied with s08 at -0.2: the lower id goes first
     }
     assert {s.instrument_id: s.strength for s in signals}["s00"] == pytest.approx(0.5)
+
+
+def test_the_rest_of_the_ranking_is_flat_so_the_signals_are_the_cross_section() -> None:
+    momenta = {f"s{i}": value for i, value in enumerate([0.3, 0.2, 0.1, 0.0, -0.1])}
+    bars = _cross_section(momenta) | {"late": _month_ends("late", {(2023, 2): 100.0})}
+
+    signals = _strategy(long_short=False, quantile=0.4).generate_signals(bars, date(2023, 3, 1))
+
+    # "late" has no formation history, so it is not ranked and has no signal at all.
+    assert [(s.instrument_id, s.direction) for s in signals] == [
+        ("s0", "long"),
+        ("s1", "long"),
+        ("s2", "flat"),
+        ("s3", "flat"),
+        ("s4", "flat"),
+    ]
+    assert EqualWeightBySign().weights(signals) == {"s0": 0.5, "s1": 0.5}
 
 
 def test_long_only_holds_the_winners_alone() -> None:
@@ -130,13 +148,18 @@ def test_long_only_holds_the_winners_alone() -> None:
         _cross_section(momenta), date(2023, 3, 15)
     )
 
-    assert [(s.instrument_id, s.direction) for s in signals] == [("s0", "long"), ("s1", "long")]
+    assert [(s.instrument_id, s.direction) for s in signals if s.direction != "flat"] == [
+        ("s0", "long"),
+        ("s1", "long"),
+    ]
 
 
 def test_too_small_a_cross_section_takes_no_position() -> None:
     momenta = {f"s{i}": 0.1 * i for i in range(4)}  # 4 * 0.2 < 1 per leg
 
-    assert _strategy().generate_signals(_cross_section(momenta), date(2023, 3, 1)) == []
+    signals = _strategy().generate_signals(_cross_section(momenta), date(2023, 3, 1))
+
+    assert {s.direction for s in signals} == {"flat"}
 
 
 def test_signals_stay_the_same_through_the_month() -> None:

@@ -173,6 +173,7 @@ def test_the_run_tables_hold_the_numbers_the_run_computed(tmp_path) -> None:
     assert row["data_source"] == "synthetic"
     assert row["walk_forward_passed"] == evidence.sheet.walk_forward.passed
     assert row["permutation_p_value"] == evidence.sheet.permutation.detail["p_value"]
+    assert row["permutation_test"] == "day_shuffle"
     assert row["trials"] == ["momentum_v1", "mean_reversion_v1"]
     assert row["dsr"] == 0.8
     assert row["trades"] == len(evidence.trades) > 2
@@ -330,6 +331,8 @@ def test_the_registry_lists_each_committed_definition_with_its_git_facts(tmp_pat
     assert [row["hypothesis"] for row in stored] == ["momentum_v1", "reversal_v1"]
     assert stored[0]["holdout_verdict"] is None
     assert stored[0]["schema_version"] == SCHEMA_VERSION
+    # Frozen before q5, the definitions name no significance test: the day shuffle.
+    assert [row["significance_test"] for row in stored] == ["day_shuffle", "day_shuffle"]
 
 
 def _walk_forward(passed: bool | None) -> ValidationResult:

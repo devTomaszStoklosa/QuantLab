@@ -32,6 +32,7 @@ public sealed record HypothesisSummary(
     string Criterion,
     double MinSharpe,
     double MaxPValue,
+    string SignificanceTest,
     string FrozenAtCommit,
     DateTimeOffset RegisteredAt,
     long TrialsOnSameData,
@@ -48,6 +49,7 @@ public sealed record WalkForwardSummary(bool? Passed, string Rule, long Positive
 
 public sealed record PermutationSummary(
     bool? Passed,
+    string Test,
     string Statistic,
     long Count,
     long Seed,
