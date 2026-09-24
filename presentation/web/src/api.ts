@@ -127,6 +127,11 @@ export interface MonthlyReturn {
   netReturn: number;
 }
 
+export interface YearlyReturn {
+  year: number;
+  netReturn: number;
+}
+
 export interface PnlGroup {
   dimension: 'regime' | 'holding_period';
   key: string;
@@ -153,8 +158,10 @@ export interface HypothesisDetail {
   walkForward: WalkForwardWindow[];
   regimes: RegimeMetrics[];
   monthly: MonthlyReturn[];
+  yearly: YearlyReturn[];
   pnlGroups: PnlGroup[];
   diagnostics: Diagnostic[];
+  tradeInstruments: string[];
 }
 
 export interface EquityPoint {

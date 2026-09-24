@@ -493,6 +493,20 @@
       "netReturn": 0
     }
   ],
+  "yearly": [
+    {
+      "year": 2020,
+      "netReturn": 0
+    },
+    {
+      "year": 2021,
+      "netReturn": 0.08780805926125579
+    },
+    {
+      "year": 2022,
+      "netReturn": 0.13041590582052964
+    }
+  ],
   "pnlGroups": [
     {
       "dimension": "regime",
@@ -574,5 +588,9 @@
       "label": "half-life (days)",
       "value": 10.779460400427995
     }
+  ],
+  "tradeInstruments": [
+    "btc-usdt",
+    "eth-usdt"
   ]
 }

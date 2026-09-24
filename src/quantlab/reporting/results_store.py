@@ -2,7 +2,7 @@
 
 The presentation layer (q7, ADR-0008) reads these files and nothing else, so
 every number is computed before it gets here; this module lays the numbers out
-as tables and computes nothing but the monthly returns and drawdowns the
+as tables and computes nothing but the monthly and yearly returns and drawdowns the
 tear-sheet also shows, and the registry status from the recorded gates. The
 schema is the contract with the .NET API: renaming a column or changing its
 type raises SCHEMA_VERSION. Schema: docs/specs/q7-dotnet-react-presentation/02-spec.md.
@@ -20,7 +20,7 @@ from pydantic import BaseModel, model_validator
 
 from quantlab.attribution.trade_ledger import PnlGroup, Trade
 from quantlab.reporting.cost_comparison import CostSensitivity
-from quantlab.reporting.metrics import drawdown_series, monthly_returns
+from quantlab.reporting.metrics import drawdown_series, monthly_returns, yearly_returns
 from quantlab.reporting.tear_sheet import TearSheet
 from quantlab.research.definition import TrainingDiagnostic
 from quantlab.research.hypothesis import Status, concluded_status
@@ -177,6 +177,12 @@ TABLE_SCHEMAS = {
         [
             _field("year", pa.int64()),
             _field("month", pa.int64()),
+            _field("net_return", pa.float64()),
+        ]
+    ),
+    "yearly": pa.schema(
+        [
+            _field("year", pa.int64()),
             _field("net_return", pa.float64()),
         ]
     ),
@@ -404,6 +410,9 @@ def _tables(evidence: RunEvidence) -> dict[str, list[dict]]:
         "monthly": [
             {"year": year, "month": month, "net_return": value}
             for year, month, value in monthly_returns(dates, equity)
+        ],
+        "yearly": [
+            {"year": year, "net_return": value} for year, value in yearly_returns(dates, equity)
         ],
         "pnl_groups": [
             {"dimension": dimension, "position": position} | group.model_dump()

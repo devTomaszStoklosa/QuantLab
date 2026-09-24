@@ -515,6 +515,20 @@
       "netReturn": 0.04870461823162131
     }
   ],
+  "yearly": [
+    {
+      "year": 2020,
+      "netReturn": -0.48010992281948206
+    },
+    {
+      "year": 2021,
+      "netReturn": -0.26760566115514806
+    },
+    {
+      "year": 2022,
+      "netReturn": -0.7360131616200557
+    }
+  ],
   "pnlGroups": [
     {
       "dimension": "regime",
@@ -613,5 +627,9 @@
       "costs": 0.025492516945116606
     }
   ],
-  "diagnostics": []
+  "diagnostics": [],
+  "tradeInstruments": [
+    "btc-usdt",
+    "eth-usdt"
+  ]
 }

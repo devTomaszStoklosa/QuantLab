@@ -203,6 +203,12 @@ def test_the_run_tables_hold_the_numbers_the_run_computed(tmp_path) -> None:
         run.snapshots[-1].equity / run.snapshots[0].equity
     )
 
+    yearly = _read(directory / "yearly.parquet")
+    assert [y["year"] for y in yearly] == [2020, 2021, 2022]
+    assert math.prod(1.0 + y["net_return"] for y in yearly) == pytest.approx(
+        run.snapshots[-1].equity / run.snapshots[0].equity
+    )
+
     trades = _read(directory / "trades.parquet")
     assert [trade["trade_id"] for trade in trades] == list(range(1, len(evidence.trades) + 1))
     assert trades[0]["net_pnl"] == evidence.trades[0].net_pnl
