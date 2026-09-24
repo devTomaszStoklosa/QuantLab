@@ -1,7 +1,11 @@
+from datetime import date, timedelta
+
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
 from quantlab.backtest.sizing import EqualWeightBySign, PairWeights
+from quantlab.core.data.provider import PriceBar
 from quantlab.research.definition import (
     CostModelParameters,
     PairsSpreadParameters,
@@ -180,3 +184,45 @@ def test_a_pairs_definition_parses_through_the_strategy_field() -> None:
     config = HoldoutConfig.model_validate(_definition(_pairs().model_dump(mode="json")))
 
     assert isinstance(config.parameters, PairsSpreadParameters)
+
+
+def _log_price_bars(instrument_id: str, log_prices: np.ndarray) -> list[PriceBar]:
+    return [
+        PriceBar(
+            instrument_id=instrument_id,
+            ts=date(2020, 1, 1) + timedelta(days=i),
+            open=float(np.exp(v)),
+            high=float(np.exp(v)),
+            low=float(np.exp(v)),
+            close=float(np.exp(v)),
+            volume=1.0,
+            source="test",
+        )
+        for i, v in enumerate(log_prices)
+    ]
+
+
+def test_pairs_report_cointegration_over_the_training_period_only() -> None:
+    rng = np.random.default_rng(8)
+    log_x = 10.0 + np.cumsum(rng.normal(0.0, 0.03, 900))
+    spread = np.zeros(900)
+    for t in range(1, 900):
+        spread[t] = 0.9 * spread[t - 1] + rng.normal(0.0, 0.01)
+    log_y = 0.5 + 0.8 * log_x + spread
+    log_y[700:] += np.linspace(0.0, 3.0, 200)  # breaks down after the training period
+    bars = {
+        "eth-usdt": _log_price_bars("eth-usdt", log_y),
+        "btc-usdt": _log_price_bars("btc-usdt", log_x),
+    }
+
+    (diagnostic,) = _pairs().training_diagnostics(bars, date(2020, 1, 1), date(2021, 11, 30))
+
+    assert diagnostic.title == "Cointegration of eth-usdt on btc-usdt"
+    assert diagnostic.values["days"] == 700
+    assert diagnostic.values["hedge ratio"] == pytest.approx(0.8, abs=0.03)
+    assert diagnostic.values["p-value"] < 0.01
+    assert diagnostic.values["half-life (days)"] == pytest.approx(6.6, rel=0.3)
+
+
+def test_directional_strategies_report_no_training_diagnostics() -> None:
+    assert _momentum().training_diagnostics({}, date(2020, 1, 1), date(2021, 1, 1)) == []

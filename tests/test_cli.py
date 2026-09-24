@@ -536,3 +536,34 @@ def test_run_reports_a_hypothesis_that_never_trades(tmp_path, monkeypatch) -> No
     assert "n/a: no positions were held" in result.output
     assert "0 trades (0 open at the end), n/a with net P&L > 0" in result.output
     assert output.exists()
+
+
+_PAIRS = (
+    "  strategy: pairs_spread\n  dependent: eth-usdt\n  explanatory: btc-usdt\n"
+    "  formation_days: 365\n  entry_z: 2.0\n  exit_z: 0.0\n  max_coint_p_value: 0.05\n"
+)
+
+
+def test_run_reports_cointegration_for_a_pairs_hypothesis(tmp_path, monkeypatch) -> None:
+    repo = tmp_path / "definitions"
+    _definition_repo(repo, monkeypatch)
+    _add_definition(repo, "pairs_x", _PAIRS)
+
+    result = runner.invoke(app, ["run", "pairs_x"])
+
+    assert result.exit_code == 0, result.output
+    assert (
+        "Cointegration of eth-usdt on btc-usdt (training 2022-01-01 .. 2023-12-31):"
+        in result.output
+    )
+    assert "hedge ratio" in result.output and "p-value" in result.output
+    assert "Trials on this universe and training period: 2 (momentum_v1, pairs_x)" in result.output
+
+
+def test_run_reports_no_cointegration_for_a_directional_hypothesis(tmp_path, monkeypatch) -> None:
+    _definition_repo(tmp_path / "definitions", monkeypatch)
+
+    result = runner.invoke(app, ["run", "momentum_v1"])
+
+    assert result.exit_code == 0, result.output
+    assert "Cointegration" not in result.output
