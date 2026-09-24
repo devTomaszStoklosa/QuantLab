@@ -25,6 +25,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 
 **Po `q6`-V5 (2026-09-24):** jedyny epik z niezablokowaną pracą to `q4-pairs-trading-stat-arb` (`q5` czeka na decyzję o źródle danych akcji, `q7` na .NET SDK, którego środowisko chmurowe nie pobiera). Kod (kointegracja, kontrakt wag, strategia par) powstaje na danych syntetycznych; zamrożenie `pairs_v1` wymaga odpowiedzi na pytania pre-rejestracji. Współczynnik zabezpieczenia jest estymowany kroczącym oknem z przeszłości, więc CPCV nadal nie ma czego oceniać — zostaje odłożone bez epiku docelowego.
 
+**Po `q4`-P5 (2026-09-24):** `q2`, `q3`, `q4` i `q6` czekają na lokalne przebiegi (Binance), `q5` na decyzję o źródle danych akcji. Odblokował się `q7-dotnet-react-presentation`: .NET 10 SDK jest w archiwum Ubuntu, dostępnym w środowisku chmurowym. Epik nie zależy od danych rynkowych — API i UI testowane są na syntetycznym magazynie wyników wygenerowanym pełnym pipeline'em.
+
 ## Epiki
 
 ### lab-foundation
@@ -67,9 +69,11 @@ Probabilistic i deflated Sharpe ratio, Probability of Backtest Overfitting (CSCV
 
 Slice'y: V1 PSR i DSR · V2 rejestr prób z historii gita · V3 PBO (CSCV) · V4 PSR/DSR w `quantlab run` i tear-sheecie · V5 `quantlab trials` · V6 przebiegi lokalne i dziennik.
 
-### q7-dotnet-react-presentation (rozszerzenie, nierozpisane)
+### q7-dotnet-react-presentation (rozszerzenie, w toku)
 
-ASP.NET Core Web API nad wynikami w DuckDB/Parquet, React: eksplorator strategii i blotter transakcji.
+ASP.NET Core Web API nad wynikami w DuckDB/Parquet, React: rejestr hipotez, dowody hipotezy i rejestr transakcji, w design systemie QuantForge. Tylko odczyt — liczby wyłącznie z magazynu wyników zapisanego przez Pythona ([ADR-0008](adr/0008-results-store-parquet-duckdb.md)). Pełna specyfikacja: [specs/q7-dotnet-react-presentation/](specs/q7-dotnet-react-presentation/).
+
+Slice'y: W1 magazyn wyników w Pythonie · W2 szkielet API .NET · W3 endpointy dowodów i transakcji · W4 aplikacja React z rejestrem hipotez · W5 ekran hipotezy i rejestr transakcji · W6 weryfikacja lokalna.
 
 ## Zakres MVP
 
@@ -96,4 +100,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q4-pairs-trading-stat-arb | Ready for dev | Ready for dev | Ready for dev | P1–P5 gotowe (`pairs_v1` zamrożona); P6 wymaga lokalnego przebiegu (Binance) |
 | q5-equities-cross-section | nie napisany | nie napisany | nie napisany | — |
 | q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
-| q7-dotnet-react-presentation | nie napisany | nie napisany | nie napisany | — |
+| q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | — |
