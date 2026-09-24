@@ -35,7 +35,7 @@ Jako badacz testujący kolejne hipotezy na tych samych danych chcę, żeby rapor
 
 ## Out of scope
 
-- **CPCV i purged k-fold.** Obie metody oceniają parametry dopasowywane na danych treningowych; strategie w laboratorium mają parametry z literatury, więc każda ścieżka CPCV byłaby tym samym przebiegiem. Wracają z pierwszą hipotezą z parametrami dopasowywanymi (`q4`, np. współczynnik zabezpieczenia w pairs trading). Nazwa epiku zostaje, żeby nie łamać ROADMAP.
+- **CPCV i purged k-fold.** Obie metody oceniają parametry dopasowywane na danych treningowych; strategie w laboratorium mają parametry z literatury, więc każda ścieżka CPCV byłaby tym samym przebiegiem. Wracają z pierwszą hipotezą z parametrami dobieranymi optymalizacją na danych treningowych; `q4` estymuje współczynnik zabezpieczenia kroczącym oknem z przeszłości (walk-forward z konstrukcji), więc jeszcze nie. Nazwa epiku zostaje, żeby nie łamać ROADMAP.
 - **Zmiana zamrożonych kryteriów lub werdyktów.** `momentum_v1` i `mean_reversion_v1` zachowują swoje kryteria sukcesu; DSR i PBO są przy nich opisowe.
 - **DSR z empiryczną wariancją Sharpe między próbami.** Przy 2–3 próbach wariancja z 1–2 stopniami swobody nic nie mówi; wariant empiryczny ma sens przy kilkunastu próbach.
 - **Efektywna liczba niezależnych prób** (grupowanie skorelowanych prób). Liczymy wszystkie próby jako niezależne, co zawyża próg — błąd w bezpieczną stronę.
