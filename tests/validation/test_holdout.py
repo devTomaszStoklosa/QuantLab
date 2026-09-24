@@ -4,7 +4,11 @@ from pathlib import Path
 
 import pytest
 
-from quantlab.research.definition import CostModelParameters, TimeSeriesMomentumParameters
+from quantlab.research.definition import (
+    CostModelParameters,
+    ShortTermReversalParameters,
+    TimeSeriesMomentumParameters,
+)
 from quantlab.validation.holdout import (
     HoldoutNotFrozenError,
     SuccessCriterion,
@@ -15,6 +19,7 @@ from quantlab.validation.holdout import (
 )
 
 _FROZEN_CONFIG = Path(__file__).parents[2] / "config" / "holdout" / "momentum_v1.yaml"
+_REVERSAL_CONFIG = Path(__file__).parents[2] / "config" / "holdout" / "mean_reversion_v1.yaml"
 _CRITERION = SuccessCriterion(description="d", min_sharpe=0.0, max_p_value=0.1)
 
 
@@ -121,3 +126,23 @@ def test_holdout_passed_uses_validation_result_terms() -> None:
     assert holdout_passed("passed") is True
     assert holdout_passed("rejected") is False
     assert holdout_passed("inconclusive") is None
+
+
+def test_frozen_mean_reversion_v1_reads_as_pre_registered() -> None:
+    """The answers to the q3 story's open questions, as frozen (REQ-331)."""
+    config = parse_holdout_config(_REVERSAL_CONFIG)
+    momentum = parse_holdout_config(_FROZEN_CONFIG)
+
+    assert config.hypothesis == "mean_reversion_v1"
+    assert (config.training_start, config.training_end) == (
+        momentum.training_start,
+        momentum.training_end,
+    )
+    assert (config.start, config.end) == (date(2026, 1, 1), date(2026, 8, 31))
+    assert config.parameters == ShortTermReversalParameters(
+        strategy="short_term_reversal",
+        formation_days=7,
+        universe=momentum.parameters.universe,
+        cost_model=momentum.parameters.cost_model,
+    )
+    assert config.success_criterion == momentum.success_criterion

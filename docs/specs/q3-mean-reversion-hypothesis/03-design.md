@@ -1,6 +1,6 @@
 # q3-mean-reversion-hypothesis - Design
 
-Status: Draft
+Status: Ready for dev
 Owner role: Architect
 Upstream: 02-spec.md
 ADRs: docs/adr/0002-dual-backtest-engine.md, docs/adr/0004-validation-first-frozen-holdout.md, docs/adr/0005-descriptive-reports-no-investment-advice.md

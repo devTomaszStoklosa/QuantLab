@@ -1,6 +1,6 @@
 # q3-mean-reversion-hypothesis - Specification
 
-Status: Draft
+Status: Ready for dev
 Owner role: BA
 Upstream: 01-story.md
 

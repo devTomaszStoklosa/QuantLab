@@ -1,6 +1,6 @@
 # q3-mean-reversion-hypothesis - Druga rodzina hipotez: krótkoterminowe odwrócenie (mean reversion)
 
-Status: Draft
+Status: Ready for dev
 Owner role: PO
 Upstream: docs/specs/q1-momentum-research-mvp/
 Links: docs/ROADMAP.md, docs/RESEARCH_LOG.md
@@ -60,3 +60,5 @@ Should have — pierwsze rozszerzenie po MVP, wybrane regułą z ROADMAP (moment
 | 2 | Koszyk. Propozycja: ten sam `mvp-crypto` (BTC-USDT + ETH-USDT) — czysty kontrast z `momentum_v1` na identycznych danych; szerszy koszyk jako osobna hipoteza po point-in-time uniwersum (`q5`), żeby nie wprowadzić survivorship bias | Tomasz | przed slice M4 |
 | 3 | Zakres holdoutu. Propozycja: 2026-01-01 → 2026-08-31 (dane, których żaden przebieg nie wczytał; ok. 8 miesięcy, mała moc przyjęta z góry). Alternatywa: 2024–2025 (dłuższy, ale już oglądany) | Tomasz | przed slice M4 |
 | 4 | Kryterium sukcesu holdoutu. Propozycja: to samo co `momentum_v1` (Sharpe netto > 0 i p < 0.1), dla porównywalności obu hipotez | Tomasz | przed slice M4 |
+
+**Rozstrzygnięte 2026-09-24 (Tomasz), zamrożone w [config/holdout/mean_reversion_v1.yaml](../../../config/holdout/mean_reversion_v1.yaml):** wszystkie cztery propozycje przyjęte — okres formacji 7 dni, koszyk `mvp-crypto`, holdout 2026-01-01 → 2026-08-31, kryterium jak w `momentum_v1`. Okres treningowy ten sam co w `momentum_v1` (2018-01-01 → 2023-12-31), żeby kontrast był na identycznych danych; lata 2024–2025 pominięte, bo `q1` już je oglądało.
