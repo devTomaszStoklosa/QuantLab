@@ -1,3 +1,4 @@
+from bisect import bisect_right
 from dataclasses import asdict, dataclass
 from datetime import date
 from typing import Protocol
@@ -45,6 +46,14 @@ class PriceBar:
     def from_json(cls, data: dict) -> "PriceBar":
         """A bar from `to_json`'s output, or from the pydantic dumps of older caches."""
         return cls(**{**data, "ts": date.fromisoformat(str(data["ts"])[:10])})
+
+
+def count_through(bars: list[PriceBar], as_of: date) -> int:
+    """How many of `bars` are dated on or before `as_of`, so `bars[:n]` is the history
+    known then: a binary search. `bars` must be sorted by date, as every provider and
+    the data layer return them. Strategies, cost models and the regime classifier ask
+    this every day; sorting the whole history each time made a backtest quadratic."""
+    return bisect_right(bars, as_of, key=lambda bar: bar.ts)
 
 
 class DataSourceUnavailableError(Exception):

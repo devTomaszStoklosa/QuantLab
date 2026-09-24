@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from quantlab.core.data.provider import PriceBar
+from quantlab.core.data.provider import PriceBar, count_through
 
 
 class Signal(BaseModel):
@@ -23,12 +23,13 @@ def trailing_return(bars: list[PriceBar], as_of: date, days: int) -> float | Non
     Only bars with ts <= as_of are used (REQ-010, no look-ahead): any bar dated
     after as_of in the input is ignored, not just unused by chance. None when
     there is no bar for as_of itself or fewer than `days` bars before it.
+    `bars` are sorted by date, as the data layer returns them.
     """
-    history = sorted((bar for bar in bars if bar.ts <= as_of), key=lambda bar: bar.ts)
-    if not history or history[-1].ts != as_of or len(history) <= days:
+    known = count_through(bars, as_of)
+    if known == 0 or bars[known - 1].ts != as_of or known <= days:
         return None
-    past = history[-1 - days]
-    return (history[-1].close - past.close) / past.close
+    past = bars[known - 1 - days]
+    return (bars[known - 1].close - past.close) / past.close
 
 
 def signals_for_universe(
