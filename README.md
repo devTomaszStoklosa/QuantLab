@@ -22,6 +22,8 @@ Gotowe są też: drugi silnik z egzekucją zleceń i parytetem z wektorowym (`q2
 
 ## Uruchomienie
 
+Pełna instrukcja krok po kroku, z instalacją na Windows i rozwiązywaniem problemów: [docs/INSTRUKCJA.md](docs/INSTRUKCJA.md).
+
 ### Przebiegi lokalne
 
 To, co zostało do zrobienia na maszynie z dostępem do danych, pokazuje jedna komenda (`q10`): sprawdzenia środowiska (natywne paczki bez AVX2, DuckDB w API .NET, dostęp do Binance i klucz Tiingo — gdy któryś krok ich potrzebuje), budowa uniwersum S&P 500, przebiegi treningowe, otwarcia holdoutów, commity zapisów otwarć i wpisy w dzienniku — każdy krok ze stanem (`done`, `pending`, `blocked` z powodem) i komendą. Przebieg jest zrobiony tylko wtedy, gdy magazyn ma go w bieżącym schemacie i z tą samą listą prób na tych samych danych.
@@ -79,6 +81,7 @@ Python 3.12 + uv, pandas/numpy, DuckDB + Parquet, statsmodels/scipy, pytest. War
 
 ## Dokumentacja
 
+- [docs/INSTRUKCJA.md](docs/INSTRUKCJA.md) — instrukcja obsługi krok po kroku: instalacja, `quantlab plan`, przebiegi, holdouty, dziennik, aplikacja.
 - [docs/PRODUCT.md](docs/PRODUCT.md) — dokumentacja produktowa: czym jest, jakie ma funkcje, jak z nich korzystać.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — warstwy, moduły, model danych, kontrakty.
 - [docs/ROADMAP.md](docs/ROADMAP.md) — epiki, slice'y, zakres MVP, rozszerzenia.
