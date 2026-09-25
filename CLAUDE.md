@@ -59,6 +59,7 @@ Fizycznie ta sama maszyna co pozostałe repozytoria właściciela: Intel i5-2500
 | Jeśli pracujesz nad… | Czytaj… |
 |---|---|
 | opisem produktu, funkcji, sposobu użycia | [docs/PRODUCT.md](docs/PRODUCT.md) |
+| korzystaniem z gotowego rozwiązania krok po kroku | [docs/INSTRUKCJA.md](docs/INSTRUKCJA.md) |
 | architekturą, modułami, modelem danych | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | kolejnością epików, zakresem MVP | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | źródłem danych, licencją | [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md) |
