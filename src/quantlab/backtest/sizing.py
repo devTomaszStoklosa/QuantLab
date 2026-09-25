@@ -38,6 +38,24 @@ class EqualWeightBySign:
         return equal_weight_by_sign(signals)
 
 
+class CarriedWeights:
+    """The signed weights the signals carry, whatever their number (q9, REQ-911).
+
+    For a strategy that has already sized its positions, such as a portfolio
+    of sleeves whose net weights arrive as signals: the engines then trade and
+    cost exactly those net weights.
+    """
+
+    def weights(self, signals: list[Signal]) -> dict[str, float]:
+        active = [signal for signal in signals if signal.direction != "flat"]
+        if any(signal.weight is None for signal in active):
+            raise ValueError("Signals sized by CarriedWeights must carry a weight")
+        return {
+            signal.instrument_id: signal.weight if signal.direction == "long" else -signal.weight
+            for signal in active
+        }
+
+
 class PairWeights:
     """The weights the signals carry, for both legs of a pair or for none (REQ-412).
 

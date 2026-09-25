@@ -122,7 +122,7 @@ Diagnostyka treningu (tabela `diagnostics` magazynu, bez zmiany schematu v3):
 
 ## Non-functional requirements
 
-- Performance: przebieg treningowy portfela czterech rękawów (72 rebalanse, rękawy zakotwiczone od 2018) z walidacją i 10 000 permutacji < 3 min na maszynie deweloperskiej — pomiar w P3; przekroczenie → pamięć podręczna przebiegów rękawów między miesiącami.
+- Performance: przebieg treningowy portfela czterech rękawów (72 rebalanse, rękawy zakotwiczone od 2018) z walidacją i 10 000 permutacji < 3 min na maszynie deweloperskiej — pomiar w P3; przekroczenie → pamięć podręczna przebiegów rękawów między miesiącami. **Pomiar P3 (2026-09-25, środowisko chmurowe):** cztery rękawy z zamrożonych definicji krypto na syntetycznych barach 2017-08-17 → 2023-12-31, 72 alokacje: historia rękawów 80 s (ok. 75% to `pairs_v1`, który w każdym wywołaniu przelicza całą historię pary), każdy kolejny przebieg portfela z tą samą historią 3,5 s; szczytowo 200 MB. Historia rękawów jest więc współdzielona przez wszystkie przebiegi jednego `quantlab run` (pamięć kluczowana dniem i treścią barów przed nim); pełny `run` mierzony w P4 — przyspieszenie strategii par dopiero wtedy, pod strażą zrzutu bajt w bajt.
 - Reproducibility: deterministycznie; wagi i przebiegi rękawów nie zależą od kolejności wywołań.
 - Compatibility: hipotezy bez portfela — wyniki co do bitu jak przed epikiem (REQ-960); magazyn wyników bez zmiany schematu.
 
