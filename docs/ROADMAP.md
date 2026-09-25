@@ -14,6 +14,7 @@ lab-foundation
        -> q6-advanced-validation-cpcv
        -> q7-dotnet-react-presentation
        -> q8-parameter-selection-cpcv   (po q1–q7; korzysta z q2, q6, q7)
+       -> q9-strategy-portfolio         (po q8; korzysta z q2, q4, q6, q7, q8)
 ```
 
 q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
@@ -35,6 +36,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 **Po `q5`-X8 (2026-09-24):** `xsmom_v1` zamrożona po decyzjach 1–7: momentum 12-1 na S&P 500 point-in-time (Tiingo, Wikipedia), trening 2005–2019, holdout 2020–2025, kryterium z testem losowych portfeli. Cały kod epiku gotowy; reszta wymaga sieci i dzieje się lokalnie, w tej kolejności: `uv run quantlab build-universe` (poprawki tickerów tylko z raportu budowy, potem commit `sp500.yaml` i `sp500-renames.yaml`), `uv run quantlab run xsmom_v1` z kluczem `TIINGO_API_KEY` (pobieranie rozłożone w czasie, patrz DATA-SOURCES), `uv run quantlab open-holdout xsmom_v1`, wpis w dzienniku (REQ-562). Wszystkie epiki mają już kod; otwarte są tylko przebiegi lokalne (`q2`–`q6` na Binance, `q5` na Tiingo) i weryfikacja `q7` na Windows.
 
 **Po CI (2026-09-24):** repozytorium ma CI na GitHub Actions (ruff, pytest, testy API .NET, testy i build aplikacji React — na Linuksie i Windowsie), co pokrywa część weryfikacji `q7` na Windows. Wszystkie epiki `q1`–`q7` mają kod; Tomasz wybrał jako następny epik **`q8-parameter-selection-cpcv`**: hipoteza z parametrem dobieranym na danych (siatka, reguła wyboru zamrożona zamiast wartości), walk-forward z re-optymalizacją i CPCV z purgingiem i embargo — odłożone w `q6` do pierwszej takiej hipotezy. Kod na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q8-parameter-selection-cpcv/01-story.md), przebiegi lokalnie (Binance).
+
+**Po `q8`-P7 (2026-09-25):** `momentum_select_v1` zamrożona; wszystkie epiki `q1`–`q8` mają kod, otwarte są tylko przebiegi lokalne. Tomasz wybrał jako następny epik **`q9-strategy-portfolio`**: portfel zamrożonych hipotez krypto łączonych regułą alokacji ryzyka (odwrotność zmienności, risk parity, równe wagi) z wagami z historii sprzed rebalansu, handlujący pozycjami netto (kompensacja przeciwnych pozycji rękawów). Holdout portfela nachodzi na nieotwarte holdouty trzech składników, więc otwiera się dopiero po nich. Kod na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q9-strategy-portfolio/01-story.md), przebiegi lokalnie (Binance).
 
 ## Epiki
 
@@ -94,6 +97,12 @@ Slice'y: P1 dokumentacja · P2 CPCV · P3 strategia z doborem · P4 konfiguracje
 
 **Po zamrożeniu (2026-09-25):** `momentum_select_v1` — momentum szeregów czasowych na BTC i ETH z lookbackiem wybieranym co rok z siatki 30–365 dni po Sharpe netto z historii sprzed wyboru; bramka in-sample: mediana Sharpe ścieżek CPCV > 0; holdout 2026-01-01 → 2026-08-31. Sześć wartości siatki to sześć konfiguracji w progu DSR na `mvp-crypto` 2018–2023 (razem 9), więc opisowy DSR `momentum_v1`, `mean_reversion_v1` i `pairs_v1` spadnie przy ich następnym przebiegu — zgodnie z liczbą prób, bez zmiany ich wyników ani werdyktów. Zostały lokalne przebiegi: `uv run quantlab run momentum_select_v1`, potem jednorazowo `open-holdout`, wpis w dzienniku z porównaniem z `momentum_v1`.
 
+### q9-strategy-portfolio (rozszerzenie, w toku)
+
+Portfel zamrożonych strategii jako hipoteza: zamrożona reguła łączenia (składniki, reguła alokacji ryzyka, okno estymacji, rebalans miesięczny) zamiast pojedynczej strategii, wagi rękawów z ich samodzielnych przebiegów na historii sprzed dnia rebalansu, pozycje netto w jednym przebiegu silnika (obrót i koszty tylko różnic netto), korelacje, współczynnik dywersyfikacji i opisowe porównanie reguł oraz składników. Holdout portfela strzeżony przez otwarcia holdoutów składników. Pełna specyfikacja: [specs/q9-strategy-portfolio/](specs/q9-strategy-portfolio/).
+
+Slice'y: P1 dokumentacja · P2 reguły alokacji · P3 strategia portfelowa i sizer wag netto · P4 definicja portfela i straż holdoutu · P5 raport · P6 `demo_portfolio` w magazynie syntetycznym · P7 zamrożenie `portfolio_v1` · przebiegi lokalne i dziennik.
+
 ## Zakres MVP
 
 Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
@@ -121,3 +130,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
 | q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | W1–W5 gotowe (magazyn wyników, API .NET, aplikacja React); W6: CI na Linuksie i Windowsie zielone; na maszynie deweloperskiej zostaje DuckDB bez AVX2 |
 | q8-parameter-selection-cpcv | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, CPCV, strategia z doborem, konfiguracje w DSR, PBO siatki i raport, bramka CPCV w kryterium, magazyn v3, API, aplikacja i tear-sheet, `demo_select`; decyzje 1–6 przyjęte 2026-09-25, `momentum_select_v1` zamrożona); przebiegi (trening, holdout, dziennik) lokalnie na Binance |
+| q9-strategy-portfolio | Ready for dev | Ready for dev | Ready for dev | P1 gotowe (dokumentacja); P2–P6 na danych syntetycznych; P7 czeka na pytania 1–6 (01-story) |
