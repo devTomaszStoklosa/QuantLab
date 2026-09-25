@@ -76,7 +76,7 @@ definition (components, allocation, window, history_start) ──resolve(load)�
 StrategyPortfolio(sleeves: strategy + sizer + rebalance + cost model, rule, window)
    rebalance day d (first trading day of a month):
       for each sleeve s: vectorized.run(sleeve s, bars < d, from history_start) -> last `window` net returns
-      eligible(returns, min_window_days) -> rule.weights -> w_s        (memoized per month)
+      eligible(history since anchor, window, min_window_days) -> rule.weights(last window) -> w_s  (memoized per month)
    as_of in month of d:
       t_s = sleeve s sizer(sleeve s signals(as_of));  net_i = Σ_s w_s · t_{s,i}
       -> signals with weight |net_i|  ─> CarriedWeights ─> vectorized / event-driven engine ─> BacktestRun
@@ -108,7 +108,7 @@ config/holdout/portfolio_v1.yaml               # zamrożona definicja (P7)
 class AllocationRule(Protocol):
     def weights(self, returns: np.ndarray, eligible: np.ndarray) -> np.ndarray: ...  # T x K -> K
 ALLOCATION_RULES: dict[str, AllocationRule]  # equal_weight, inverse_volatility, risk_parity
-def eligible_sleeves(returns: np.ndarray, min_days: int) -> np.ndarray: ...          # K bools
+def eligible_sleeves(history: np.ndarray, window: int, min_days: int) -> np.ndarray: ...  # K bools
 def diversification_ratio(weights: np.ndarray, covariance: np.ndarray) -> float: ...
 
 # backtest/sizing.py

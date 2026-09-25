@@ -13,7 +13,7 @@ Upstream: 01-story.md
 | Reguła alokacji | funkcja okna dziennych zwrotów netto rękawów → wagi rękawów, nieujemne, sumujące się do 1 |
 | Dzień rebalansu | pierwszy dzień handlowy miesiąca; od niego obowiązują nowe wagi rękawów |
 | Okno estymacji | ostatnie `window_days` dziennych zwrotów netto rękawa przed dniem rebalansu |
-| Rękaw kwalifikowany | rękaw z co najmniej `min_window_days` zwrotami w oknie i niezerową wariancją; tylko on dostaje wagę |
+| Rękaw kwalifikowany | rękaw z co najmniej `min_window_days` dziennymi zwrotami od swojego pierwszego niezerowego zwrotu i z niezerową wariancją w oknie; tylko on dostaje wagę |
 | Pozycja netto | suma pozycji rękawów w instrumencie pomnożonych przez ich wagi — to, co portfel faktycznie trzyma i czym handluje |
 | Wkład w ryzyko | w_i · (Σw)_i / (wᵀΣw): udział rękawu w wariancji portfela; risk parity wyrównuje wkłady |
 | Współczynnik dywersyfikacji | (Σ w_i σ_i) / √(wᵀΣw): 1 bez dywersyfikacji, więcej przy nieskorelowanych rękawach |
@@ -35,7 +35,7 @@ Reguły alokacji
 - REQ-902 (AC-1): The equal-weight rule shall give each eligible sleeve 1/K', K' being the number of eligible sleeves.
 - REQ-903 (AC-1): The inverse-volatility rule shall give each eligible sleeve a weight proportional to 1/σ_i, σ_i the standard deviation (ddof 1) of its returns in the window.
 - REQ-904 (AC-1): The risk-parity rule shall give weights whose risk contributions w_i · (Σw)_i are equal across the eligible sleeves to a relative tolerance of 1e-8, Σ the sample covariance of their window returns; with uncorrelated sleeves it shall equal the inverse-volatility weights.
-- REQ-905: A sleeve shall be eligible when it has at least `min_window_days` returns in the window and a non-zero variance; with no eligible sleeve the rule shall give no weights.
+- REQ-905: A sleeve shall be eligible when at least `min_window_days` daily returns have passed since its first non-zero return and its window returns have a non-zero variance; with no eligible sleeve the rule shall give no weights. (A day without a position returns exactly 0: a sleeve that has not traded yet waits, one that trades and is flat for a while — a pair out of its trade — stays eligible.)
 
 Portfel pozycji netto
 
@@ -98,7 +98,7 @@ parameters:
 | `components` | ≥ 2, bez powtórzeń, bez id samego portfela; każdy musi mieć zacommitowaną, niezmienioną definicję na tym samym uniwersum, niebędącą portfelem (sprawdzane przy wczytaniu, przed pobraniem danych) |
 | `allocation` | nazwa z rejestru reguł alokacji |
 | `window_days` | ≥ 2 |
-| `min_window_days` | 2 ≤ `min_window_days` ≤ `window_days` |
+| `min_window_days` | ≥ 2 |
 | `history_start` | data; kotwica przebiegów rękawów |
 
 Diagnostyka treningu (tabela `diagnostics` magazynu, bez zmiany schematu v3):
