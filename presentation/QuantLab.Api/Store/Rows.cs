@@ -20,6 +20,8 @@ internal static class Rows
         MinSharpe: row.Number("min_sharpe"),
         MaxPValue: row.Number("max_p_value"),
         SignificanceTest: row.Text("significance_test"),
+        InSampleValidation: row.Text("in_sample_validation"),
+        Configurations: row.Integer("configurations"),
         FrozenAtCommit: row.Text("frozen_at_commit"),
         RegisteredAt: row.Instant("registered_at_us"),
         TrialsOnSameData: row.Integer("trials_on_same_data"),
@@ -64,6 +66,28 @@ internal static class Rows
             row.Text("walk_forward_rule"),
             row.Integer("walk_forward_positive_windows"),
             row.Integer("walk_forward_windows_with_sharpe")),
+        InSample: new InSampleGate(row.Text("in_sample_validation"), row.OptionalFlag("in_sample_passed")),
+        Grid: row.OptionalInteger("cpcv_groups") is { } groups
+            ? new GridSummary(
+                row.Date("grid_start"),
+                row.Date("grid_end"),
+                row.OptionalInteger("grid_pbo_blocks") is { } blocks
+                    ? new PboSummary(row.Number("grid_pbo"), blocks, row.Integer("grid_pbo_splits"))
+                    : null,
+                new CpcvSummary(
+                    Groups: groups,
+                    TestGroups: row.Integer("cpcv_test_groups"),
+                    Purge: row.Integer("cpcv_purge"),
+                    Embargo: row.Integer("cpcv_embargo"),
+                    Splits: row.Integer("cpcv_splits"),
+                    Paths: row.Integer("cpcv_paths"),
+                    MeanSharpe: row.OptionalNumber("cpcv_mean_sharpe"),
+                    MedianSharpe: row.OptionalNumber("cpcv_median_sharpe"),
+                    MinSharpe: row.OptionalNumber("cpcv_min_sharpe"),
+                    MaxSharpe: row.OptionalNumber("cpcv_max_sharpe"),
+                    PositiveShare: row.OptionalNumber("cpcv_positive_share"),
+                    Rule: row.Text("cpcv_rule")))
+            : null,
         Permutation: new PermutationSummary(
             Passed: row.OptionalFlag("permutation_passed"),
             Test: row.Text("permutation_test"),
@@ -81,6 +105,7 @@ internal static class Rows
             Reason: row.OptionalText("permutation_reason")),
         MultipleTesting: new MultipleTestingSummary(
             row.TextList("trials"),
+            row.Integer("configurations"),
             row.Integer("returns_count"),
             row.OptionalNumber("sharpe_annualized"),
             row.OptionalNumber("psr"),
@@ -140,6 +165,17 @@ internal static class Rows
 
     public static Diagnostic Diagnostic(DbDataReader row) =>
         new(row.Text("title"), row.Text("label"), row.OptionalNumber("value"));
+
+    public static SelectionCell Selection(DbDataReader row) => new(
+        row.Integer("year"),
+        row.Integer("days"),
+        row.Text("value"),
+        row.OptionalNumber("sharpe"),
+        row.Flag("chosen"));
+
+    public static CpcvPath CpcvPath(DbDataReader row) => new(row.Integer("position"), row.OptionalNumber("sharpe"));
+
+    public static CpcvChoice CpcvChoice(DbDataReader row) => new(row.Text("value"), row.Number("share"));
 
     public static EquityPoint Equity(DbDataReader row) =>
         new(row.Date("ts"), row.Number("equity"), row.Number("drawdown"));

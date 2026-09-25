@@ -2,13 +2,17 @@
 import type { ReactNode } from 'react';
 import type {
   CostModelMetrics,
+  CpcvChoice,
+  CpcvPath,
   Diagnostic,
   EquityPoint,
   HypothesisDetail,
   HypothesisSummary,
   PnlGroup,
   RegimeMetrics,
+  InSampleValidation,
   RunSummary,
+  SelectionCell,
   SignificanceTest,
   WalkForwardWindow,
 } from '../api';
@@ -35,7 +39,14 @@ const TEST_WORDING: Record<SignificanceTest, { title: string; draws: string; nul
   },
 };
 
+// The frozen in-sample gate, as the verdict names it.
+export const GATE_NAMES: Record<InSampleValidation, string> = { walk_forward: 'walk-forward', cpcv: 'CPCV' };
+
 const lossTone = (value: number | null) => (value == null ? 'dim' : value < 0 ? 'loss' : null);
+
+const badge = (passed: boolean | null) => (
+  <QF.StatusBadge status={passed === true ? 'confirmed' : passed === false ? 'rejected' : 'inconclusive'}>{outcome(passed)}</QF.StatusBadge>
+);
 
 function Descriptive() {
   return <span className="qf-muted">Descriptive only: not part of any pass rule or of the verdict.</span>;
@@ -67,7 +78,8 @@ export function VerdictBanner({ hypothesis, run }: HypothesisDetail) {
       </QF.Callout>
     );
   }
-  const walkForward = run ? `walk-forward ${outcome(run.walkForward.passed)}` : 'no stored walk-forward';
+  const gate = GATE_NAMES[hypothesis.inSampleValidation];
+  const walkForward = run ? `${gate} ${outcome(run.inSample.passed)}` : `no stored ${gate}`;
   return (
     <QF.Verdict
       verdict={hypothesis.status === 'confirmed' || hypothesis.status === 'rejected' ? hypothesis.status : 'inconclusive'}
@@ -170,20 +182,128 @@ const WINDOW_COLUMNS: Column<WalkForwardWindow & { id: string }>[] = [
 
 export function WalkForwardPanel({ windows, run }: { windows: WalkForwardWindow[]; run: RunSummary }) {
   const wf = run.walkForward;
+  const gate = run.inSample.validation;
   return (
     <QF.Panel
       title="Walk-forward"
       icon="repeat"
       subtitle="Calendar-year windows from the first position; * partial year"
-      tag={<QF.StatusBadge status={wf.passed === true ? 'confirmed' : wf.passed === false ? 'rejected' : 'inconclusive'}>{outcome(wf.passed)}</QF.StatusBadge>}
+      tag={badge(wf.passed)}
       flush
       footer={
         <>
           {wf.positiveWindows} of {wf.windowsWithSharpe} windows with Sharpe &gt; 0. Rule: {wf.rule}
+          {gate !== 'walk_forward' && (
+            <>
+              {' '}
+              <span className="qf-muted">
+                Descriptive only: this hypothesis's frozen in-sample gate is {GATE_NAMES[gate]}.
+              </span>
+            </>
+          )}
         </>
       }
     >
       <QF.DataTable rows={windows.map((w, i) => ({ ...w, id: String(i) }))} columns={WINDOW_COLUMNS} />
+    </QF.Panel>
+  );
+}
+
+type SelectionRow = { id: string; year: number; days: number; chosen: string | null; sharpes: Record<string, number | null> };
+
+/** Each year's choice from the grid, with every value's Sharpe on the history before it (q8, REQ-841). */
+export function SelectionPanel({ selection, run }: { selection: SelectionCell[]; run: RunSummary }) {
+  const grid = run.grid;
+  if (!grid) return null;
+  const values = [...new Set(selection.map((cell) => cell.value))];
+  const rows: SelectionRow[] = [...new Set(selection.map((cell) => cell.year))].map((year) => {
+    const cells = selection.filter((cell) => cell.year === year);
+    return {
+      id: String(year),
+      year,
+      days: cells[0].days,
+      chosen: cells.find((cell) => cell.chosen)?.value ?? null,
+      sharpes: Object.fromEntries(cells.map((cell) => [cell.value, cell.sharpe])),
+    };
+  });
+  const columns: Column<SelectionRow>[] = [
+    { key: 'year', label: 'Year', render: (year: number) => <span className="qf-num">{year}</span> },
+    ...values.map(
+      (value): Column<SelectionRow> => ({
+        key: `sharpe:${value}`,
+        label: value,
+        numeric: true,
+        render: (_: unknown, row) => (row.chosen === value ? <b>{ratio(row.sharpes[value])}</b> : ratio(row.sharpes[value])),
+        tone: (_: unknown, row) => lossTone(row.sharpes[value]),
+      }),
+    ),
+    {
+      key: 'chosen',
+      label: 'Chosen',
+      render: (chosen: string | null, row) =>
+        chosen ?? <span className="qf-muted">none ({row.days} days of history)</span>,
+    },
+  ];
+  const pbo = grid.pbo;
+  return (
+    <QF.Panel
+      title="Parameter selection"
+      icon="filter"
+      subtitle={`Grid ${values.join(', ')} · each year's value has the best net Sharpe on the history before 1 January · Sharpe annualized`}
+      flush
+      footer={
+        <>
+          {pbo
+            ? `PBO of choosing from the grid (CSCV, ${pbo.blocks} blocks, ${pbo.splits.toLocaleString('en-US')} splits, ${range(grid.start, grid.end)}): ${ratio(pbo.value)}. `
+            : 'PBO of choosing from the grid: n/a (too few days). '}
+          <Descriptive />
+        </>
+      }
+    >
+      <QF.DataTable rows={rows} columns={columns} />
+    </QF.Panel>
+  );
+}
+
+/** The CPCV of the choosing procedure: many out-of-sample paths from one history (q8, REQ-841). */
+export function CpcvPanel({ run, paths, choices }: { run: RunSummary; paths: CpcvPath[]; choices: CpcvChoice[] }) {
+  const grid = run.grid;
+  if (!grid) return null;
+  const c = grid.cpcv;
+  const gate = run.inSample.validation === 'cpcv';
+  return (
+    <QF.Panel
+      title="CPCV of the selection"
+      icon="validate"
+      subtitle={`${c.groups} groups, ${c.testGroups} for testing · purge ${c.purge}, embargo ${c.embargo} days · ${c.splits} splits, ${c.paths} paths · ${range(grid.start, grid.end)}`}
+      tag={gate ? badge(run.inSample.passed) : undefined}
+      footer={
+        <>
+          {gate ? <>In-sample gate (frozen). Rule: {c.rule}. </> : <Descriptive />} Switches between a path's segments
+          are not costed.
+        </>
+      }
+    >
+      <div className="qf-stack">
+        <QF.MetricStrip
+          columns={4}
+          items={[
+            { label: 'Median path Sharpe', partition: 'is', value: ratio(c.medianSharpe) },
+            { label: 'Mean path Sharpe', value: ratio(c.meanSharpe) },
+            { label: 'Lowest / highest', value: `${ratio(c.minSharpe)} / ${ratio(c.maxSharpe)}` },
+            { label: 'Paths with Sharpe > 0', value: percent(c.positiveShare) },
+          ]}
+        />
+        <KeyValues
+          rows={[
+            ['Path Sharpes', <span className="qf-num">{paths.map((path) => ratio(path.sharpe)).join(', ')}</span>],
+            [
+              'Chosen in the splits',
+              <span className="qf-num">{choices.map((choice) => `${choice.value} ${percent(choice.share)}`).join(', ')}</span>,
+            ],
+          ]}
+        />
+      </div>
     </QF.Panel>
   );
 }
@@ -239,11 +359,14 @@ export function RegimesPanel({ regimes, run }: { regimes: RegimeMetrics[]; run: 
 
 export function MultipleTestingPanel({ run }: { run: RunSummary }) {
   const m = run.multipleTesting;
+  // A grid's values each count as a configuration (q8, REQ-820).
+  const grids = m.configurations !== m.trials.length;
+  const configurations = grids ? ` · ${m.configurations} parameter configurations among them` : '';
   return (
     <QF.Panel
       title="Multiple testing"
       icon="validate"
-      subtitle={`${m.trials.length} trials on this universe and training period: ${m.trials.join(', ')} · ${m.returnsCount} daily returns`}
+      subtitle={`${m.trials.length} trials on this universe and training period: ${m.trials.join(', ')}${configurations} · ${m.returnsCount} daily returns`}
       footer={<Descriptive />}
     >
       <QF.MetricStrip
@@ -251,7 +374,11 @@ export function MultipleTestingPanel({ run }: { run: RunSummary }) {
         items={[
           { label: 'Sharpe, net', partition: 'is', value: ratio(m.sharpeAnnualized), hint: 'from the first position' },
           { label: 'PSR (Sharpe > 0)', value: ratio(m.psr) },
-          { label: `Best of ${m.trials.length} no-edge trials`, value: ratio(m.dsrThreshold), hint: 'expected Sharpe' },
+          {
+            label: `Best of ${m.configurations} no-edge ${grids ? 'configurations' : 'trials'}`,
+            value: ratio(m.dsrThreshold),
+            hint: 'expected Sharpe',
+          },
           { label: 'Deflated Sharpe', value: ratio(m.dsr) },
         ]}
       />
@@ -355,6 +482,7 @@ export function DefinitionPanel({ hypothesis }: { hypothesis: HypothesisSummary 
           ]),
           ['Universe', String(universe)],
           ['Cost model', <code className="qf-code">{hypothesis.costModel}</code>],
+          ['In-sample gate', GATE_NAMES[hypothesis.inSampleValidation]],
           ['Training', <span className="qf-num">{range(hypothesis.trainingStart, hypothesis.trainingEnd)}</span>],
           ['Registered', day(hypothesis.registeredAt)],
           ['Trials on its data', <span className="qf-num">{hypothesis.trialsOnSameData}</span>],

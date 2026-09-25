@@ -46,6 +46,7 @@ from quantlab.reporting.engine_comparison import (
     comparison_row,
     max_equity_difference,
 )
+from quantlab.reporting.grid_report import GATE_NAMES, IN_SAMPLE_GATES, GridReport, grid_report
 from quantlab.reporting.multiple_testing import (
     MultipleTesting,
     aligned_active_returns,
@@ -59,7 +60,7 @@ from quantlab.reporting.results_store import (
     write_run,
 )
 from quantlab.reporting.tear_sheet import Contrast, TearSheet, render_html
-from quantlab.research.definition import GridEvidence, StudyParameters
+from quantlab.research.definition import StudyParameters
 from quantlab.research.hypothesis import concluded_status
 from quantlab.research.trials import (
     Trial,
@@ -72,14 +73,8 @@ from quantlab.risk.regime import VOLATILITY_REGIMES, VolatilityTercileClassifier
 from quantlab.risk.stress import ShockScenario, stress_run, worst_day_scenario
 from quantlab.strategy.base import Strategy
 from quantlab.strategy.members_only import MembersOnly
-from quantlab.validation.base import SignificanceTest, ValidationResult, Validator
-from quantlab.validation.cpcv import (
-    CPCV_GATE_RULE,
-    CpcvResult,
-    CpcvSettings,
-    cpcv_gate,
-    cpcv_of_selection,
-)
+from quantlab.validation.base import SignificanceTest, Validator
+from quantlab.validation.cpcv import CPCV_GATE_RULE, CpcvSettings, cpcv_gate
 from quantlab.validation.holdout import (
     FrozenHoldout,
     HoldoutAlreadyOpenedError,
@@ -131,13 +126,6 @@ _PBO_BLOCKS = 16
 # CPCV of a parameter grid when the definition's criterion freezes none (then it is
 # descriptive): Lopez de Prado's (2018) example sizes (q8 story, question 3).
 _CPCV_DEFAULT = CpcvSettings(groups=10, test_groups=2, purge_days=1, embargo_fraction=0.01)
-# The in-sample gate a success criterion names (q8, REQ-830), by name like the
-# significance tests: calendar walk-forward or the CPCV of a parameter grid.
-_IN_SAMPLE_GATES: dict[str, Callable[[ValidationResult, CpcvResult | None], bool | None]] = {
-    "walk_forward": lambda walk_forward, cpcv: walk_forward.passed,
-    "cpcv": lambda walk_forward, cpcv: None if cpcv is None else cpcv_gate(cpcv),
-}
-_GATE_NAMES = {"walk_forward": "walk-forward", "cpcv": "CPCV"}
 # Parity differences above this are not floating-point noise.
 _PARITY_NOISE = 1e-9
 _DEFAULT_HYPOTHESIS = "momentum_v1"
@@ -563,11 +551,8 @@ def _load_definition(hypothesis: str) -> FrozenHoldout:
         raise typer.Exit(1) from error
 
 
-def _report_grid(
-    grid: GridEvidence, settings: CpcvSettings, periods_per_year: int, gate: bool
-) -> CpcvResult:
-    """Print a parameter grid's evidence (q8, REQ-840) and return its CPCV."""
-    annualize = periods_per_year**0.5
+def _print_grid(grid: GridReport, gate: bool) -> None:
+    """Print a parameter grid's evidence (q8, REQ-840); `gate`: CPCV is the in-sample gate."""
     width = max(8, *(len(label) + 2 for label in grid.labels))
     typer.echo("")
     typer.echo(
@@ -575,31 +560,24 @@ def _report_grid(
         "Sharpe of net daily returns on the history before it (Sharpe annualized):"
     )
     typer.echo(f"{'Year':<6}" + "".join(f"{label:>{width}}" for label in grid.labels) + "  Chosen")
-    for record in grid.history:
-        chosen = (
-            record.chosen if record.chosen is not None else f"none ({record.days} days of history)"
-        )
+    for year in grid.years:
+        chosen = year.chosen if year.chosen is not None else f"none ({year.days} days of history)"
         typer.echo(
-            f"{record.year:<6}"
-            + "".join(
-                f"{_fmt_ratio(None if value is None else value * annualize):>{width}}"
-                for value in record.sharpes.values()
-            )
+            f"{year.year:<6}"
+            + "".join(f"{_fmt_ratio(value):>{width}}" for value in year.sharpes.values())
             + f"  {chosen}"
         )
 
-    returns = grid.returns
     typer.echo("")
-    if len(returns) >= _PBO_BLOCKS:
-        pbo = probability_of_backtest_overfitting(returns, _PBO_BLOCKS)
+    pbo = grid.pbo
+    if pbo is None:
+        typer.echo("PBO of choosing from the grid: n/a (too few days)")
+    else:
         typer.echo(
             f"PBO of choosing from the grid (CSCV, {pbo.n_blocks} blocks, {pbo.n_splits:,} "
             f"splits, {grid.start} .. {grid.end}): {pbo.pbo:.2f}"
         )
-    else:
-        typer.echo("PBO of choosing from the grid: n/a (too few days)")
-
-    cpcv = cpcv_of_selection(returns, grid.labels, settings, periods_per_year)
+    cpcv = grid.cpcv
     typer.echo(
         f"CPCV of the selection ({cpcv.groups} groups, {cpcv.test_groups} for testing, purge "
         f"{cpcv.purge} and embargo {cpcv.embargo} days; {cpcv.n_splits} splits, "
@@ -620,7 +598,6 @@ def _report_grid(
     else:
         typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
     typer.echo("Switches between a path's segments are not costed (q8 03-design, decision 2).")
-    return cpcv
 
 
 def _configurations_note(deflation: MultipleTesting) -> str:
@@ -775,7 +752,7 @@ def run(
         f"{walk_forward.detail.get('windows_with_sharpe', 0)} windows with Sharpe > 0)"
     )
     if config.success_criterion.in_sample_validation != "walk_forward":
-        gate_name = _GATE_NAMES[config.success_criterion.in_sample_validation]
+        gate_name = GATE_NAMES[config.success_criterion.in_sample_validation]
         typer.echo(f"Descriptive only: this hypothesis's frozen in-sample gate is {gate_name}.")
 
     # Same bars the runs used; a cache hit, not a second download.
@@ -1025,18 +1002,15 @@ def run(
         typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
 
     criterion = config.success_criterion
-    grid = parameters.grid_evidence(bars, config.training_start, config.training_end)
-    cpcv = (
+    evidence = parameters.grid_evidence(bars, config.training_start, config.training_end)
+    grid = (
         None
-        if grid is None
-        else _report_grid(
-            grid,
-            criterion.cpcv or _CPCV_DEFAULT,
-            periods_per_year,
-            gate=criterion.in_sample_validation == "cpcv",
-        )
+        if evidence is None
+        else grid_report(evidence, criterion.cpcv or _CPCV_DEFAULT, periods_per_year, _PBO_BLOCKS)
     )
-    in_sample = _IN_SAMPLE_GATES[criterion.in_sample_validation](walk_forward, cpcv)
+    if grid is not None:
+        _print_grid(grid, gate=criterion.in_sample_validation == "cpcv")
+    in_sample = IN_SAMPLE_GATES[criterion.in_sample_validation](walk_forward, grid)
 
     # The holdout's result comes only from the record of its one-time opening.
     record_path = _record_path(hypothesis)
@@ -1049,7 +1023,7 @@ def run(
         in_sample_outcome = {True: "passed", False: "failed", None: "inconclusive"}[in_sample]
         typer.echo(
             f"Hypothesis {hypothesis}: {status.upper()} "
-            f"({_GATE_NAMES[criterion.in_sample_validation]} {in_sample_outcome}, "
+            f"({GATE_NAMES[criterion.in_sample_validation]} {in_sample_outcome}, "
             f"holdout {holdout.verdict} as recorded {holdout.opened_at:%Y-%m-%d})"
         )
 
@@ -1068,6 +1042,8 @@ def run(
         holdout=holdout,
         contrast=contrast_result,
         multiple_testing=deflation,
+        grid=grid,
+        in_sample_validation=criterion.in_sample_validation,
         generated_at=datetime.now(tz=UTC),
     )
     stored = write_run(

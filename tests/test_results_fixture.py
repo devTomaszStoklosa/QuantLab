@@ -26,6 +26,8 @@ from quantlab import cli
 from quantlab.core.data.events import Delisting, InstrumentEvents, Split
 from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Instrument, Membership, Universe
+from quantlab.research.hypothesis import concluded_status
+from quantlab.validation.holdout import holdout_passed
 
 FIXTURE = Path(__file__).parents[1] / "presentation" / "fixtures" / "results"
 
@@ -96,6 +98,42 @@ success_criterion:
   min_sharpe: 0.0
   max_p_value: 0.1
   significance_test: random_portfolio
+"""
+
+# Time-series momentum choosing its lookback each year from a grid, with the CPCV
+# of that choice as its frozen in-sample gate (q8). Same universe and training
+# period as the crypto demos, so it is a trial on their data, with three configurations.
+_SELECTION_DEFINITION = """hypothesis: demo_select
+
+training_start: 2020-01-01
+training_end: 2022-12-31
+start: 2023-01-01
+end: 2023-06-30
+
+parameters:
+  strategy: time_series_momentum_selected
+  lookback_grid: [30, 90, 180]
+  history_start: 2019-07-01
+  min_history_days: 180
+  universe: mvp-crypto
+  cost_model:
+    name: realistic
+    fee_bps: 10
+    k: 0.05
+    vol_window: 30
+
+success_criterion:
+  description: >-
+    Synthetic demo. Median Sharpe of the CPCV paths > 0 in training; holdout net
+    Sharpe under the realistic cost model > 0 and permutation-test p-value < 0.1.
+  min_sharpe: 0.0
+  max_p_value: 0.1
+  in_sample_validation: cpcv
+  cpcv:
+    groups: 10
+    test_groups: 2
+    purge_days: 1
+    embargo_fraction: 0.01
 """
 
 _STOCKS = [f"eq{i:02d}" for i in range(30)]
@@ -234,6 +272,8 @@ def generate(directory: Path, monkeypatch) -> Path:
         )
     (repo / "demo_xsmom.yaml").write_text(_EQUITY_DEFINITION, encoding="utf-8", newline="\n")
     _commit(repo, "freeze demo_xsmom", datetime(2026, 9, 5, 9, 0, tzinfo=UTC), "demo_xsmom.yaml")
+    (repo / "demo_select.yaml").write_text(_SELECTION_DEFINITION, encoding="utf-8", newline="\n")
+    _commit(repo, "freeze demo_select", datetime(2026, 9, 6, 9, 0, tzinfo=UTC), "demo_select.yaml")
     provider = _SyntheticProvider()
     load = Universe.load
     monkeypatch.setattr(
@@ -256,6 +296,8 @@ def generate(directory: Path, monkeypatch) -> Path:
         ["run", "demo_momentum", "--contrast", "demo_pairs"],
         ["run", "demo_pairs"],
         ["run", "demo_xsmom"],
+        ["open-holdout", "demo_select"],
+        ["run", "demo_select"],
         ["registry"],
     ):
         result = runner.invoke(cli.app, command)
@@ -304,10 +346,12 @@ def test_the_synthetic_store_covers_each_registry_state() -> None:
         "demo_reversal": (False, None),
         "demo_pairs": (True, None),
         "demo_xsmom": (True, None),
+        "demo_select": (True, registry[4]["holdout_verdict"]),
     }
     assert registry[0]["holdout_verdict"] is not None
-    assert [row["status"] for row in registry][1:] == ["proposed", "testing", "testing"]
-    for hypothesis in ("demo_momentum", "demo_pairs", "demo_xsmom"):
+    assert registry[4]["holdout_verdict"] is not None
+    assert [row["status"] for row in registry][1:4] == ["proposed", "testing", "testing"]
+    for hypothesis in ("demo_momentum", "demo_pairs", "demo_xsmom", "demo_select"):
         [run] = pq.read_table(FIXTURE / hypothesis / "run.parquet").to_pylist()
         assert run["data_source"] == "synthetic"
     assert {row["hypothesis"]: row["significance_test"] for row in registry} == {
@@ -315,7 +359,9 @@ def test_the_synthetic_store_covers_each_registry_state() -> None:
         "demo_reversal": "day_shuffle",
         "demo_pairs": "day_shuffle",
         "demo_xsmom": "random_portfolio",
+        "demo_select": "day_shuffle",
     }
+    assert [row["in_sample_validation"] for row in registry] == ["walk_forward"] * 4 + ["cpcv"]
 
 
 def test_the_equity_demo_is_a_point_in_time_cross_section() -> None:
@@ -332,3 +378,24 @@ def test_the_equity_demo_is_a_point_in_time_cross_section() -> None:
     for trade in trades:
         membership = [m for m in _EQUITIES.memberships if m.instrument_id == trade["instrument_id"]]
         assert any(m.covers(trade["entry_ts"]) for m in membership), trade
+
+
+def test_the_selection_demo_stores_its_grid_and_its_gate_decides() -> None:
+    registry = {
+        row["hypothesis"]: row for row in pq.read_table(FIXTURE / "hypotheses.parquet").to_pylist()
+    }
+    [run] = pq.read_table(FIXTURE / "demo_select" / "run.parquet").to_pylist()
+    selection = pq.read_table(FIXTURE / "demo_select" / "selection.parquet").to_pylist()
+    paths = pq.read_table(FIXTURE / "demo_select" / "cpcv_paths.parquet").to_pylist()
+
+    assert (run["in_sample_validation"], run["cpcv_groups"], run["cpcv_paths"]) == ("cpcv", 10, 9)
+    assert len(paths) == 9
+    assert {row["year"] for row in selection} == {2020, 2021, 2022}
+    assert sum(row["chosen"] for row in selection) == 3  # one value a year
+    # Its three lookbacks count toward the trials of the other crypto demos (REQ-820).
+    [momentum] = pq.read_table(FIXTURE / "demo_momentum" / "run.parquet").to_pylist()
+    assert momentum["trials"][-1] == "demo_select"
+    assert momentum["configurations"] == len(momentum["trials"]) + 2
+    # The status follows the CPCV, not the walk-forward.
+    verdict = holdout_passed(registry["demo_select"]["holdout_verdict"])
+    assert registry["demo_select"]["status"] == concluded_status(run["in_sample_passed"], verdict)

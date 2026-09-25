@@ -11,18 +11,20 @@ system's tokens (presentation/design-system/project/tokens.json).
 import html
 import math
 from datetime import date, datetime
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, model_validator
 
 from quantlab.backtest.run import BacktestRun
 from quantlab.reporting.cost_comparison import RunMetrics
+from quantlab.reporting.grid_report import IN_SAMPLE_GATES, GridReport
 from quantlab.reporting.metrics import drawdown_series
 from quantlab.reporting.multiple_testing import MultipleTesting
 from quantlab.research.hypothesis import concluded_status
 from quantlab.risk.conditional import RegimeMetrics
 from quantlab.risk.regime import VOLATILITY_REGIMES
 from quantlab.validation.base import ValidationResult
+from quantlab.validation.cpcv import CPCV_GATE_RULE, cpcv_gate
 from quantlab.validation.holdout import HoldoutRecord, holdout_passed
 
 DISCLAIMER = (
@@ -34,6 +36,7 @@ _MINUS = "\u2212"
 _MISSING = "\u2014"
 _THIN_SPACE = "\u2009"  # thousands separator, 10 000
 _OUTCOME = {True: "passed", False: "failed", None: "inconclusive"}
+_GATE_LABELS = {"walk_forward": "Walk-forward", "cpcv": "CPCV"}
 # Each significance test (q5, REQ-563): its name, what was drawn, whose mean the
 # actual Sharpe is set against, what it beats. Results opened before q5 name no
 # test: they come from the day shuffle.
@@ -78,7 +81,9 @@ class TearSheet(BaseModel):
     `run` is the training run behind the charts and the regime, walk-forward
     and permutation results; `cost_comparison` holds the same inputs under each
     cost model, `run`'s own included. `holdout` is the record of the one-time
-    holdout opening, or None while the holdout is still sealed.
+    holdout opening, or None while the holdout is still sealed. `grid` is the
+    evidence of a parameter grid (q8), and `in_sample_validation` names the
+    frozen in-sample gate: walk-forward, or the grid's CPCV.
     """
 
     hypothesis: str
@@ -92,9 +97,18 @@ class TearSheet(BaseModel):
     generated_at: datetime
     contrast: Contrast | None = None
     multiple_testing: MultipleTesting | None = None
+    grid: GridReport | None = None
+    in_sample_validation: Literal["walk_forward", "cpcv"] = "walk_forward"
+
+    @property
+    def in_sample_passed(self) -> bool | None:
+        """The outcome of the frozen in-sample gate (REQ-830)."""
+        return IN_SAMPLE_GATES[self.in_sample_validation](self.walk_forward, self.grid)
 
     @model_validator(mode="after")
     def _consistent(self) -> Self:
+        if self.in_sample_validation == "cpcv" and self.grid is None:
+            raise ValueError("A CPCV in-sample gate needs the grid's evidence")
         if self.run.cost_model_name not in {m.cost_model_name for m in self.cost_comparison}:
             raise ValueError(f"No metrics for the run's cost model {self.run.cost_model_name}")
         if self.walk_forward.method != "walk_forward":
@@ -268,17 +282,17 @@ def _header(sheet: TearSheet) -> str:
 def _verdict(sheet: TearSheet) -> str:
     """The hypothesis status the pre-registered gates give, or why there is none yet."""
     opening = '<section id="verdict"><p class="eyebrow">Werdykt hipotezy</p>'
-    walk_forward = _OUTCOME[sheet.walk_forward.passed]
+    gate = f"{_GATE_LABELS[sheet.in_sample_validation]}: <strong>{_OUTCOME[sheet.in_sample_passed]}"
     if sheet.holdout is None:
         return (
             f"{opening}<p>Brak werdyktu: holdout nie został jeszcze otwarty. "
-            f"Walk-forward: <strong>{walk_forward}</strong>.</p></section>"
+            f"{gate}</strong>.</p></section>"
         )
-    status = concluded_status(sheet.walk_forward.passed, holdout_passed(sheet.holdout.verdict))
+    status = concluded_status(sheet.in_sample_passed, holdout_passed(sheet.holdout.verdict))
     return (
         f'{opening}<p class="verdict-word"><strong class="verdict verdict-{status}">'
         f"{status}</strong></p>"
-        f"<p>Walk-forward: <strong>{walk_forward}</strong>; holdout: "
+        f"<p>{gate}</strong>; holdout: "
         f"<strong>{_e(sheet.holdout.verdict)}</strong>. Status wynika z reguł ustalonych przed "
         "wynikiem: <code>confirmed</code> wymaga zaliczenia obu bramek, niezaliczona bramka "
         "daje <code>rejected</code>, pozostałe przypadki \u2014 <code>inconclusive</code>.</p>"
@@ -328,7 +342,7 @@ def _regime_table(regimes: dict[str, RegimeMetrics]) -> str:
     return _table(["Reżim", "Dni", "Udział", "CAGR", "Sharpe", "Sortino"], rows)
 
 
-def _walk_forward(result: ValidationResult) -> str:
+def _walk_forward(result: ValidationResult, gate: bool) -> str:
     detail = result.detail
 
     def row(label: str, window: dict) -> list[str]:
@@ -360,6 +374,86 @@ def _walk_forward(result: ValidationResult) -> str:
         '<p class="note">* niepełny rok kalendarzowy</p>'
         f"<p>Reguła (zarejestrowana przed wynikiem): <q>{_e(detail['rule'])}</q></p>"
         f"<p>Wynik: <strong>{_OUTCOME[result.passed]}</strong>{counts}</p>"
+        + (
+            ""
+            if gate
+            else '<p class="muted">Opisowe: bramką in-sample tej hipotezy jest CPCV '
+            "(sekcja <q>Dobór parametru</q>).</p>"
+        )
+    )
+
+
+def _grid(grid: GridReport | None, gate: bool, cost_model: str) -> str:
+    """The yearly choices of a parameter grid, the PBO of choosing from it and the
+    CPCV of the choosing procedure (q8, REQ-840)."""
+    if grid is None:
+        return ""
+    values = ", ".join(_e(label) for label in grid.labels)
+    rows = [
+        [
+            str(year.year),
+            *(
+                f"<strong>{_ratio(sharpe)}</strong>" if label == year.chosen else _ratio(sharpe)
+                for label, sharpe in year.sharpes.items()
+            ),
+            (
+                f"<code>{_e(year.chosen)}</code>"
+                if year.chosen is not None
+                else f'<span class="muted">brak ({year.days} dni historii)</span>'
+            ),
+        ]
+        for year in grid.years
+    ]
+    choices = _table(
+        ["Rok", *(f"<code>{_e(label)}</code>" for label in grid.labels), "Wybór"], rows
+    )
+    pbo = grid.pbo
+    pbo_text = (
+        "<p>PBO wyboru z siatki: <strong>n/d</strong> (za mało dni).</p>"
+        if pbo is None
+        else (
+            f"<p>PBO wyboru z siatki (CSCV, {pbo.n_blocks} bloków, "
+            f"{f'{pbo.n_splits:,}'.replace(',', _THIN_SPACE)} podziałów, "
+            f"{grid.start.isoformat()} → {grid.end.isoformat()}): "
+            f"<strong>{_ratio(pbo.pbo)}</strong>.</p>"
+        )
+    )
+    cpcv = grid.cpcv
+    summary = _table(
+        ["Miara", "Wartość"],
+        [
+            ["Mediana Sharpe ścieżek", _ratio(cpcv.median_sharpe)],
+            ["Średnia Sharpe ścieżek", _ratio(cpcv.mean_sharpe)],
+            ["Najniższy / najwyższy", f"{_ratio(cpcv.min_sharpe)} / {_ratio(cpcv.max_sharpe)}"],
+            ["Ścieżki ze Sharpe > 0", _pct(cpcv.positive_share)],
+        ],
+    )
+    paths = ", ".join(_ratio(sharpe) for sharpe in cpcv.path_sharpes)
+    shares = ", ".join(
+        f"<code>{_e(label)}</code> {_pct(share)}" for label, share in cpcv.choice_shares.items()
+    )
+    verdict = (
+        f"<p>Reguła (zarejestrowana przed wynikiem): <q>{_e(CPCV_GATE_RULE)}</q></p>"
+        f"<p>Wynik: <strong>{_OUTCOME[cpcv_gate(cpcv)]}</strong></p>"
+        if gate
+        else '<p class="muted">Opisowe: nie jest częścią żadnej reguły zaliczenia ani werdyktu '
+        "hipotezy.</p>"
+    )
+    return (
+        '<h3 id="selection">Dobór parametru</h3>'
+        f"<p>Siatka: {values}. Co rok, 1 stycznia, wybierana jest wartość o najwyższym Sharpe "
+        f"dziennych zwrotów netto (<code>{cost_model}</code>) na historii sprzed tego dnia; "
+        "pogrubiony Sharpe to wybór. Sharpe w skali roku.</p>"
+        f"{choices}{pbo_text}"
+        f'<h3 id="cpcv">CPCV procedury wyboru</h3>'
+        f"<p>{cpcv.groups} grup, {cpcv.test_groups} testowe; purge {cpcv.purge} i embargo "
+        f"{cpcv.embargo} dni; {cpcv.n_splits} podziałów, {cpcv.n_paths} ścieżek, "
+        f"{grid.start.isoformat()} → {grid.end.isoformat()}. W każdym podziale wybór pada na "
+        "zbiorze treningowym, a jego zwroty na zbiorze testowym są poza próbą.</p>"
+        f"{summary}"
+        f'<p class="muted">Sharpe ścieżek: <span class="num">{paths}</span>. Wybierane w '
+        f"podziałach: {shares}. Przełączenia między segmentami ścieżki nie są kosztowane.</p>"
+        f"{verdict}"
     )
 
 
@@ -490,7 +584,8 @@ def _training_section(sheet: TearSheet) -> str:
         f"{_regime_table(sheet.regimes)}"
         '<h3 id="walk-forward">Walk-forward</h3>'
         f'<p class="muted">Okna roczne, <code>{cost_model}</code>.</p>'
-        f"{_walk_forward(sheet.walk_forward)}"
+        f"{_walk_forward(sheet.walk_forward, sheet.in_sample_validation == 'walk_forward')}"
+        f"{_grid(sheet.grid, sheet.in_sample_validation == 'cpcv', cost_model)}"
         f'<h3 id="permutation">{_wording(sheet.permutation.detail)[0]}</h3>'
         f"{_permutation(sheet.permutation)}"
         f"{_multiple_testing(sheet.multiple_testing, run.cost_model_name)}"

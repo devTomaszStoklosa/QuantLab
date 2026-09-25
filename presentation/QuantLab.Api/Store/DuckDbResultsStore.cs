@@ -80,7 +80,7 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
         summary = WithRunHeadline(db, summary);
         if (!summary.HasRun)
         {
-            return new HypothesisDetail(summary, null, [], [], [], [], [], [], [], []);
+            return new HypothesisDetail(summary, null, [], [], [], [], [], [], [], [], [], [], []);
         }
         var runPath = TablePath(summary.Hypothesis, "run");
         EnsureCompatible(db, runPath);
@@ -94,6 +94,9 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
             Table(db, summary.Hypothesis, "yearly", "year", Rows.Year),
             Table(db, summary.Hypothesis, "pnl_groups", orderBy: null, Rows.Group), // as written: regime, then holding period
             Table(db, summary.Hypothesis, "diagnostics", "position", Rows.Diagnostic),
+            Table(db, summary.Hypothesis, "selection", "year, position", Rows.Selection),
+            Table(db, summary.Hypothesis, "cpcv_paths", "position", Rows.CpcvPath),
+            Table(db, summary.Hypothesis, "cpcv_choices", "position", Rows.CpcvChoice),
             Query(
                 db,
                 TablePath(summary.Hypothesis, "trades"),

@@ -16,6 +16,7 @@ public class UiFixtureTests
         ["demo_momentum.json"] = "/api/hypotheses/demo_momentum",
         ["demo_reversal.json"] = "/api/hypotheses/demo_reversal",
         ["demo_pairs.json"] = "/api/hypotheses/demo_pairs",
+        ["demo_select.json"] = "/api/hypotheses/demo_select",
         ["demo_momentum-equity.json"] = "/api/hypotheses/demo_momentum/equity",
         ["demo_momentum-trades.json"] = "/api/hypotheses/demo_momentum/trades?limit=25",
     };

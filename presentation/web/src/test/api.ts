@@ -6,6 +6,7 @@ import momentumTrades from './api/demo_momentum-trades.json';
 import momentum from './api/demo_momentum.json';
 import pairs from './api/demo_pairs.json';
 import reversal from './api/demo_reversal.json';
+import select from './api/demo_select.json';
 import registry from './api/registry.json';
 
 export const captured = {
@@ -13,6 +14,7 @@ export const captured = {
   momentum: momentum as HypothesisDetail,
   reversal: reversal as HypothesisDetail,
   pairs: pairs as HypothesisDetail,
+  select: select as HypothesisDetail,
   momentumEquity: momentumEquity as EquityPoint[],
   momentumTrades: momentumTrades as TradePage,
 };

@@ -27,6 +27,9 @@ export interface HoldoutRecord {
 // Which test gave a p-value (q5, REQ-563): timing (day shuffle) or selection.
 export type SignificanceTest = 'day_shuffle' | 'random_portfolio';
 
+// The frozen in-sample gate (q8, REQ-830): calendar walk-forward, or the CPCV of a parameter grid.
+export type InSampleValidation = 'walk_forward' | 'cpcv';
+
 export interface HypothesisSummary {
   hypothesis: string;
   strategy: string;
@@ -41,6 +44,8 @@ export interface HypothesisSummary {
   minSharpe: number;
   maxPValue: number;
   significanceTest: SignificanceTest;
+  inSampleValidation: InSampleValidation;
+  configurations: number;
   frozenAtCommit: string;
   registeredAt: string;
   trialsOnSameData: number;
@@ -67,6 +72,8 @@ export interface RunSummary {
   dataSource: string;
   costSensitivity: { verdict: string; sharpeDifference: number | null; cagrSignFlip: boolean | null };
   walkForward: { passed: boolean | null; rule: string; positiveWindows: number; windowsWithSharpe: number };
+  inSample: { validation: InSampleValidation; passed: boolean | null };
+  grid: GridSummary | null;
   permutation: {
     passed: boolean | null;
     test: SignificanceTest;
@@ -85,6 +92,7 @@ export interface RunSummary {
   };
   multipleTesting: {
     trials: string[];
+    configurations: number;
     returnsCount: number;
     sharpeAnnualized: number | null;
     psr: number | null;
@@ -94,6 +102,46 @@ export interface RunSummary {
   contrast: { hypothesis: string; costModel: string; correlation: number | null } | null;
   regimeMethod: string;
   trades: { total: number; openAtEnd: number; winning: number };
+}
+
+/** A parameter grid's evidence over the training period (q8, REQ-841). */
+export interface GridSummary {
+  start: string;
+  end: string;
+  pbo: { value: number; blocks: number; splits: number } | null;
+  cpcv: {
+    groups: number;
+    testGroups: number;
+    purge: number;
+    embargo: number;
+    splits: number;
+    paths: number;
+    meanSharpe: number | null;
+    medianSharpe: number | null;
+    minSharpe: number | null;
+    maxSharpe: number | null;
+    positiveShare: number | null;
+    rule: string;
+  };
+}
+
+/** One grid value's annualized Sharpe in one year's choice; `chosen` marks the value traded that year. */
+export interface SelectionCell {
+  year: number;
+  days: number;
+  value: string;
+  sharpe: number | null;
+  chosen: boolean;
+}
+
+export interface CpcvPath {
+  position: number;
+  sharpe: number | null;
+}
+
+export interface CpcvChoice {
+  value: string;
+  share: number;
 }
 
 export interface CostModelMetrics {
@@ -166,6 +214,9 @@ export interface HypothesisDetail {
   yearly: YearlyReturn[];
   pnlGroups: PnlGroup[];
   diagnostics: Diagnostic[];
+  selection: SelectionCell[];
+  cpcvPaths: CpcvPath[];
+  cpcvChoices: CpcvChoice[];
   tradeInstruments: string[];
 }
 

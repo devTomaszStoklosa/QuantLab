@@ -4,6 +4,7 @@ import subprocess
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
+import numpy as np
 import pyarrow.parquet as pq
 import pytest
 
@@ -17,6 +18,7 @@ from quantlab.attribution.trade_ledger import (
 from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.core.data.provider import PriceBar
 from quantlab.reporting.cost_comparison import cost_sensitivity, run_metrics
+from quantlab.reporting.grid_report import GridReport, grid_report
 from quantlab.reporting.metrics import drawdown_series
 from quantlab.reporting.multiple_testing import MultipleTesting
 from quantlab.reporting.results_store import (
@@ -32,10 +34,12 @@ from quantlab.reporting.results_store import (
     write_run,
 )
 from quantlab.reporting.tear_sheet import TearSheet
-from quantlab.research.definition import TrainingDiagnostic
+from quantlab.research.definition import GridEvidence, TrainingDiagnostic
 from quantlab.risk.conditional import regime_conditional_metrics
 from quantlab.risk.regime import VOLATILITY_REGIMES
+from quantlab.strategy.selected_parameter import SelectionRecord
 from quantlab.validation.base import ValidationResult
+from quantlab.validation.cpcv import CPCV_GATE_RULE, CpcvSettings
 from quantlab.validation.holdout import HoldoutRecord, write_holdout_record
 from quantlab.validation.permutation import PermutationTestValidator
 from quantlab.validation.walk_forward import WalkForwardValidator
@@ -109,6 +113,8 @@ def _evidence(
     hypothesis: str = "momentum_v1",
     walk_forward: ValidationResult | None = None,
     diagnostics: list[TrainingDiagnostic] | None = None,
+    grid: GridReport | None = None,
+    in_sample_validation: str = "walk_forward",
 ) -> RunEvidence:
     run = run or _run()
     labels = {_day(i): ("low" if i % 3 else "high") for i in range(_DAYS + 1)}
@@ -131,6 +137,8 @@ def _evidence(
         ).validate(run),
         holdout=None,
         generated_at=datetime(2026, 9, 24, 10, 0, tzinfo=UTC),
+        grid=grid,
+        in_sample_validation=in_sample_validation,
         multiple_testing=MultipleTesting(
             trials=["momentum_v1", "mean_reversion_v1"],
             configurations=2,
@@ -411,3 +419,98 @@ def test_regime_rows_follow_the_regime_order(tmp_path) -> None:
     labels = [row["regime"] for row in _read(directory / "regimes.parquet")]
 
     assert labels == [label for label in VOLATILITY_REGIMES if label in labels]
+
+
+def _grid(drift: float = 0.0) -> GridReport:
+    """Two grid values over 2020-2021, "90" with a lasting edge over "30"; no choice in 2020."""
+    returns = np.random.default_rng(5).normal(drift, 0.01, (731, 2))
+    returns[:, 1] += 0.002
+    history = [
+        SelectionRecord(
+            year=2020,
+            evaluated_from=None,
+            evaluated_to=date(2019, 12, 31),
+            days=0,
+            sharpes={"30": None, "90": None},
+            chosen=None,
+        ),
+        SelectionRecord(
+            year=2021,
+            evaluated_from=date(2020, 1, 1),
+            evaluated_to=date(2020, 12, 31),
+            days=366,
+            sharpes={"30": -0.01, "90": 0.2},
+            chosen="90",
+        ),
+    ]
+    evidence = GridEvidence(
+        labels=["30", "90"],
+        start=date(2020, 1, 1),
+        end=date(2021, 12, 31),
+        returns=returns,
+        history=history,
+    )
+    settings = CpcvSettings(groups=6, test_groups=2, purge_days=1, embargo_fraction=0.01)
+    return grid_report(evidence, settings, _PERIODS_PER_YEAR, pbo_blocks=16)
+
+
+def test_a_grid_is_stored_as_its_choices_its_cpcv_paths_and_its_summary(tmp_path) -> None:
+    grid = _grid()
+
+    directory = write_run(tmp_path, _evidence(grid=grid, in_sample_validation="cpcv"))
+
+    [row] = _read(directory / RUN_FILE)
+    cpcv = grid.cpcv
+    assert (row["in_sample_validation"], row["in_sample_passed"]) == ("cpcv", True)
+    assert (row["grid_start"], row["grid_end"]) == (date(2020, 1, 1), date(2021, 12, 31))
+    assert (row["grid_pbo"], row["grid_pbo_blocks"]) == (grid.pbo.pbo, 16)
+    assert (row["cpcv_groups"], row["cpcv_test_groups"], row["cpcv_splits"]) == (6, 2, 15)
+    assert (row["cpcv_paths"], row["cpcv_embargo"]) == (5, cpcv.embargo)
+    assert row["cpcv_median_sharpe"] == cpcv.median_sharpe > 0
+    assert row["cpcv_rule"] == CPCV_GATE_RULE
+    assert row["configurations"] == 2
+
+    selection = _read(directory / "selection.parquet")
+    assert [(s["year"], s["position"], s["value"], s["chosen"]) for s in selection] == [
+        (2020, 0, "30", False),
+        (2020, 1, "90", False),
+        (2021, 0, "30", False),
+        (2021, 1, "90", True),
+    ]
+    assert selection[3]["sharpe"] == pytest.approx(0.2 * _PERIODS_PER_YEAR**0.5)  # annualized
+    assert selection[0]["sharpe"] is None
+    paths = _read(directory / "cpcv_paths.parquet")
+    assert [path["sharpe"] for path in paths] == cpcv.path_sharpes
+    choices = _read(directory / "cpcv_choices.parquet")
+    assert [(c["value"], c["share"]) for c in choices] == list(cpcv.choice_shares.items())
+
+
+def test_a_run_without_a_grid_has_null_grid_columns_and_empty_grid_tables(tmp_path) -> None:
+    directory = write_run(tmp_path, _evidence())
+
+    [row] = _read(directory / RUN_FILE)
+    assert row["in_sample_validation"] == "walk_forward"
+    assert row["in_sample_passed"] == row["walk_forward_passed"]
+    for column in ("grid_start", "grid_pbo", "cpcv_groups", "cpcv_median_sharpe", "cpcv_rule"):
+        assert row[column] is None, column
+    for table in ("selection", "cpcv_paths", "cpcv_choices"):
+        assert _read(directory / f"{table}.parquet") == []
+
+
+@pytest.mark.parametrize(("drift", "status"), [(0.0, "confirmed"), (-0.005, "rejected")])
+def test_an_opened_holdout_concludes_with_the_stored_cpcv_gate(tmp_path, drift, status) -> None:
+    repo = _definitions(tmp_path / "definitions")
+    store = tmp_path / "results"
+    # The walk-forward failed, but this run's frozen in-sample gate is the CPCV.
+    evidence = _evidence(
+        walk_forward=_walk_forward(False), grid=_grid(drift), in_sample_validation="cpcv"
+    )
+    write_run(store, evidence)
+    write_holdout_record(repo / "momentum_v1.opened.json", _opened("passed"))
+
+    rows = write_registry(store, repo)
+
+    assert rows[0].status == status
+    stored = _read(store / REGISTRY_FILE)[0]
+    # The registry names each definition's gate and configurations: these are frozen before q8.
+    assert (stored["in_sample_validation"], stored["configurations"]) == ("walk_forward", 1)
