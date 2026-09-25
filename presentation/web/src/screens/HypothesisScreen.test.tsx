@@ -11,6 +11,9 @@ const ROUTES = {
   '/api/hypotheses/demo_pairs': captured.pairs,
   '/api/hypotheses/demo_pairs/equity': captured.momentumEquity,
   '/api/hypotheses/demo_pairs/trades': captured.momentumTrades,
+  '/api/hypotheses/demo_select': captured.select,
+  '/api/hypotheses/demo_select/equity': captured.momentumEquity,
+  '/api/hypotheses/demo_select/trades': captured.momentumTrades,
 };
 
 function renderWith(id: string, routes: Record<string, unknown> = ROUTES) {
@@ -54,7 +57,8 @@ describe('HypothesisScreen', () => {
     expect(within(panel(/^Walk-forward/)).getByText('Aggregate')).toBeInTheDocument();
     expect(within(panel(/^Walk-forward/)).getByText('failed')).toBeInTheDocument();
     expect(within(panel('Permutation test')).getByText('0.898')).toBeInTheDocument();
-    expect(within(panel('Multiple testing')).getByText('0.02')).toBeInTheDocument();
+    expect(within(panel('Multiple testing')).getByText('0.01')).toBeInTheDocument();
+    expect(within(panel('Multiple testing')).getByText('Best of 6 no-edge configurations')).toBeInTheDocument();
     expect(within(panel('Contrast')).getByText('−0.44')).toBeInTheDocument();
     expect(within(panel('Regimes')).getAllByRole('row')).toHaveLength(1 + captured.momentum.regimes.length);
   });
@@ -118,6 +122,40 @@ describe('HypothesisScreen', () => {
     expect(screen.getByText('uv run quantlab run demo_reversal')).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /Equity curve/ })).toBeNull();
     expect(api.requested).toEqual(['/api/hypotheses/demo_reversal']);
+  });
+
+  it('shows no grid panels for a hypothesis without a grid', async () => {
+    renderWith('demo_momentum');
+    await screen.findByRole('heading', { name: 'Costs' });
+
+    expect(screen.queryByRole('heading', { name: 'Parameter selection' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /^CPCV of the selection/ })).toBeNull();
+  });
+
+  it("shows a grid's yearly choices with each value's Sharpe and the PBO of choosing", async () => {
+    renderWith('demo_select');
+
+    const selection = within(await screen.findByRole('heading', { name: 'Parameter selection' }).then((h) => h.closest('section')!));
+    const rows = selection.getAllByRole('row');
+    expect(rows).toHaveLength(1 + 3); // 2020, 2021, 2022
+    expect(within(rows[0]).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Year', '30', '90', '180', 'Chosen']);
+    expect(rows[1]).toHaveTextContent('2020');
+    expect(within(rows[1]).getByText('−0.08').tagName).toBe('B'); // the chosen value's Sharpe
+    expect(rows[1]).toHaveTextContent('180');
+    expect(selection.getByText(/PBO of choosing from the grid \(CSCV, 16 blocks, 12,870 splits, .*\): 0\.88/)).toBeInTheDocument();
+  });
+
+  it('shows the CPCV paths and, as the frozen gate, the verdict it gives', async () => {
+    renderWith('demo_select');
+
+    const cpcv = within(await screen.findByRole('heading', { name: /^CPCV of the selection/ }).then((h) => h.closest('section')!));
+    expect(cpcv.getByText(/10 groups, 2 for testing · purge 1, embargo 11 days · 45 splits, 9 paths/)).toBeInTheDocument();
+    expect(cpcv.getByText('failed')).toBeInTheDocument();
+    expect(cpcv.getByText(/In-sample gate \(frozen\)\. Rule: median Sharpe of the CPCV paths > 0/)).toBeInTheDocument();
+    expect(cpcv.getByText('30 37.8%, 90 0.0%, 180 62.2%')).toBeInTheDocument();
+    expect(screen.getByText(/CPCV failed; holdout inconclusive/)).toBeInTheDocument();
+    expect(within(panel(/^Walk-forward/)).getByText(/Descriptive only: this hypothesis's frozen in-sample gate is CPCV/)).toBeInTheDocument();
+    expect(within(panel('Frozen definition')).getByText('CPCV')).toBeInTheDocument();
   });
 
   it('shows the API problem for an unknown hypothesis', async () => {

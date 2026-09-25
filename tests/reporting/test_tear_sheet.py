@@ -1,16 +1,21 @@
+import html
 import re
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
+from pydantic import ValidationError
 
 from quantlab.backtest.run import BacktestRun, PortfolioSnapshot
 from quantlab.core.data.provider import PriceBar
 from quantlab.reporting.cost_comparison import RunMetrics, run_metrics
+from quantlab.reporting.grid_report import GridReport, GridYear
 from quantlab.reporting.metrics import drawdown_series
 from quantlab.reporting.multiple_testing import MultipleTesting
 from quantlab.reporting.tear_sheet import DISCLAIMER, Contrast, TearSheet, render_html
 from quantlab.risk.conditional import RegimeMetrics, regime_conditional_metrics
+from quantlab.validation.cpcv import CPCV_GATE_RULE, CpcvResult
 from quantlab.validation.holdout import HoldoutRecord
+from quantlab.validation.pbo import PboResult
 from quantlab.validation.permutation import PermutationTestValidator
 from quantlab.validation.walk_forward import WalkForwardValidator
 
@@ -416,3 +421,97 @@ def test_multiple_testing_is_shown_only_when_given() -> None:
     assert "nie jest częścią żadnej reguły" in section
     assert '<h3 id="multiple-testing">' not in without_section
     assert '<h3 id="multiple-testing">' in _section(with_section, "training")
+
+
+def _grid(median: float | None = 0.4) -> GridReport:
+    """Two grid values over 2020-2021: no choice in 2020, "30" in 2021."""
+    return GridReport(
+        labels=["30", "90"],
+        start=date(2020, 1, 1),
+        end=date(2021, 12, 31),
+        years=[
+            GridYear(year=2020, days=120, sharpes={"30": None, "90": None}, chosen=None),
+            GridYear(year=2021, days=486, sharpes={"30": 0.8, "90": -0.25}, chosen="30"),
+        ],
+        pbo=PboResult(
+            pbo=0.42,
+            n_configurations=2,
+            n_blocks=16,
+            n_splits=12_870,
+            rows_used=720,
+            logit_median=0.1,
+        ),
+        cpcv=CpcvResult(
+            groups=6,
+            test_groups=2,
+            purge=1,
+            embargo=8,
+            n_splits=15,
+            n_paths=5,
+            path_sharpes=[0.4, -0.1, 0.9, None, 0.2],
+            choices=["30"] * 9 + ["90"] * 6,
+            choice_shares={"30": 0.6, "90": 0.4},
+            mean_sharpe=0.35,
+            median_sharpe=median,
+            min_sharpe=-0.1,
+            max_sharpe=0.9,
+            positive_share=0.75,
+        ),
+    )
+
+
+def test_a_grid_shows_its_yearly_choices_its_pbo_and_its_cpcv() -> None:
+    page = render_html(_sheet(grid=_grid()))
+
+    section = page[page.index('<h3 id="selection">') : page.index('<h3 id="permutation">')]
+    assert "Siatka: 30, 90." in section
+    assert "<strong>0.80</strong>" in section  # the chosen value's Sharpe
+    assert "\u22120.25" in section
+    assert "brak (120 dni historii)" in section
+    assert "16 bloków, 12\u2009870 podziałów, 2020-01-01 → 2021-12-31): <strong>0.42</strong>" in (
+        section
+    )
+    assert "6 grup, 2 testowe; purge 1 i embargo 8 dni; 15 podziałów, 5 ścieżek" in section
+    assert "0.40, \u22120.10, 0.90, \u2014, 0.20" in section
+    assert "<code>30</code> 60.0%, <code>90</code> 40.0%" in section
+    # Walk-forward is the gate here: the CPCV is descriptive.
+    assert "Opisowe: nie jest częścią żadnej reguły" in section
+    assert html.escape(CPCV_GATE_RULE) not in section
+    assert '<h3 id="selection">' not in render_html(_sheet())
+
+
+@pytest.mark.parametrize(
+    ("median", "gate", "holdout_verdict", "status"),
+    [
+        (0.4, "passed", "passed", "confirmed"),
+        (-0.2, "failed", "passed", "rejected"),
+        (None, "inconclusive", "passed", "inconclusive"),
+    ],
+)
+def test_a_cpcv_gate_decides_the_verdict_and_walk_forward_turns_descriptive(
+    median: float | None, gate: str, holdout_verdict: str, status: str
+) -> None:
+    failed_walk_forward = _sheet().walk_forward.model_copy(update={"passed": False})
+    sheet = _sheet(
+        grid=_grid(median),
+        in_sample_validation="cpcv",
+        walk_forward=failed_walk_forward,
+        holdout=_holdout(verdict=holdout_verdict),
+    )
+
+    page = render_html(sheet)
+
+    assert sheet.in_sample_passed is {"passed": True, "failed": False}.get(gate)
+    verdict = _section(page, "verdict")
+    assert f'<strong class="verdict verdict-{status}">{status}</strong>' in verdict
+    assert f"CPCV: <strong>{gate}</strong>; holdout" in verdict
+    walk_forward = page[page.index('<h3 id="walk-forward">') : page.index('<h3 id="selection">')]
+    assert "Opisowe: bramką in-sample tej hipotezy jest CPCV" in walk_forward
+    cpcv = page[page.index('<h3 id="cpcv">') : page.index('<h3 id="permutation">')]
+    assert f"<q>{html.escape(CPCV_GATE_RULE)}</q>" in cpcv
+    assert f"Wynik: <strong>{gate}</strong>" in cpcv
+
+
+def test_a_cpcv_gate_needs_the_grid_s_evidence() -> None:
+    with pytest.raises(ValidationError, match="needs the grid's evidence"):
+        _sheet(in_sample_validation="cpcv")

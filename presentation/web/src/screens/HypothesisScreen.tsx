@@ -7,6 +7,7 @@ import { href } from '../route';
 import {
   ContrastPanel,
   CostsPanel,
+  CpcvPanel,
   DefinitionPanel,
   DiagnosticsPanel,
   EquityPanel,
@@ -19,6 +20,7 @@ import {
   RegimesPanel,
   RunPanel,
   SealPanel,
+  SelectionPanel,
   VerdictBanner,
   WalkForwardPanel,
 } from './evidence';
@@ -41,6 +43,8 @@ function Evidence({ detail }: { detail: HypothesisDetail }) {
       )}
       <CostsPanel metrics={detail.metrics} run={run} />
       <WalkForwardPanel windows={detail.walkForward} run={run} />
+      <SelectionPanel selection={detail.selection} run={run} />
+      <CpcvPanel run={run} paths={detail.cpcvPaths} choices={detail.cpcvChoices} />
       <PermutationPanel run={run} />
       <MultipleTestingPanel run={run} />
       <RegimesPanel regimes={detail.regimes} run={run} />

@@ -1,0 +1,793 @@
+{
+  "hypothesis": {
+    "hypothesis": "demo_select",
+    "strategy": "time_series_momentum_selected",
+    "universe": "mvp-crypto",
+    "costModel": "realistic-10bps-k0.05-vol30d",
+    "parameters": {
+      "cost_model": {
+        "fee_bps": 10.0,
+        "k": 0.05,
+        "name": "realistic",
+        "vol_window": 30
+      },
+      "history_start": "2019-07-01",
+      "lookback_grid": [
+        30,
+        90,
+        180
+      ],
+      "min_history_days": 180,
+      "strategy": "time_series_momentum_selected",
+      "universe": "mvp-crypto"
+    },
+    "trainingStart": "2020-01-01",
+    "trainingEnd": "2022-12-31",
+    "holdoutStart": "2023-01-01",
+    "holdoutEnd": "2023-06-30",
+    "criterion": "Synthetic demo. Median Sharpe of the CPCV paths \u003E 0 in training; holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1.",
+    "minSharpe": 0,
+    "maxPValue": 0.1,
+    "significanceTest": "day_shuffle",
+    "inSampleValidation": "cpcv",
+    "configurations": 3,
+    "frozenAtCommit": "0c7cc702348fb4d63af2cc024ed694d5bfa8dd3a",
+    "registeredAt": "2026-09-06T09:00:00\u002B00:00",
+    "trialsOnSameData": 4,
+    "status": "rejected",
+    "hasRun": true,
+    "holdout": {
+      "openedAt": "2026-09-24T12:00:00\u002B00:00",
+      "openedAtCommit": "5e7f1c0de0000000000000000000000000000000",
+      "costModel": "realistic-10bps-k0.05-vol30d",
+      "cagr": -0.13229704745037885,
+      "sharpe": 0.19048021089706005,
+      "sortino": 0.2766383001515247,
+      "calmar": -0.24984216164083947,
+      "maxDrawdown": -0.5295225056552402,
+      "pValue": 0.5728542914171657,
+      "verdict": "inconclusive"
+    },
+    "trainingSharpe": -0.17061385279057883,
+    "sparkline": [
+      1,
+      1.0530716587867566,
+      1.1044738313040634,
+      1.0764701918838886,
+      1.047503995420656,
+      0.9610418905464763,
+      0.9423377463205155,
+      0.9033145188385882,
+      0.8717635892842562,
+      0.7747904411003472,
+      0.9124698310501806,
+      0.9962471460559218,
+      1.2150689835721844,
+      1.1780761745605857,
+      1.2046781428324866,
+      1.4246016461498774,
+      1.782426079909004,
+      1.9350909414036463,
+      2.0550494455925143,
+      2.1459690117350516,
+      2.502264848430794,
+      2.5197340233424224,
+      2.359688543026957,
+      2.3621841120473714,
+      2.1094828066420592,
+      2.397525343141316,
+      1.9483121697248091,
+      2.240529007189871,
+      1.9603873576641933,
+      1.7445478099352145,
+      1.905741931550674,
+      1.5570172150417962,
+      1.5331541662247292,
+      1.3988855236150548,
+      1.576639246037875,
+      1.8405631804132456,
+      1.5551839741589846,
+      1.5919337826267113,
+      1.5811665293627037,
+      1.3866974385140427,
+      1.4011642862994764,
+      1.2593558739452626,
+      1.2149737642369052,
+      1.298245555918708,
+      1.1760728980469217,
+      1.2781921246978045,
+      1.2256732787251865,
+      0.8977531601676708,
+      0.9843993722583089,
+      1.1146237450235374,
+      1.0990506985256452,
+      1.1970200078844133,
+      1.343878612632657,
+      1.373668875476549,
+      1.0692265739697595,
+      1.0473860972297397,
+      1.0271150218119858,
+      1.0824883070649063,
+      0.9553758634516321,
+      0.914176503422702,
+      0.95973382701078,
+      0.8466733901998997,
+      0.7366584594569449,
+      0.8153664912956528,
+      0.7011296847227343,
+      0.648375611220698,
+      0.7122657571497939,
+      0.8621957955157615,
+      0.7551774081401386,
+      0.7690984571448392,
+      0.7435560740084896,
+      0.7312542291895485,
+      0.6906370085262398,
+      0.8340206950160515,
+      0.8005646781779281,
+      0.6336954677968019,
+      0.5709843942594572,
+      0.5079624889424587,
+      0.5504079379873683,
+      0.4963797008599749,
+      0.43007976358996114,
+      0.37981537035337554,
+      0.311788188667481,
+      0.3548015158110318,
+      0.3297982852600585,
+      0.3389037282138234,
+      0.3390138101521105,
+      0.3773248559446023,
+      0.37506207742196984,
+      0.3802815477600695,
+      0.2929358193695839,
+      0.26015224999486597,
+      0.265814513015315,
+      0.234831107407257,
+      0.2484347083874207,
+      0.21958550890905593,
+      0.2374573213544685,
+      0.26590335022216816,
+      0.2665370940415957,
+      0.29369147254038896,
+      0.2853678520479058,
+      0.28754960162602206,
+      0.2283335841989839,
+      0.21560202271808404,
+      0.19632628377155803,
+      0.20991056561248164,
+      0.20156997876696683,
+      0.17771080141056705,
+      0.2017168918557747,
+      0.23225045666064165,
+      0.266654002403416,
+      0.2422523802240465,
+      0.2682684770386782,
+      0.26877211624221503,
+      0.23100471664643543,
+      0.2488624785305124,
+      0.2898568170692767,
+      0.3347537316323456,
+      0.3649725630305946,
+      0.30437494117287306
+    ],
+    "dataSource": "synthetic"
+  },
+  "run": {
+    "runId": "00000000-0000-0000-0000-00000000002d",
+    "strategy": "time_series_momentum_selected",
+    "strategyParams": {
+      "history_start": "2019-07-01",
+      "lookback_grid": [
+        30,
+        90,
+        180
+      ],
+      "min_history_days": 180
+    },
+    "universe": "mvp-crypto",
+    "costModel": "realistic-10bps-k0.05-vol30d",
+    "start": "2020-01-01",
+    "end": "2022-12-31",
+    "firstPosition": "2020-01-02",
+    "seed": 0,
+    "gitSha": "5e7f1c0de0000000000000000000000000000000",
+    "generatedAt": "2026-09-24T12:00:00\u002B00:00",
+    "dataSource": "synthetic",
+    "costSensitivity": {
+      "verdict": "cost-dependent",
+      "sharpeDifference": 0.12086202394781184,
+      "cagrSignFlip": false
+    },
+    "walkForward": {
+      "passed": false,
+      "rule": "Sharpe \u003E 0 in at least 2/3 of windows with a defined Sharpe, and aggregate Sharpe \u003E 0; inconclusive if fewer than 3 windows have a defined Sharpe",
+      "positiveWindows": 1,
+      "windowsWithSharpe": 3
+    },
+    "inSample": {
+      "validation": "cpcv",
+      "passed": false
+    },
+    "grid": {
+      "start": "2020-01-01",
+      "end": "2022-12-31",
+      "pbo": {
+        "value": 0.8818958818958819,
+        "blocks": 16,
+        "splits": 12870
+      },
+      "cpcv": {
+        "groups": 10,
+        "testGroups": 2,
+        "purge": 1,
+        "embargo": 11,
+        "splits": 45,
+        "paths": 9,
+        "meanSharpe": -0.661673378857564,
+        "medianSharpe": -0.7673279356493555,
+        "minSharpe": -0.7673279356493555,
+        "maxSharpe": -0.29188243008629355,
+        "positiveShare": 0,
+        "rule": "median Sharpe of the CPCV paths \u003E 0; inconclusive if fewer than half the paths have a defined Sharpe"
+      }
+    },
+    "permutation": {
+      "passed": null,
+      "test": "day_shuffle",
+      "statistic": "annualized Sharpe of gross daily returns",
+      "count": 500,
+      "seed": 0,
+      "alpha": 0.1,
+      "activeDays": 1095,
+      "lowConfidence": false,
+      "actual": 0.005869587665711103,
+      "nullMean": 0.2521764097577785,
+      "nullStd": 0.5574637131074782,
+      "percentile": 0.332,
+      "pValue": 0.6686626746506986,
+      "reason": null
+    },
+    "multipleTesting": {
+      "trials": [
+        "demo_momentum",
+        "demo_reversal",
+        "demo_pairs",
+        "demo_select"
+      ],
+      "configurations": 6,
+      "returnsCount": 1095,
+      "sharpeAnnualized": -0.17061385279057883,
+      "psr": 0.38390349851612343,
+      "dsrThreshold": 0.7509796252443728,
+      "dsr": 0.05537811006063653
+    },
+    "contrast": null,
+    "regimeMethod": "Re\u017Cim rynku: tercyl zmienno\u015Bci btc-usdt z 30 sesji wzgl\u0119dem jej warto\u015Bci z ostatnich 365 sesji, na sesj\u0119 przed ka\u017Cdym zwrotem.",
+    "trades": {
+      "total": 90,
+      "openAtEnd": 2,
+      "winning": 17
+    }
+  },
+  "metrics": [
+    {
+      "costModel": "zero-cost",
+      "cagr": -0.23327875624379668,
+      "sharpe": 0.005869587665710096,
+      "sortino": 0.00838477471655231,
+      "calmar": -0.2544749285219815,
+      "maxDrawdown": -0.9167062452820223,
+      "turnover": 40.88686270262197,
+      "primary": false
+    },
+    {
+      "costModel": "naive-10bps",
+      "cagr": -0.2642077565316838,
+      "sharpe": -0.049751828842767,
+      "sortino": -0.07092238322872511,
+      "calmar": -0.2856097062132989,
+      "maxDrawdown": -0.9250657480609861,
+      "turnover": 40.898950809404745,
+      "primary": false
+    },
+    {
+      "costModel": "realistic-10bps-k0.05-vol30d",
+      "cagr": -0.3273285973413197,
+      "sharpe": -0.17061385279057883,
+      "sortino": -0.2421304593040474,
+      "calmar": -0.3481861912628599,
+      "maxDrawdown": -0.9400964356286206,
+      "turnover": 40.92573201092101,
+      "primary": true
+    }
+  ],
+  "walkForward": [
+    {
+      "start": "2020-01-02",
+      "end": "2020-12-31",
+      "partial": true,
+      "aggregate": false,
+      "cagr": 0.38401055743116186,
+      "sharpe": 0.8074287078114495,
+      "maxDrawdown": -0.5159258408226407
+    },
+    {
+      "start": "2021-01-01",
+      "end": "2021-12-31",
+      "partial": false,
+      "aggregate": false,
+      "cagr": -0.6842773615907668,
+      "sharpe": -1.1780226870084445,
+      "maxDrawdown": -0.6940746648526688
+    },
+    {
+      "start": "2022-01-01",
+      "end": "2022-12-31",
+      "partial": false,
+      "aggregate": false,
+      "cagr": -0.3034316007924538,
+      "sharpe": -0.12014362316457275,
+      "maxDrawdown": -0.6465827272993405
+    },
+    {
+      "start": "2020-01-02",
+      "end": "2022-12-31",
+      "partial": false,
+      "aggregate": true,
+      "cagr": -0.3273285973413197,
+      "sharpe": -0.17061385279057883,
+      "maxDrawdown": -0.9400964356286206
+    }
+  ],
+  "regimes": [
+    {
+      "regime": "low",
+      "days": 373,
+      "share": 0.3406392694063927,
+      "cagr": -0.8007390086488217,
+      "sharpe": -1.7790437579992533,
+      "sortino": -2.2921535004201274
+    },
+    {
+      "regime": "medium",
+      "days": 332,
+      "share": 0.30319634703196346,
+      "cagr": 0.9719091722392006,
+      "sharpe": 1.2795903552193875,
+      "sortino": 2.0157455012517
+    },
+    {
+      "regime": "high",
+      "days": 360,
+      "share": 0.3287671232876712,
+      "cagr": -0.242409057904879,
+      "sharpe": -0.04108545605928917,
+      "sortino": -0.059137592708443446
+    },
+    {
+      "regime": "undefined",
+      "days": 30,
+      "share": 0.0273972602739726,
+      "cagr": 3.061552452269474,
+      "sharpe": 2.1216340151767117,
+      "sortino": 3.3156305865017135
+    }
+  ],
+  "monthly": [
+    {
+      "year": 2020,
+      "month": 1,
+      "netReturn": 0.12209463238323548
+    },
+    {
+      "year": 2020,
+      "month": 2,
+      "netReturn": -0.14292506771482094
+    },
+    {
+      "year": 2020,
+      "month": 3,
+      "netReturn": -0.13144977362447008
+    },
+    {
+      "year": 2020,
+      "month": 4,
+      "netReturn": 0.4969945053098672
+    },
+    {
+      "year": 2020,
+      "month": 5,
+      "netReturn": 0.45480487626727695
+    },
+    {
+      "year": 2020,
+      "month": 6,
+      "netReturn": 0.355876368771723
+    },
+    {
+      "year": 2020,
+      "month": 7,
+      "netReturn": -0.08501025319725386
+    },
+    {
+      "year": 2020,
+      "month": 8,
+      "netReturn": -0.044439626052415804
+    },
+    {
+      "year": 2020,
+      "month": 9,
+      "netReturn": -0.21593412896742004
+    },
+    {
+      "year": 2020,
+      "month": 10,
+      "netReturn": -0.16988637757067526
+    },
+    {
+      "year": 2020,
+      "month": 11,
+      "netReturn": 0.20941343617804042
+    },
+    {
+      "year": 2020,
+      "month": 12,
+      "netReturn": -0.18471040098939506
+    },
+    {
+      "year": 2021,
+      "month": 1,
+      "netReturn": -0.0020902253998178466
+    },
+    {
+      "year": 2021,
+      "month": 2,
+      "netReturn": -0.141046796402997
+    },
+    {
+      "year": 2021,
+      "month": 3,
+      "netReturn": -0.007001677521409677
+    },
+    {
+      "year": 2021,
+      "month": 4,
+      "netReturn": 0.1408954424722686
+    },
+    {
+      "year": 2021,
+      "month": 5,
+      "netReturn": -0.18304262530527993
+    },
+    {
+      "year": 2021,
+      "month": 6,
+      "netReturn": -0.1684889561349252
+    },
+    {
+      "year": 2021,
+      "month": 7,
+      "netReturn": -0.06507420022472432
+    },
+    {
+      "year": 2021,
+      "month": 8,
+      "netReturn": -0.17537524523524461
+    },
+    {
+      "year": 2021,
+      "month": 9,
+      "netReturn": 0.10325285975089993
+    },
+    {
+      "year": 2021,
+      "month": 10,
+      "netReturn": -0.01946840978206177
+    },
+    {
+      "year": 2021,
+      "month": 11,
+      "netReturn": -0.2501194116896861
+    },
+    {
+      "year": 2021,
+      "month": 12,
+      "netReturn": -0.23471907608766918
+    },
+    {
+      "year": 2022,
+      "month": 1,
+      "netReturn": -0.29798772790408523
+    },
+    {
+      "year": 2022,
+      "month": 2,
+      "netReturn": 0.10160404370379617
+    },
+    {
+      "year": 2022,
+      "month": 3,
+      "netReturn": 0.13941640683468393
+    },
+    {
+      "year": 2022,
+      "month": 4,
+      "netReturn": -0.2694925933902138
+    },
+    {
+      "year": 2022,
+      "month": 5,
+      "netReturn": -0.16339271290512847
+    },
+    {
+      "year": 2022,
+      "month": 6,
+      "netReturn": 0.15890454266121057
+    },
+    {
+      "year": 2022,
+      "month": 7,
+      "netReturn": -0.18873787585563762
+    },
+    {
+      "year": 2022,
+      "month": 8,
+      "netReturn": -0.06057995737206889
+    },
+    {
+      "year": 2022,
+      "month": 9,
+      "netReturn": 0.10135264786827403
+    },
+    {
+      "year": 2022,
+      "month": 10,
+      "netReturn": 0.30987987718053
+    },
+    {
+      "year": 2022,
+      "month": 11,
+      "netReturn": -0.0319783539318671
+    },
+    {
+      "year": 2022,
+      "month": 12,
+      "netReturn": 0.04870461823162109
+    }
+  ],
+  "yearly": [
+    {
+      "year": 2020,
+      "netReturn": 0.38401055743116186
+    },
+    {
+      "year": 2021,
+      "netReturn": -0.6842773615907668
+    },
+    {
+      "year": 2022,
+      "netReturn": -0.3034316007924538
+    }
+  ],
+  "pnlGroups": [
+    {
+      "dimension": "regime",
+      "key": "low",
+      "trades": 28,
+      "winRate": 0.14285714285714285,
+      "totalNetPnl": 0.17747607634772974,
+      "meanNetPnl": 0.006338431298133205,
+      "medianNetPnl": -0.011015546586446642,
+      "worstNetPnl": -0.07752188828953709,
+      "bestNetPnl": 0.5988695790455306,
+      "costs": 0.07526333758426665
+    },
+    {
+      "dimension": "regime",
+      "key": "medium",
+      "trades": 36,
+      "winRate": 0.3333333333333333,
+      "totalNetPnl": -0.3348951348781182,
+      "meanNetPnl": -0.009302642635503282,
+      "medianNetPnl": -0.005559475545824297,
+      "worstNetPnl": -0.12329831337115804,
+      "bestNetPnl": 0.08103877504520436,
+      "costs": 0.09816230800750789
+    },
+    {
+      "dimension": "regime",
+      "key": "high",
+      "trades": 24,
+      "winRate": 0,
+      "totalNetPnl": -0.8223410475243652,
+      "meanNetPnl": -0.03426421031351522,
+      "medianNetPnl": -0.021944739355476618,
+      "worstNetPnl": -0.15257578102024702,
+      "bestNetPnl": -0.0017023380193723194,
+      "costs": 0.09206857267376273
+    },
+    {
+      "dimension": "regime",
+      "key": "undefined",
+      "trades": 2,
+      "winRate": 0.5,
+      "totalNetPnl": 0.28413504722762656,
+      "meanNetPnl": 0.14206752361381328,
+      "medianNetPnl": 0.14206752361381328,
+      "worstNetPnl": -0.007271741927407352,
+      "bestNetPnl": 0.29140678915503393,
+      "costs": 0.017213409075745013
+    },
+    {
+      "dimension": "holding_period",
+      "key": "1-7d",
+      "trades": 52,
+      "winRate": 0.11538461538461539,
+      "totalNetPnl": -0.9901859366096672,
+      "meanNetPnl": -0.0190420372424936,
+      "medianNetPnl": -0.01269542994476887,
+      "worstNetPnl": -0.08405854377938084,
+      "bestNetPnl": 0.027625091523608883,
+      "costs": 0.12742209706803334
+    },
+    {
+      "dimension": "holding_period",
+      "key": "8-30d",
+      "trades": 23,
+      "winRate": 0.30434782608695654,
+      "totalNetPnl": -0.15506835530123844,
+      "meanNetPnl": -0.006742102404401672,
+      "medianNetPnl": -0.009828509763077583,
+      "worstNetPnl": -0.10201492750923224,
+      "bestNetPnl": 0.08103877504520436,
+      "costs": 0.06124404060526059
+    },
+    {
+      "dimension": "holding_period",
+      "key": "31-90d",
+      "trades": 6,
+      "winRate": 0,
+      "totalNetPnl": -0.3548577911451815,
+      "meanNetPnl": -0.05914296519086359,
+      "medianNetPnl": -0.03300720255420643,
+      "worstNetPnl": -0.15257578102024702,
+      "bestNetPnl": -0.005697549717956258,
+      "costs": 0.038388725533273375
+    },
+    {
+      "dimension": "holding_period",
+      "key": "91-365d",
+      "trades": 9,
+      "winRate": 0.4444444444444444,
+      "totalNetPnl": 0.8044870242289602,
+      "meanNetPnl": 0.08938744713655114,
+      "medianNetPnl": -0.006371248547854154,
+      "worstNetPnl": -0.07752188828953709,
+      "bestNetPnl": 0.5988695790455306,
+      "costs": 0.055652764134714934
+    }
+  ],
+  "diagnostics": [],
+  "selection": [
+    {
+      "year": 2020,
+      "days": 184,
+      "value": "30",
+      "sharpe": -0.9961562157707997,
+      "chosen": false
+    },
+    {
+      "year": 2020,
+      "days": 184,
+      "value": "90",
+      "sharpe": -2.079207033892295,
+      "chosen": false
+    },
+    {
+      "year": 2020,
+      "days": 184,
+      "value": "180",
+      "sharpe": -0.08121914988412464,
+      "chosen": true
+    },
+    {
+      "year": 2021,
+      "days": 550,
+      "value": "30",
+      "sharpe": 0.11579734509509809,
+      "chosen": false
+    },
+    {
+      "year": 2021,
+      "days": 550,
+      "value": "90",
+      "sharpe": -0.9224582247200809,
+      "chosen": false
+    },
+    {
+      "year": 2021,
+      "days": 550,
+      "value": "180",
+      "sharpe": 0.5691550959261555,
+      "chosen": true
+    },
+    {
+      "year": 2022,
+      "days": 915,
+      "value": "30",
+      "sharpe": -0.3779605332701414,
+      "chosen": false
+    },
+    {
+      "year": 2022,
+      "days": 915,
+      "value": "90",
+      "sharpe": -0.5755626646362929,
+      "chosen": false
+    },
+    {
+      "year": 2022,
+      "days": 915,
+      "value": "180",
+      "sharpe": -0.14186339594563177,
+      "chosen": true
+    }
+  ],
+  "cpcvPaths": [
+    {
+      "position": 0,
+      "sharpe": -0.29188243008629355
+    },
+    {
+      "position": 1,
+      "sharpe": -0.7673279356493555
+    },
+    {
+      "position": 2,
+      "sharpe": -0.7673279356493555
+    },
+    {
+      "position": 3,
+      "sharpe": -0.7673279356493555
+    },
+    {
+      "position": 4,
+      "sharpe": -0.7673279356493555
+    },
+    {
+      "position": 5,
+      "sharpe": -0.7673279356493555
+    },
+    {
+      "position": 6,
+      "sharpe": -0.7673279356493555
+    },
+    {
+      "position": 7,
+      "sharpe": -0.7673279356493555
+    },
+    {
+      "position": 8,
+      "sharpe": -0.29188243008629355
+    }
+  ],
+  "cpcvChoices": [
+    {
+      "value": "30",
+      "share": 0.37777777777777777
+    },
+    {
+      "value": "90",
+      "share": 0
+    },
+    {
+      "value": "180",
+      "share": 0.6222222222222222
+    }
+  ],
+  "tradeInstruments": [
+    "btc-usdt",
+    "eth-usdt"
+  ]
+}

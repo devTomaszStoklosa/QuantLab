@@ -28,9 +28,11 @@
     "minSharpe": 0,
     "maxPValue": 0.1,
     "significanceTest": "day_shuffle",
+    "inSampleValidation": "walk_forward",
+    "configurations": 1,
     "frozenAtCommit": "50914050231e06bd27d0f014d250bfc6c9d01f0b",
     "registeredAt": "2026-09-03T09:00:00\u002B00:00",
-    "trialsOnSameData": 3,
+    "trialsOnSameData": 4,
     "status": "testing",
     "hasRun": true,
     "holdout": null,
@@ -190,6 +192,11 @@
       "positiveWindows": 2,
       "windowsWithSharpe": 2
     },
+    "inSample": {
+      "validation": "walk_forward",
+      "passed": null
+    },
+    "grid": null,
     "permutation": {
       "passed": true,
       "test": "day_shuffle",
@@ -210,13 +217,15 @@
       "trials": [
         "demo_momentum",
         "demo_reversal",
-        "demo_pairs"
+        "demo_pairs",
+        "demo_select"
       ],
+      "configurations": 6,
       "returnsCount": 534,
       "sharpeAnnualized": 1.4070927480216526,
       "psr": 0.960903513140765,
-      "dsrThreshold": 0.7057198109149657,
-      "dsr": 0.8100047308333327
+      "dsrThreshold": 1.075903228820556,
+      "dsr": 0.6607651954753545
     },
     "contrast": null,
     "regimeMethod": "Re\u017Cim rynku: tercyl zmienno\u015Bci btc-usdt z 30 sesji wzgl\u0119dem jej warto\u015Bci z ostatnich 365 sesji, na sesj\u0119 przed ka\u017Cdym zwrotem.",
@@ -591,6 +600,9 @@
       "value": 10.779460400427995
     }
   ],
+  "selection": [],
+  "cpcvPaths": [],
+  "cpcvChoices": [],
   "tradeInstruments": [
     "btc-usdt",
     "eth-usdt"

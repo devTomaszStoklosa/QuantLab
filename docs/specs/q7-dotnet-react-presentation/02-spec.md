@@ -74,13 +74,13 @@ UI (React)
 
 ## Data and validation
 
-Magazyn wyników, schemat w wersji 2 (wersja 2 od `q5`-X7b: kolumny `significance_test` w rejestrze i `permutation_test` w `run.parquet`; API czytające wersję 1 odpowiada 503 z prośbą o odświeżenie magazynu). Typy Parquet: `DATE` (date32), `TIMESTAMP` (UTC), `DOUBLE`, `INTEGER` (int64), `BOOLEAN`, `VARCHAR`, `VARCHAR[]`. Kolumny oznaczone `?` mogą być NULL.
+Magazyn wyników, schemat w wersji 3 (wersja 2 od `q5`-X7b: kolumny `significance_test` w rejestrze i `permutation_test` w `run.parquet`; wersja 3 od `q8`-P6: bramka in-sample, liczba konfiguracji, podsumowanie siatki i CPCV w `run.parquet`, tabele `selection`, `cpcv_paths`, `cpcv_choices`; API czytające starszą wersję odpowiada 503 z prośbą o odświeżenie magazynu). Typy Parquet: `DATE` (date32), `TIMESTAMP` (UTC), `DOUBLE`, `INTEGER` (int64), `BOOLEAN`, `VARCHAR`, `VARCHAR[]`. Kolumny oznaczone `?` mogą być NULL.
 
 `results/hypotheses.parquet` — jeden wiersz na definicję
 
 | Column | Type | Meaning |
 |---|---|---|
-| `schema_version` | INTEGER | 2 |
+| `schema_version` | INTEGER | 3 |
 | `hypothesis` | VARCHAR | id z definicji |
 | `strategy`, `universe`, `cost_model` | VARCHAR | nazwa strategii, uniwersum i modelu kosztów przebiegu głównego |
 | `parameters` | VARCHAR | JSON parametrów z definicji |
@@ -88,10 +88,12 @@ Magazyn wyników, schemat w wersji 2 (wersja 2 od `q5`-X7b: kolumny `significanc
 | `criterion` | VARCHAR | opis kryterium sukcesu |
 | `min_sharpe`, `max_p_value` | DOUBLE | progi kryterium |
 | `significance_test` | VARCHAR | test, z którego pochodzi p-value kryterium (i holdoutu): `day_shuffle`, `random_portfolio` (`q5`, REQ-563) |
+| `in_sample_validation` | VARCHAR | zamrożona bramka in-sample: `walk_forward` albo `cpcv` (`q8`, REQ-830) |
+| `configurations` | INTEGER | liczba konfiguracji parametrów definicji: 1, a dla siatki liczba jej wartości (`q8`, REQ-820) |
 | `frozen_at_commit` | VARCHAR | ostatni commit definicji |
 | `registered_at` | TIMESTAMP | pierwszy commit definicji |
 | `trials_on_same_data` | INTEGER | liczba prób na tym uniwersum i okresie treningowym, z usuniętymi |
-| `status` | VARCHAR | `proposed`, `testing`, `confirmed`, `rejected`, `inconclusive` |
+| `status` | VARCHAR | `proposed`, `testing`, `confirmed`, `rejected`, `inconclusive`; po otwarciu holdoutu z bramki in-sample zapisanej w przebiegu (`in_sample_passed`) i werdyktu holdoutu |
 | `has_run` | BOOLEAN | czy magazyn ma przebieg tej hipotezy |
 | `holdout_opened_at`? , `holdout_opened_at_commit`? , `holdout_cost_model`? | TIMESTAMP, VARCHAR, VARCHAR | z zapisu otwarcia |
 | `holdout_cagr`?, `holdout_sharpe`?, `holdout_sortino`?, `holdout_calmar`?, `holdout_max_drawdown`?, `holdout_p_value`? | DOUBLE | z zapisu otwarcia |
@@ -101,7 +103,7 @@ Magazyn wyników, schemat w wersji 2 (wersja 2 od `q5`-X7b: kolumny `significanc
 
 | Column | Type | Meaning |
 |---|---|---|
-| `schema_version` | INTEGER | 2 |
+| `schema_version` | INTEGER | 3 |
 | `hypothesis`, `run_id`, `strategy`, `universe`, `cost_model` | VARCHAR | z `BacktestRun` |
 | `strategy_params` | VARCHAR | JSON |
 | `start`, `end` | DATE | okres treningowy przebiegu |
@@ -112,10 +114,17 @@ Magazyn wyników, schemat w wersji 2 (wersja 2 od `q5`-X7b: kolumny `significanc
 | `data_source` | VARCHAR | źródło barów (`binance`, `synthetic`) |
 | `cost_sensitivity`, `cost_sharpe_difference`?, `cost_cagr_sign_flip`? | VARCHAR, DOUBLE, BOOLEAN | wrażliwość na koszty (naiwny vs realistyczny) |
 | `walk_forward_passed`?, `walk_forward_rule`, `walk_forward_positive_windows`, `walk_forward_windows_with_sharpe` | BOOLEAN, VARCHAR, INTEGER, INTEGER | |
+| `in_sample_validation`, `in_sample_passed`? | VARCHAR, BOOLEAN | zamrożona bramka in-sample i jej wynik (`walk_forward`: wynik walk-forward; `cpcv`: mediana Sharpe ścieżek CPCV > 0) |
+| `grid_start`?, `grid_end`? | DATE | okno, w którym każda wartość siatki daje sygnał (NULL bez siatki) |
+| `grid_pbo`?, `grid_pbo_blocks`?, `grid_pbo_splits`? | DOUBLE, INTEGER, INTEGER | PBO wyboru z siatki (CSCV); NULL bez siatki albo przy zbyt krótkiej historii |
+| `cpcv_groups`?, `cpcv_test_groups`?, `cpcv_purge`?, `cpcv_embargo`?, `cpcv_splits`?, `cpcv_paths`? | INTEGER | ustawienia i rozmiar CPCV procedury wyboru (NULL bez siatki) |
+| `cpcv_mean_sharpe`?, `cpcv_median_sharpe`?, `cpcv_min_sharpe`?, `cpcv_max_sharpe`?, `cpcv_positive_share`? | DOUBLE | rozkład Sharpe ścieżek CPCV (w skali roku) |
+| `cpcv_rule`? | VARCHAR | reguła bramki CPCV (zamrożona, gdy `in_sample_validation` = `cpcv`) |
 | `permutation_test` | VARCHAR | który test istotności: `day_shuffle` (tasowanie dni) albo `random_portfolio` (losowe portfele) |
 | `permutation_passed`?, `permutation_statistic`, `permutation_count`, `permutation_seed`, `permutation_alpha`, `permutation_active_days`, `permutation_low_confidence` | | parametry testu |
 | `permutation_actual`?, `permutation_null_mean`?, `permutation_null_std`?, `permutation_percentile`?, `permutation_p_value`?, `permutation_reason`? | DOUBLE, VARCHAR | wynik albo powód braku |
 | `trials` | VARCHAR[] | próby na tych samych danych, od najstarszej |
+| `configurations` | INTEGER | konfiguracje parametrów tych prób (wartości siatek liczone osobno); liczba w progu DSR |
 | `returns_count`, `sharpe_annualized`?, `psr`?, `dsr_threshold`?, `dsr`? | INTEGER, DOUBLE | wielokrotne testowanie |
 | `contrast_hypothesis`?, `contrast_cost_model`?, `contrast_correlation`? | VARCHAR, DOUBLE | kontrast (`--contrast`) |
 | `regime_method` | VARCHAR | opis klasyfikacji reżimów |
@@ -133,6 +142,9 @@ Tabele wielowierszowe w `results/<hipoteza>/` (kolumna `position` to kolejność
 | `yearly` | `year`, `net_return` (miesiące składają się w rok; liczone w Pythonie, nie w UI) |
 | `pnl_groups` | `dimension` (`regime`, `holding_period`), `position`, `key`, `trades`, `win_rate`, `total_net_pnl`, `mean_net_pnl`, `median_net_pnl`, `worst_net_pnl`, `best_net_pnl`, `costs` |
 | `diagnostics` | `position`, `title`, `label`, `value`? |
+| `selection` | `year`, `days`, `position` (kolejność w siatce), `value`, `sharpe`? (w skali roku, na historii sprzed 1 stycznia), `chosen` — wiersz na wartość siatki w każdym roku; pusta bez siatki (`q8`) |
+| `cpcv_paths` | `position`, `sharpe`? — Sharpe każdej ścieżki CPCV; pusta bez siatki |
+| `cpcv_choices` | `position`, `value`, `share` — udział podziałów CPCV wybierających wartość; pusta bez siatki |
 | `trades` | `trade_id`, `instrument_id`, `side`, `entry_ts`, `entry_price`, `exit_ts`, `exit_price`, `size`, `gross_pnl`, `costs`, `net_pnl`, `holding_days`, `regime_at_entry`, `open_at_end` |
 
 Parametry `GET /api/hypotheses/{id}/trades`

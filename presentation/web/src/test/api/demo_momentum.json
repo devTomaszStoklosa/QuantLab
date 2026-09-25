@@ -23,9 +23,11 @@
     "minSharpe": 0,
     "maxPValue": 0.1,
     "significanceTest": "day_shuffle",
+    "inSampleValidation": "walk_forward",
+    "configurations": 1,
     "frozenAtCommit": "b5dbb40f111c4b78942bc1b661ca3f62588d651e",
     "registeredAt": "2026-09-01T09:00:00\u002B00:00",
-    "trialsOnSameData": 3,
+    "trialsOnSameData": 4,
     "status": "rejected",
     "hasRun": true,
     "holdout": {
@@ -191,6 +193,11 @@
       "positiveWindows": 0,
       "windowsWithSharpe": 3
     },
+    "inSample": {
+      "validation": "walk_forward",
+      "passed": false
+    },
+    "grid": null,
     "permutation": {
       "passed": null,
       "test": "day_shuffle",
@@ -211,13 +218,15 @@
       "trials": [
         "demo_momentum",
         "demo_reversal",
-        "demo_pairs"
+        "demo_pairs",
+        "demo_select"
       ],
+      "configurations": 6,
       "returnsCount": 1095,
       "sharpeAnnualized": -0.6836948630594516,
       "psr": 0.11871817964426495,
-      "dsrThreshold": 0.4925918845967542,
-      "dsr": 0.02104579548832486
+      "dsrThreshold": 0.7509796252443728,
+      "dsr": 0.006585621408656317
     },
     "contrast": {
       "hypothesis": "demo_pairs",
@@ -630,6 +639,9 @@
     }
   ],
   "diagnostics": [],
+  "selection": [],
+  "cpcvPaths": [],
+  "cpcvChoices": [],
   "tradeInstruments": [
     "btc-usdt",
     "eth-usdt"

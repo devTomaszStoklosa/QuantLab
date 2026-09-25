@@ -21,12 +21,16 @@ public class HypothesesTests
     {
         var hypotheses = await Get(Fixture.Store, "/api/hypotheses");
 
-        var expected = Fixture.Query($"SELECT hypothesis, status, has_run, frozen_at_commit, trials_on_same_data FROM read_parquet('{Fixture.File("hypotheses.parquet")}')");
+        var expected = Fixture.Query($"SELECT hypothesis, status, has_run, frozen_at_commit, trials_on_same_data, in_sample_validation, configurations FROM read_parquet('{Fixture.File("hypotheses.parquet")}')");
         Assert.Equal(
             expected.Select(row => (row["hypothesis"], row["status"], row["has_run"], row["frozen_at_commit"], row["trials_on_same_data"])),
             hypotheses.EnumerateArray().Select(h => ((object?)h.GetProperty("hypothesis").GetString(),
                 (object?)h.GetProperty("status").GetString(), (object?)h.GetProperty("hasRun").GetBoolean(),
                 (object?)h.GetProperty("frozenAtCommit").GetString(), (object?)h.GetProperty("trialsOnSameData").GetInt64())));
+        Assert.Equal(
+            expected.Select(row => (row["in_sample_validation"], row["configurations"])),
+            hypotheses.EnumerateArray().Select(h => ((object?)h.GetProperty("inSampleValidation").GetString(),
+                (object?)h.GetProperty("configurations").GetInt64())));
     }
 
     [Fact]

@@ -4,7 +4,7 @@ namespace QuantLab.Api.Store;
 public static class StoreSchema
 {
     /// <summary>Must match <c>SCHEMA_VERSION</c> in quantlab.reporting.results_store.</summary>
-    public const long Version = 2;
+    public const long Version = 3;
 
     public const string RegistryFile = "hypotheses.parquet";
     public const string RunFile = "run.parquet";

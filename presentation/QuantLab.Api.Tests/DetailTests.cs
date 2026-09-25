@@ -21,8 +21,9 @@ public class DetailTests
         Assert.Equal(stored["permutation_p_value"], run.GetProperty("permutation").Number("pValue"));
         Assert.Equal(stored["dsr"], run.GetProperty("multipleTesting").Number("dsr"));
         Assert.Equal(
-            ["demo_momentum", "demo_reversal", "demo_pairs"],
+            ["demo_momentum", "demo_reversal", "demo_pairs", "demo_select"],
             run.GetProperty("multipleTesting").GetProperty("trials").EnumerateArray().Select(t => t.GetString()));
+        Assert.Equal(stored["configurations"], (object)run.GetProperty("multipleTesting").GetProperty("configurations").GetInt64());
         Assert.Equal("demo_pairs", run.GetProperty("contrast").GetProperty("hypothesis").GetString());
         Assert.Equal(stored["contrast_correlation"], run.GetProperty("contrast").Number("correlation"));
         Assert.Equal(90, run.GetProperty("strategyParams").GetProperty("lookback_days").GetInt32());
@@ -105,7 +106,60 @@ public class DetailTests
 
         Assert.Equal("proposed", detail.GetProperty("hypothesis").GetProperty("status").GetString());
         Assert.Equal(JsonValueKind.Null, detail.GetProperty("run").ValueKind);
-        foreach (var list in new[] { "metrics", "walkForward", "regimes", "monthly", "yearly", "pnlGroups", "diagnostics", "tradeInstruments" })
+        foreach (var list in new[] { "metrics", "walkForward", "regimes", "monthly", "yearly", "pnlGroups", "diagnostics", "selection", "cpcvPaths", "cpcvChoices", "tradeInstruments" })
+        {
+            Assert.Empty(detail.GetProperty(list).EnumerateArray());
+        }
+    }
+
+    [Fact]
+    public async Task ASelectionRunCarriesItsGridItsYearlyChoicesAndItsCpcvPaths()
+    {
+        var detail = await Http.Ok("/api/hypotheses/demo_select");
+
+        var stored = Fixture.Query($"SELECT * FROM {Table("demo_select", "run")}").Single();
+        var run = detail.GetProperty("run");
+        Assert.Equal("cpcv", run.GetProperty("inSample").GetProperty("validation").GetString());
+        Assert.Equal(stored["in_sample_passed"], (object?)run.GetProperty("inSample").GetProperty("passed").GetBoolean());
+        var grid = run.GetProperty("grid");
+        Assert.Equal("2020-01-01", grid.GetProperty("start").GetString());
+        Assert.Equal(stored["grid_pbo"], grid.GetProperty("pbo").Number("value"));
+        Assert.Equal(stored["grid_pbo_splits"], (object)grid.GetProperty("pbo").GetProperty("splits").GetInt64());
+        var cpcv = grid.GetProperty("cpcv");
+        Assert.Equal(10, cpcv.GetProperty("groups").GetInt64());
+        Assert.Equal(stored["cpcv_paths"], (object)cpcv.GetProperty("paths").GetInt64());
+        Assert.Equal(stored["cpcv_median_sharpe"], cpcv.Number("medianSharpe"));
+        Assert.Equal(stored["cpcv_rule"], cpcv.GetProperty("rule").GetString());
+        Assert.Equal("cpcv", detail.GetProperty("hypothesis").GetProperty("inSampleValidation").GetString());
+        Assert.Equal(3, detail.GetProperty("hypothesis").GetProperty("configurations").GetInt64());
+
+        var selection = Fixture.Query($"SELECT year, value, sharpe, chosen FROM {Table("demo_select", "selection")} ORDER BY year, position");
+        Assert.Equal(
+            selection.Select(s => ((long)s["year"]!, (string)s["value"]!, (double?)s["sharpe"], (bool)s["chosen"]!)),
+            detail.GetProperty("selection").EnumerateArray().Select(s => (
+                s.GetProperty("year").GetInt64(), s.GetProperty("value").GetString()!, s.Number("sharpe"), s.GetProperty("chosen").GetBoolean())));
+        var paths = Fixture.Query($"SELECT sharpe FROM {Table("demo_select", "cpcv_paths")} ORDER BY position");
+        Assert.Equal(
+            paths.Select(p => (double?)p["sharpe"]),
+            detail.GetProperty("cpcvPaths").EnumerateArray().Select(p => p.Number("sharpe")));
+        var choices = Fixture.Query($"SELECT value, share FROM {Table("demo_select", "cpcv_choices")} ORDER BY position");
+        Assert.Equal(
+            choices.Select(c => ((string)c["value"]!, (double)c["share"]!)),
+            detail.GetProperty("cpcvChoices").EnumerateArray().Select(c => (c.GetProperty("value").GetString()!, c.GetProperty("share").GetDouble())));
+    }
+
+    [Fact]
+    public async Task ARunWithoutAGridHasANullGridAndItsWalkForwardAsTheGate()
+    {
+        var detail = await Http.Ok("/api/hypotheses/demo_momentum");
+
+        var run = detail.GetProperty("run");
+        Assert.Equal(JsonValueKind.Null, run.GetProperty("grid").ValueKind);
+        Assert.Equal("walk_forward", run.GetProperty("inSample").GetProperty("validation").GetString());
+        Assert.Equal(
+            run.GetProperty("walkForward").GetProperty("passed").GetBoolean(),
+            run.GetProperty("inSample").GetProperty("passed").GetBoolean());
+        foreach (var list in new[] { "selection", "cpcvPaths", "cpcvChoices" })
         {
             Assert.Empty(detail.GetProperty(list).EnumerateArray());
         }

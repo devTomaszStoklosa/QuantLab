@@ -33,6 +33,8 @@ public sealed record HypothesisSummary(
     double MinSharpe,
     double MaxPValue,
     string SignificanceTest,
+    string InSampleValidation,
+    long Configurations,
     string FrozenAtCommit,
     DateTimeOffset RegisteredAt,
     long TrialsOnSameData,
@@ -65,11 +67,34 @@ public sealed record PermutationSummary(
 
 public sealed record MultipleTestingSummary(
     IReadOnlyList<string> Trials,
+    long Configurations,
     long ReturnsCount,
     double? SharpeAnnualized,
     double? Psr,
     double? DsrThreshold,
     double? Dsr);
+
+/// <summary>The frozen in-sample gate: <c>walk_forward</c>, or <c>cpcv</c> for a parameter grid (q8).</summary>
+public sealed record InSampleGate(string Validation, bool? Passed);
+
+public sealed record PboSummary(double Value, long Blocks, long Splits);
+
+public sealed record CpcvSummary(
+    long Groups,
+    long TestGroups,
+    long Purge,
+    long Embargo,
+    long Splits,
+    long Paths,
+    double? MeanSharpe,
+    double? MedianSharpe,
+    double? MinSharpe,
+    double? MaxSharpe,
+    double? PositiveShare,
+    string Rule);
+
+/// <summary>A parameter grid's evidence over the training period (q8, REQ-841).</summary>
+public sealed record GridSummary(DateOnly Start, DateOnly End, PboSummary? Pbo, CpcvSummary Cpcv);
 
 public sealed record ContrastSummary(string Hypothesis, string CostModel, double? Correlation);
 
@@ -90,6 +115,8 @@ public sealed record RunSummary(
     string DataSource,
     CostSensitivity CostSensitivity,
     WalkForwardSummary WalkForward,
+    InSampleGate InSample,
+    GridSummary? Grid,
     PermutationSummary Permutation,
     MultipleTestingSummary MultipleTesting,
     ContrastSummary? Contrast,
@@ -141,6 +168,13 @@ public sealed record PnlGroup(
 
 public sealed record Diagnostic(string Title, string Label, double? Value);
 
+/// <summary>One grid value's Sharpe in one year's choice; <c>Chosen</c> marks the value traded that year.</summary>
+public sealed record SelectionCell(long Year, long Days, string Value, double? Sharpe, bool Chosen);
+
+public sealed record CpcvPath(long Position, double? Sharpe);
+
+public sealed record CpcvChoice(string Value, double Share);
+
 /// <summary>A hypothesis and, when the store holds one, its latest run's evidence (REQ-721).</summary>
 public sealed record HypothesisDetail(
     HypothesisSummary Hypothesis,
@@ -152,6 +186,9 @@ public sealed record HypothesisDetail(
     IReadOnlyList<YearlyReturn> Yearly,
     IReadOnlyList<PnlGroup> PnlGroups,
     IReadOnlyList<Diagnostic> Diagnostics,
+    IReadOnlyList<SelectionCell> Selection,
+    IReadOnlyList<CpcvPath> CpcvPaths,
+    IReadOnlyList<CpcvChoice> CpcvChoices,
     IReadOnlyList<string> TradeInstruments);
 
 public sealed record EquityPoint(DateOnly Ts, double Equity, double Drawdown);

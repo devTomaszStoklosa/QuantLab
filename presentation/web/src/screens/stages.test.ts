@@ -16,6 +16,15 @@ describe('pipeline stages', () => {
     });
   });
 
+  it("draws a grid's CPCV as the in-sample gate when the definition froze it so", () => {
+    const detail = structuredClone(captured.select);
+    detail.run!.inSample.passed = true; // the walk-forward failed: descriptive under a CPCV gate
+
+    const walkforward = stages(detail).find((s) => s.key === 'walkforward')!;
+    expect(detail.run!.walkForward.passed).toBe(false);
+    expect(walkforward).toMatchObject({ state: 'passed', meta: 'CPCV' });
+  });
+
   it('keeps a sealed holdout locked and an unrun hypothesis pending', () => {
     expect(byKey(captured.reversal)).toMatchObject({
       hypothesis: 'passed',

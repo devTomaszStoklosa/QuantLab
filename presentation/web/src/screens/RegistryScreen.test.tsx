@@ -20,6 +20,7 @@ describe('RegistryScreen', () => {
       'demo_reversal',
       'demo_pairs',
       'demo_xsmom',
+      'demo_select',
     ]);
     expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '#/h/demo_momentum');
     expect(rows[0]).toHaveTextContent('Rejected');
@@ -55,13 +56,14 @@ describe('RegistryScreen', () => {
   it('filters by status through the tabs, with counts from the registry', async () => {
     renderWith({ '/api/hypotheses': captured.registry });
     const rejected = await screen.findByRole('tab', { name: /Rejected/ });
-    expect(rejected).toHaveTextContent('1');
+    expect(rejected).toHaveTextContent('2');
 
     await userEvent.click(rejected);
 
     const rows = within(screen.getByRole('table')).getAllByRole('row').slice(1);
-    expect(rows).toHaveLength(1);
+    expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent('demo_momentum');
+    expect(rows[1]).toHaveTextContent('demo_select');
     await userEvent.click(screen.getByRole('tab', { name: /Confirmed/ }));
     expect(screen.getByText('No hypothesis has this status.')).toBeInTheDocument();
   });

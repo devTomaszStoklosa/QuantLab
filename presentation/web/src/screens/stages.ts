@@ -21,8 +21,14 @@ export function stages({ hypothesis, run }: HypothesisDetail): Stage[] {
     signal: ran(hypothesis.strategy),
     backtest: ran(run ? `Sharpe ${ratio(hypothesis.trainingSharpe)}` : undefined),
     costs: ran(run?.costSensitivity.verdict),
+    // The in-sample gate the definition froze: walk-forward, or a grid's CPCV (q8).
     walkforward: run
-      ? { state: GATE[String(run.walkForward.passed)], meta: run.walkForward.passed === null ? 'inconclusive' : undefined }
+      ? {
+          state: GATE[String(run.inSample.passed)],
+          meta: [run.inSample.validation === 'cpcv' ? 'CPCV' : null, run.inSample.passed === null ? 'inconclusive' : null]
+            .filter(Boolean)
+            .join(' · ') || undefined,
+        }
       : { state: 'pending' },
     holdout: holdout ? { state: HOLDOUT[holdout.verdict], meta: holdout.verdict } : { state: 'locked', meta: 'sealed' },
     regimes: ran('descriptive'),

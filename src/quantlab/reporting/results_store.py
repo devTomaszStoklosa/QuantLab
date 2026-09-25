@@ -20,15 +20,17 @@ from pydantic import BaseModel, model_validator
 
 from quantlab.attribution.trade_ledger import PnlGroup, Trade
 from quantlab.reporting.cost_comparison import CostSensitivity
+from quantlab.reporting.grid_report import GridReport
 from quantlab.reporting.metrics import drawdown_series, monthly_returns, yearly_returns
 from quantlab.reporting.tear_sheet import TearSheet
 from quantlab.research.definition import TrainingDiagnostic
 from quantlab.research.hypothesis import Status, concluded_status
 from quantlab.research.trials import registered_trials, trials_on_same_data
 from quantlab.risk.regime import VOLATILITY_REGIMES
+from quantlab.validation.cpcv import CPCV_GATE_RULE
 from quantlab.validation.holdout import HoldoutRecord, holdout_passed, read_holdout_record
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 REGISTRY_FILE = "hypotheses.parquet"
 RUN_FILE = "run.parquet"
 
@@ -60,6 +62,8 @@ REGISTRY_SCHEMA = pa.schema(
         _field("min_sharpe", pa.float64()),
         _field("max_p_value", pa.float64()),
         _field("significance_test", pa.string()),
+        _field("in_sample_validation", pa.string()),
+        _field("configurations", pa.int64()),
         _field("frozen_at_commit", pa.string()),
         _field("registered_at", _TIMESTAMP),
         _field("trials_on_same_data", pa.int64()),
@@ -101,6 +105,25 @@ RUN_SCHEMA = pa.schema(
         _field("walk_forward_rule", pa.string()),
         _field("walk_forward_positive_windows", pa.int64()),
         _field("walk_forward_windows_with_sharpe", pa.int64()),
+        _field("in_sample_validation", pa.string()),
+        _optional("in_sample_passed", pa.bool_()),
+        _optional("grid_start", _DATE),
+        _optional("grid_end", _DATE),
+        _optional("grid_pbo", pa.float64()),
+        _optional("grid_pbo_blocks", pa.int64()),
+        _optional("grid_pbo_splits", pa.int64()),
+        _optional("cpcv_groups", pa.int64()),
+        _optional("cpcv_test_groups", pa.int64()),
+        _optional("cpcv_purge", pa.int64()),
+        _optional("cpcv_embargo", pa.int64()),
+        _optional("cpcv_splits", pa.int64()),
+        _optional("cpcv_paths", pa.int64()),
+        _optional("cpcv_mean_sharpe", pa.float64()),
+        _optional("cpcv_median_sharpe", pa.float64()),
+        _optional("cpcv_min_sharpe", pa.float64()),
+        _optional("cpcv_max_sharpe", pa.float64()),
+        _optional("cpcv_positive_share", pa.float64()),
+        _optional("cpcv_rule", pa.string()),
         _optional("permutation_passed", pa.bool_()),
         _field("permutation_test", pa.string()),
         _field("permutation_statistic", pa.string()),
@@ -116,6 +139,7 @@ RUN_SCHEMA = pa.schema(
         _optional("permutation_p_value", pa.float64()),
         _optional("permutation_reason", pa.string()),
         _field("trials", pa.list_(pa.string())),
+        _field("configurations", pa.int64()),
         _field("returns_count", pa.int64()),
         _optional("sharpe_annualized", pa.float64()),
         _optional("psr", pa.float64()),
@@ -211,6 +235,29 @@ TABLE_SCHEMAS = {
             _optional("value", pa.float64()),
         ]
     ),
+    "selection": pa.schema(
+        [
+            _field("year", pa.int64()),
+            _field("days", pa.int64()),
+            _field("position", pa.int64()),
+            _field("value", pa.string()),
+            _optional("sharpe", pa.float64()),
+            _field("chosen", pa.bool_()),
+        ]
+    ),
+    "cpcv_paths": pa.schema(
+        [
+            _field("position", pa.int64()),
+            _optional("sharpe", pa.float64()),
+        ]
+    ),
+    "cpcv_choices": pa.schema(
+        [
+            _field("position", pa.int64()),
+            _field("value", pa.string()),
+            _field("share", pa.float64()),
+        ]
+    ),
     "trades": pa.schema(
         [
             _field("trade_id", pa.int64()),
@@ -270,6 +317,8 @@ class RegistryRow(BaseModel):
     min_sharpe: float
     max_p_value: float
     significance_test: str
+    in_sample_validation: str
+    configurations: int
     frozen_at_commit: str
     registered_at: datetime
     trials_on_same_data: int
@@ -294,6 +343,31 @@ def _regime_order(labels: list[str]) -> list[str]:
     return known + sorted(label for label in labels if label not in VOLATILITY_REGIMES)
 
 
+def _grid_columns(grid: GridReport | None) -> dict:
+    """A parameter grid's summary columns (q8, REQ-841); all NULL without a grid."""
+    pbo = grid.pbo if grid else None
+    cpcv = grid.cpcv if grid else None
+    return {
+        "grid_start": grid.start if grid else None,
+        "grid_end": grid.end if grid else None,
+        "grid_pbo": _number(pbo.pbo) if pbo else None,
+        "grid_pbo_blocks": pbo.n_blocks if pbo else None,
+        "grid_pbo_splits": pbo.n_splits if pbo else None,
+        "cpcv_groups": cpcv.groups if cpcv else None,
+        "cpcv_test_groups": cpcv.test_groups if cpcv else None,
+        "cpcv_purge": cpcv.purge if cpcv else None,
+        "cpcv_embargo": cpcv.embargo if cpcv else None,
+        "cpcv_splits": cpcv.n_splits if cpcv else None,
+        "cpcv_paths": cpcv.n_paths if cpcv else None,
+        "cpcv_mean_sharpe": _number(cpcv.mean_sharpe) if cpcv else None,
+        "cpcv_median_sharpe": _number(cpcv.median_sharpe) if cpcv else None,
+        "cpcv_min_sharpe": _number(cpcv.min_sharpe) if cpcv else None,
+        "cpcv_max_sharpe": _number(cpcv.max_sharpe) if cpcv else None,
+        "cpcv_positive_share": _number(cpcv.positive_share) if cpcv else None,
+        "cpcv_rule": CPCV_GATE_RULE if cpcv else None,
+    }
+
+
 def _run_row(evidence: RunEvidence) -> dict:
     sheet = evidence.sheet
     run = sheet.run
@@ -303,6 +377,7 @@ def _run_row(evidence: RunEvidence) -> dict:
     contrast = sheet.contrast
     sensitivity = evidence.cost_sensitivity
     first_position = next((s.ts for s in run.snapshots if s.positions), None)
+    # Columns are laid out by RUN_SCHEMA, not by this order.
     return {
         "schema_version": SCHEMA_VERSION,
         "hypothesis": sheet.hypothesis,
@@ -325,6 +400,8 @@ def _run_row(evidence: RunEvidence) -> dict:
         "walk_forward_rule": walk_forward["rule"],
         "walk_forward_positive_windows": walk_forward.get("positive_windows", 0),
         "walk_forward_windows_with_sharpe": walk_forward.get("windows_with_sharpe", 0),
+        "in_sample_validation": sheet.in_sample_validation,
+        "in_sample_passed": sheet.in_sample_passed,
         "permutation_passed": sheet.permutation.passed,
         "permutation_test": permutation["test"],
         "permutation_statistic": permutation["statistic"],
@@ -340,6 +417,7 @@ def _run_row(evidence: RunEvidence) -> dict:
         "permutation_p_value": _number(permutation.get("p_value")),
         "permutation_reason": permutation.get("reason"),
         "trials": deflation.trials,
+        "configurations": deflation.configurations,
         "returns_count": deflation.n_returns,
         "sharpe_annualized": _number(deflation.sharpe_annualized),
         "psr": _number(deflation.psr),
@@ -352,7 +430,7 @@ def _run_row(evidence: RunEvidence) -> dict:
         "trades": len(evidence.trades),
         "trades_open_at_end": sum(1 for trade in evidence.trades if trade.open_at_end),
         "trades_winning": sum(1 for trade in evidence.trades if trade.net_pnl > 0),
-    }
+    } | _grid_columns(sheet.grid)
 
 
 def _tables(evidence: RunEvidence) -> dict[str, list[dict]]:
@@ -364,6 +442,7 @@ def _tables(evidence: RunEvidence) -> dict[str, list[dict]]:
     windows = sheet.walk_forward.detail["windows"]
     aggregate = sheet.walk_forward.detail["aggregate"]
     total_days = sum(regime.days for regime in sheet.regimes.values())
+    grid = sheet.grid
     return {
         "metrics": [
             {
@@ -431,6 +510,28 @@ def _tables(evidence: RunEvidence) -> dict[str, list[dict]]:
                 for label, value in diagnostic.values.items()
             )
         ],
+        "selection": [
+            {
+                "year": year.year,
+                "days": year.days,
+                "position": position,
+                "value": label,
+                "sharpe": _number(sharpe),
+                "chosen": label == year.chosen,
+            }
+            for year in (grid.years if grid else [])
+            for position, (label, sharpe) in enumerate(year.sharpes.items())
+        ],
+        "cpcv_paths": [
+            {"position": position, "sharpe": _number(sharpe)}
+            for position, sharpe in enumerate(grid.cpcv.path_sharpes if grid else [])
+        ],
+        "cpcv_choices": [
+            {"position": position, "value": label, "share": share}
+            for position, (label, share) in enumerate(
+                grid.cpcv.choice_shares.items() if grid else []
+            )
+        ],
         "trades": [
             {"trade_id": trade_id} | trade.model_dump()
             for trade_id, trade in enumerate(evidence.trades, start=1)
@@ -462,25 +563,24 @@ def write_run(store: Path, evidence: RunEvidence) -> Path:
     return target
 
 
-def _stored_walk_forward(store: Path, hypothesis: str) -> tuple[bool, bool | None]:
-    """Whether the store holds a current-schema run of the hypothesis, and its
-    walk-forward result."""
+def _stored_gate(store: Path, hypothesis: str) -> tuple[bool, bool | None]:
+    """Whether the store holds a current-schema run of the hypothesis, and the
+    result of its frozen in-sample gate (walk-forward, or CPCV in q8)."""
     path = store / hypothesis / RUN_FILE
     if not path.exists():
         return False, None
-    table = pq.read_table(path, columns=["schema_version", "walk_forward_passed"]).to_pylist()
+    table = pq.read_table(path, columns=["schema_version"]).to_pylist()
     if len(table) != 1 or table[0]["schema_version"] != SCHEMA_VERSION:
         return False, None  # a run written by another schema version is not shown
-    return True, table[0]["walk_forward_passed"]
+    [row] = pq.read_table(path, columns=["in_sample_passed"]).to_pylist()
+    return True, row["in_sample_passed"]
 
 
-def _status(
-    has_run: bool, walk_forward_passed: bool | None, holdout: HoldoutRecord | None
-) -> Status:
+def _status(has_run: bool, in_sample_passed: bool | None, holdout: HoldoutRecord | None) -> Status:
     """REQ-711: the gates decide once the holdout is open; before that, a stored run
     means the hypothesis is being tested."""
     if holdout is not None:
-        return concluded_status(walk_forward_passed, holdout_passed(holdout.verdict))
+        return concluded_status(in_sample_passed, holdout_passed(holdout.verdict))
     return "testing" if has_run else "proposed"
 
 
@@ -495,7 +595,7 @@ def registry_rows(store: Path, definitions_dir: Path) -> list[RegistryRow]:
         parameters = config.parameters
         record_path = definitions_dir / f"{trial.hypothesis}.opened.json"
         holdout = read_holdout_record(record_path) if record_path.exists() else None
-        has_run, walk_forward_passed = _stored_walk_forward(store, trial.hypothesis)
+        has_run, in_sample_passed = _stored_gate(store, trial.hypothesis)
         rows.append(
             RegistryRow(
                 hypothesis=trial.hypothesis,
@@ -513,10 +613,12 @@ def registry_rows(store: Path, definitions_dir: Path) -> list[RegistryRow]:
                 min_sharpe=config.success_criterion.min_sharpe,
                 max_p_value=config.success_criterion.max_p_value,
                 significance_test=config.success_criterion.significance_test,
+                in_sample_validation=config.success_criterion.in_sample_validation,
+                configurations=parameters.configurations,
                 frozen_at_commit=trial.last_commit,
                 registered_at=trial.registered_at,
                 trials_on_same_data=len(trials_on_same_data(trial.hypothesis, trials)),
-                status=_status(has_run, walk_forward_passed, holdout),
+                status=_status(has_run, in_sample_passed, holdout),
                 has_run=has_run,
                 holdout=holdout,
             )
