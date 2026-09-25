@@ -103,6 +103,8 @@ Portfel zamrożonych strategii jako hipoteza: zamrożona reguła łączenia (sk�
 
 Slice'y: P1 dokumentacja · P2 reguły alokacji · P3 strategia portfelowa i sizer wag netto · P4 definicja portfela i straż holdoutu · P5 raport · P6 `demo_portfolio` w magazynie syntetycznym · P7 zamrożenie `portfolio_v1` · przebiegi lokalne i dziennik.
 
+**Po zamrożeniu (2026-09-25):** `portfolio_v1` — cztery hipotezy krypto (`momentum_v1`, `mean_reversion_v1`, `pairs_v1`, `momentum_select_v1`) ważone co miesiąc odwrotnością zmienności z 90 dni, pozycje netto; bramka walk-forward, holdout 2026-01-01 → 2026-08-31 otwierany dopiero po holdoutach trzech składników. Kolejna próba na `mvp-crypto` 2018–2023 (razem 5 prób, 10 konfiguracji), więc opisowy DSR pozostałych spadnie przy ich następnym przebiegu. Lokalnie, w tej kolejności: przebiegi treningowe i otwarcia holdoutów `mean_reversion_v1`, `pairs_v1`, `momentum_select_v1`; potem `uv run quantlab run portfolio_v1`, `open-holdout portfolio_v1`, wpis w dzienniku z porównaniem ze składnikami.
+
 ## Zakres MVP
 
 Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
@@ -130,4 +132,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q6-advanced-validation-cpcv | Ready for dev | Ready for dev | Ready for dev | V1–V5 gotowe; V6 wymaga lokalnych przebiegów (Binance) |
 | q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | W1–W5 gotowe (magazyn wyników, API .NET, aplikacja React); W6: CI na Linuksie i Windowsie zielone; na maszynie deweloperskiej zostaje DuckDB bez AVX2 |
 | q8-parameter-selection-cpcv | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, CPCV, strategia z doborem, konfiguracje w DSR, PBO siatki i raport, bramka CPCV w kryterium, magazyn v3, API, aplikacja i tear-sheet, `demo_select`; decyzje 1–6 przyjęte 2026-09-25, `momentum_select_v1` zamrożona); przebiegi (trening, holdout, dziennik) lokalnie na Binance |
-| q9-strategy-portfolio | Ready for dev | Ready for dev | Ready for dev | P1–P6 gotowe (dokumentacja, reguły alokacji, strategia portfelowa z pozycjami netto, definicja ze składnikami i strażą holdoutu, raport w diagnostyce i tear-sheecie, `demo_portfolio`; przyspieszenie strategii par bez zmiany wyników); P7 czeka na pytania 1–6 (01-story) |
+| q9-strategy-portfolio | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, reguły alokacji, strategia portfelowa z pozycjami netto, definicja ze składnikami i strażą holdoutu, raport w diagnostyce i tear-sheecie, `demo_portfolio`, przyspieszenie strategii par bez zmiany wyników; decyzje 1–6 przyjęte 2026-09-25, `portfolio_v1` zamrożona); przebiegi lokalnie na Binance, holdout po holdoutach składników |

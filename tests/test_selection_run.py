@@ -180,9 +180,10 @@ def test_momentum_select_v1_freezes_the_answers_to_the_story_s_questions() -> No
     assert (config.start, config.end) == (date(2026, 1, 1), date(2026, 8, 31))
     # The holdout's 2026 choice is made on all history since the anchor.
     assert parameters.fetch_start(config.start) == date(2017, 1, 1)
-    # Its six lookbacks join the three single-configuration trials on these data.
+    # Its six lookbacks join the single-configuration trials on these data.
     trials = trials_on_same_data(
         "momentum_select_v1", registered_trials(_REPO / "config" / "holdout")
     )
-    assert [trial.hypothesis for trial in trials][-1] == "momentum_select_v1"
-    assert sum(trial.definition.parameters.configurations for trial in trials) == 9
+    configurations = {t.hypothesis: t.definition.parameters.configurations for t in trials}
+    assert configurations["momentum_select_v1"] == 6
+    assert sum(configurations.values()) == len(trials) + 5

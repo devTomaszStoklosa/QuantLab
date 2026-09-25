@@ -13,6 +13,7 @@ from quantlab import cli
 from quantlab.core.data.provider import PriceBar, WithoutEvents
 from quantlab.core.universe import Instrument
 from quantlab.research.definition import StrategyPortfolioParameters
+from quantlab.research.trials import registered_trials, trials_on_same_data
 from quantlab.validation.holdout import (
     parse_holdout_config,
     read_holdout_record,
@@ -260,3 +261,38 @@ def test_a_resolved_portfolio_fetches_every_sleeve_s_warm_up_and_counts_once(tmp
     ]
     assert parameters.holdout_prerequisites(date(2023, 1, 1), date(2023, 6, 30)) == []
     assert parameters.build_strategy().history is parameters.build_strategy().history
+
+
+def test_portfolio_v1_freezes_the_answers_to_the_story_s_questions() -> None:
+    definitions = _REPO / "config" / "holdout"
+
+    def load(hypothesis: str):
+        return parse_holdout_config(definitions / f"{hypothesis}.yaml")
+
+    config = load("portfolio_v1")
+    parameters = config.parameters.resolve(load)
+
+    assert parameters.components == [
+        "momentum_v1",
+        "mean_reversion_v1",
+        "pairs_v1",
+        "momentum_select_v1",
+    ]
+    assert (parameters.allocation, parameters.window_days, parameters.min_window_days) == (
+        "inverse_volatility",
+        90,
+        60,
+    )
+    assert parameters.history_start == date(2018, 1, 1)
+    assert config.success_criterion.in_sample_validation == "walk_forward"
+    assert (config.training_start, config.training_end) == (date(2018, 1, 1), date(2023, 12, 31))
+    assert (config.start, config.end) == (date(2026, 1, 1), date(2026, 8, 31))
+    # Its holdout waits for the three components that share it (REQ-930).
+    assert parameters.holdout_prerequisites(config.start, config.end) == [
+        "mean_reversion_v1",
+        "pairs_v1",
+        "momentum_select_v1",
+    ]
+    trials = trials_on_same_data("portfolio_v1", registered_trials(definitions))
+    assert "portfolio_v1" in [trial.hypothesis for trial in trials]
+    assert parameters.configurations == 1
