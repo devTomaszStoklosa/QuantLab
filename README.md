@@ -22,6 +22,20 @@ Gotowe są też: drugi silnik z egzekucją zleceń i parytetem z wektorowym (`q2
 
 ## Uruchomienie
 
+### Przebiegi lokalne
+
+To, co zostało do zrobienia na maszynie z dostępem do danych, pokazuje jedna komenda (`q10`): sprawdzenia środowiska (natywne paczki bez AVX2, DuckDB w API .NET, dostęp do Binance i klucz Tiingo — gdy któryś krok ich potrzebuje), budowa uniwersum S&P 500, przebiegi treningowe, otwarcia holdoutów, commity zapisów otwarć i wpisy w dzienniku — każdy krok ze stanem (`done`, `pending`, `blocked` z powodem) i komendą. Przebieg jest zrobiony tylko wtedy, gdy magazyn ma go w bieżącym schemacie i z tą samą listą prób na tych samych danych.
+
+```bash
+uv sync
+uv run quantlab plan          # stan każdego kroku, bez sieci i bez zmian w plikach
+uv run quantlab plan --run    # sprawdzenia i kroki automatyczne po kolei; stop na pierwszym błędzie
+```
+
+`--run` nigdy nie otwiera holdoutu, nie commituje i nie pisze w dzienniku: to kroki badacza, wykonywane po przejrzeniu wyników treningu, w kolejności z planu (np. `portfolio_v1` po holdoutach swoich składników).
+
+### Komendy
+
 ```bash
 uv sync
 uv run pytest -q

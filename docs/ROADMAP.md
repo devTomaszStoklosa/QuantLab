@@ -15,6 +15,7 @@ lab-foundation
        -> q7-dotnet-react-presentation
        -> q8-parameter-selection-cpcv   (po q1–q7; korzysta z q2, q6, q7)
        -> q9-strategy-portfolio         (po q8; korzysta z q2, q4, q6, q7, q8)
+       -> q10-local-runbook             (po q9; plan przebiegów lokalnych)
 ```
 
 q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
@@ -38,6 +39,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 **Po CI (2026-09-24):** repozytorium ma CI na GitHub Actions (ruff, pytest, testy API .NET, testy i build aplikacji React — na Linuksie i Windowsie), co pokrywa część weryfikacji `q7` na Windows. Wszystkie epiki `q1`–`q7` mają kod; Tomasz wybrał jako następny epik **`q8-parameter-selection-cpcv`**: hipoteza z parametrem dobieranym na danych (siatka, reguła wyboru zamrożona zamiast wartości), walk-forward z re-optymalizacją i CPCV z purgingiem i embargo — odłożone w `q6` do pierwszej takiej hipotezy. Kod na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q8-parameter-selection-cpcv/01-story.md), przebiegi lokalnie (Binance).
 
 **Po `q8`-P7 (2026-09-25):** `momentum_select_v1` zamrożona; wszystkie epiki `q1`–`q8` mają kod, otwarte są tylko przebiegi lokalne. Tomasz wybrał jako następny epik **`q9-strategy-portfolio`**: portfel zamrożonych hipotez krypto łączonych regułą alokacji ryzyka (odwrotność zmienności, risk parity, równe wagi) z wagami z historii sprzed rebalansu, handlujący pozycjami netto (kompensacja przeciwnych pozycji rękawów). Holdout portfela nachodzi na nieotwarte holdouty trzech składników, więc otwiera się dopiero po nich. Kod na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q9-strategy-portfolio/01-story.md), przebiegi lokalnie (Binance).
+
+**Po `q9`-P7 (2026-09-25):** `portfolio_v1` zamrożony; wszystkie epiki `q1`–`q9` mają kod, a otwarte są przebiegi lokalne: sześć hipotez bez treningu, holdouty w kolejności chroniącej `portfolio_v1`, budowa `sp500.yaml` i pobranie z Tiingo dla `xsmom_v1`, sprawdzenie DuckDB bez AVX2. Tomasz wybrał jako następny epik **`q10-local-runbook`**: `quantlab plan` — stan każdego pozostałego kroku z powodem i komendą — oraz `quantlab plan --run`, który wykonuje kroki automatyczne w poprawnej kolejności, a otwarcia holdoutów, commity i wpisy w dzienniku zostawia badaczowi.
 
 ## Epiki
 
@@ -105,6 +108,12 @@ Slice'y: P1 dokumentacja · P2 reguły alokacji · P3 strategia portfelowa i siz
 
 **Po zamrożeniu (2026-09-25):** `portfolio_v1` — cztery hipotezy krypto (`momentum_v1`, `mean_reversion_v1`, `pairs_v1`, `momentum_select_v1`) ważone co miesiąc odwrotnością zmienności z 90 dni, pozycje netto; bramka walk-forward, holdout 2026-01-01 → 2026-08-31 otwierany dopiero po holdoutach trzech składników. Kolejna próba na `mvp-crypto` 2018–2023 (razem 5 prób, 10 konfiguracji), więc opisowy DSR pozostałych spadnie przy ich następnym przebiegu. Lokalnie, w tej kolejności: przebiegi treningowe i otwarcia holdoutów `mean_reversion_v1`, `pairs_v1`, `momentum_select_v1`; potem `uv run quantlab run portfolio_v1`, `open-holdout portfolio_v1`, wpis w dzienniku z porównaniem ze składnikami.
 
+### q10-local-runbook (narzędzie, w toku)
+
+Plan przebiegów lokalnych liczony ze stanu repozytorium i magazynu wyników: dla każdej zacommitowanej hipotezy przebieg treningowy (zrobiony tylko przy aktualnym schemacie i tej samej liście prób), otwarcie holdoutu (zablokowane do treningu i do holdoutów składników portfela), commit zapisu otwarcia i wpis w dzienniku; przed nimi sprawdzenia środowiska i budowa uniwersów. `--run` wykonuje sprawdzenia i kroki automatyczne po kolei, zatrzymuje się na pierwszym błędzie i nigdy nie wykonuje kroków ręcznych. Pełna specyfikacja: [specs/q10-local-runbook/](specs/q10-local-runbook/).
+
+Slice'y: R1 dokumentacja · R2 stan i `quantlab plan` · R3 `quantlab plan --run` · R4 README „Przebiegi lokalne".
+
 ## Zakres MVP
 
 Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
@@ -133,3 +142,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q7-dotnet-react-presentation | Ready for dev | Ready for dev | Ready for dev | W1–W5 gotowe (magazyn wyników, API .NET, aplikacja React); W6: CI na Linuksie i Windowsie zielone; na maszynie deweloperskiej zostaje DuckDB bez AVX2 |
 | q8-parameter-selection-cpcv | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, CPCV, strategia z doborem, konfiguracje w DSR, PBO siatki i raport, bramka CPCV w kryterium, magazyn v3, API, aplikacja i tear-sheet, `demo_select`; decyzje 1–6 przyjęte 2026-09-25, `momentum_select_v1` zamrożona); przebiegi (trening, holdout, dziennik) lokalnie na Binance |
 | q9-strategy-portfolio | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, reguły alokacji, strategia portfelowa z pozycjami netto, definicja ze składnikami i strażą holdoutu, raport w diagnostyce i tear-sheecie, `demo_portfolio`, przyspieszenie strategii par bez zmiany wyników; decyzje 1–6 przyjęte 2026-09-25, `portfolio_v1` zamrożona); przebiegi lokalnie na Binance, holdout po holdoutach składników |
+| q10-local-runbook | Ready for dev | Ready for dev | Ready for dev | R1–R4 gotowe (dokumentacja, `quantlab plan`, `plan --run`, `check-source`, README „Przebiegi lokalne"); na maszynie deweloperskiej: `uv run quantlab plan --run` |

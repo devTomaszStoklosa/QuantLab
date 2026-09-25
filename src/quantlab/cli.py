@@ -1,12 +1,16 @@
 import importlib.metadata
 import importlib.resources
+import os
+import shutil
 import subprocess
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, NamedTuple
 
+import requests
 import typer
 from pydantic import BaseModel
 
@@ -62,6 +66,7 @@ from quantlab.reporting.results_store import (
 from quantlab.reporting.tear_sheet import Contrast, TearSheet, render_html
 from quantlab.research.definition import StudyParameters
 from quantlab.research.hypothesis import concluded_status
+from quantlab.research.plan import Step, build_plan, read_state
 from quantlab.research.trials import (
     Trial,
     TrialRegistryError,
@@ -1415,3 +1420,154 @@ def registry_command() -> None:
             f"{_holdout_state(row)}"
         )
     typer.echo(f"Registry written to {_RESULTS_DIR / REGISTRY_FILE}")
+
+
+# --- q10: the plan of what is left to do locally --------------------------------------
+
+_RESEARCH_LOG = Path("docs/RESEARCH_LOG.md")
+# How each plan step's program starts as a process (REQ-1020): quantlab and pytest
+# from this interpreter, so the environment `uv run` chose is the one that runs.
+_PROGRAMS = {
+    "quantlab": [sys.executable, "-m", "quantlab"],
+    "pytest": [sys.executable, "-m", "pytest"],
+}
+_SHOWN = {"quantlab": "uv run quantlab", "pytest": "uv run pytest"}
+
+
+def _execute(command: list[str]) -> int:
+    """Run one step as its own process; its output goes straight to the terminal."""
+    program, *args = command
+    return subprocess.run([*_PROGRAMS.get(program, [program]), *args], check=False).returncode
+
+
+# Replaced in tests: every step a process, nothing run in-process (03-design, decision 3).
+_EXECUTOR: Callable[[list[str]], int] = _execute
+
+
+def run_step(step: Step, executor: Callable[[list[str]], int]) -> int:
+    """Execute a check or an automatic step; a manual one is the researcher's (REQ-1021)."""
+    if step.kind == "manual" or step.command is None:
+        raise ValueError(f"{step.key} is a manual step: quantlab never takes it")
+    return executor(step.command)
+
+
+def _plan() -> list[Step]:
+    state = read_state(
+        repository=Path.cwd(),
+        definitions=_HOLDOUT_DIR,
+        store=_RESULTS_DIR,
+        universes=_UNIVERSES_DIR,
+        research_log=_RESEARCH_LOG,
+        dotnet=shutil.which("dotnet") is not None,
+    )
+    return build_plan(state)
+
+
+def _shown(command: list[str] | None) -> str:
+    if command is None:
+        return ""
+    program, *args = command
+    return " ".join([_SHOWN.get(program, program), *args])
+
+
+def _print_plan(steps: list[Step]) -> None:
+    counts = {state: sum(1 for s in steps if s.state == state) for state in ("pending", "blocked")}
+    typer.echo(
+        f"Plan: {counts['pending']} pending, {counts['blocked']} blocked, "
+        f"{len(steps) - sum(counts.values())} done"
+    )
+    width = max(len(step.key) for step in steps) + 2
+    for number, step in enumerate(steps, start=1):
+        typer.echo(f"{number:>3}  {step.state:<8}{step.kind:<8}{step.key:<{width}}{step.title}")
+        if step.state != "done":
+            if step.reason:
+                typer.echo(f"{'':>{21 + width}}{step.reason}")
+            if step.command and step.state == "pending":
+                typer.echo(f"{'':>{21 + width}}$ {_shown(step.command)}")
+
+
+@app.command("plan")
+def plan_command(
+    run: Annotated[
+        bool,
+        typer.Option(
+            "--run",
+            help="Execute the pending checks and automatic steps in order; never a manual one.",
+        ),
+    ] = False,
+) -> None:
+    """What is left to do on this machine, in order (q10): checks, universes, training
+    runs, holdout openings, commits and research-log entries, each with its state."""
+    try:
+        steps = _plan()
+    except TrialRegistryError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
+    _print_plan(steps)
+    if not run:
+        return
+    executed: set[str] = set()
+    while True:
+        # Recomputed after every step: one may unblock the next (REQ-1023).
+        step = next(
+            (
+                s
+                for s in _plan()
+                if s.kind != "manual" and s.state == "pending" and s.key not in executed
+            ),
+            None,
+        )
+        if step is None:
+            break
+        typer.echo("")
+        typer.echo(f">>> {step.key}: {_shown(step.command)}")
+        code = run_step(step, _EXECUTOR)
+        executed.add(step.key)
+        if code != 0:
+            typer.echo(f"Stopped: {step.key} failed (exit code {code}).", err=True)
+            raise typer.Exit(1)
+    manual = [s for s in _plan() if s.kind == "manual" and s.state != "done"]
+    typer.echo("")
+    if not manual:
+        typer.echo("Nothing left: every step is done.")
+        return
+    typer.echo("Left for you (quantlab never takes these steps):")
+    for step in manual:
+        detail = f" - {step.reason}" if step.reason else ""
+        typer.echo(f"  {step.state:<8}{step.key}{detail}")
+        if step.state == "pending" and step.command:
+            typer.echo(f"          $ {_shown(step.command)}")
+
+
+def _ping_binance() -> None:
+    requests.get("https://api.binance.com/api/v3/ping", timeout=15).raise_for_status()
+
+
+def _ping_tiingo() -> None:
+    key = os.environ.get("TIINGO_API_KEY")
+    if not key:
+        raise ValueError("TIINGO_API_KEY is not set (a free key at tiingo.com)")
+    requests.get(
+        "https://api.tiingo.com/api/test",
+        headers={"Authorization": f"Token {key}"},
+        timeout=15,
+    ).raise_for_status()
+
+
+# A data source a pending run reads, checked before any run (q10, REQ-1010).
+_SOURCE_CHECKS: dict[str, Callable[[], None]] = {"binance": _ping_binance, "tiingo": _ping_tiingo}
+
+
+@app.command("check-source")
+def check_source(source: Annotated[str, typer.Argument(help="binance or tiingo")]) -> None:
+    """Whether a data source answers from this machine (with its key, where it needs one)."""
+    probe = _SOURCE_CHECKS.get(source)
+    if probe is None:
+        typer.echo(f"Error: unknown source {source}; one of {sorted(_SOURCE_CHECKS)}", err=True)
+        raise typer.Exit(1)
+    try:
+        probe()
+    except (requests.RequestException, ValueError) as error:
+        typer.echo(f"{source}: not reachable - {error}", err=True)
+        raise typer.Exit(1) from error
+    typer.echo(f"{source}: reachable")

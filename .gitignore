@@ -21,3 +21,6 @@ bin/
 obj/
 node_modules/
 presentation/web/dist/
+
+# tear-sheets written by quantlab plan --run (q10)
+/reports/
