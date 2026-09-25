@@ -42,7 +42,7 @@ Jako badacz chcę zamrozić **regułę łączenia** zamrożonych strategii (skł
 
 ## Priority
 
-Should have — wybrane przez Tomasza 2026-09-25 jako następny epik po `q1`–`q8`. Kod (reguły alokacji, strategia portfelowa, raport) powstaje na danych syntetycznych; zamrożenie czeka na odpowiedzi poniżej; przebiegi — na lokalny dostęp do Binance, a holdout portfela — na otwarcie holdoutów jego składników.
+Should have — wybrane przez Tomasza 2026-09-25 jako następny epik po `q1`–`q8`. Kod (reguły alokacji, strategia portfelowa, raport) powstał na danych syntetycznych; definicja zamrożona po decyzjach 1–6 poniżej (P7, 2026-09-25); przebiegi czekają na lokalny dostęp do Binance, a holdout portfela — na otwarcie holdoutów jego składników.
 
 ## Dependencies and risks
 
@@ -52,15 +52,19 @@ Should have — wybrane przez Tomasza 2026-09-25 jako następny epik po `q1`–`
 - **Ryzyko: składniki silnie skorelowane.** `momentum_v1` i `momentum_select_v1` to obie time-series momentum; odwrotność zmienności ich nie rozróżnia, risk parity tak. Mitygacja: macierz korelacji i współczynnik dywersyfikacji w raporcie, reguła wybrana przed wynikiem (pytanie 2).
 - **Ryzyko: wielokrotne testowanie.** Portfel to kolejna próba na `mvp-crypto` 2018–2023 — zaostrza próg DSR pozostałych, zgodnie z prawdą, opisowo.
 
+## Decisions
+
+Odpowiedzi na pytania 1–6, przyjęte przez Tomasza 2026-09-25 (wszystkie propozycje); zamrożone w `config/holdout/portfolio_v1.yaml` (P7):
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Składniki | **`momentum_v1`, `mean_reversion_v1`, `pairs_v1`, `momentum_select_v1`**, każdy z parametrami, sizerem, polityką rebalansu i modelem kosztów ze swojej zamrożonej definicji |
+| 2 | Reguła alokacji | **Odwrotność zmienności** 90-dniowych zwrotów netto rękawu; równe wagi i risk parity opisowo. Pomiar P3 na danych syntetycznych: rękaw pary (zabezpieczony, o niskiej zmienności) dostaje w okresach handlu 0,5–0,65 wagi |
+| 3 | Okno i harmonogram | Okno **90 dni**, rebalans wag **1. dnia każdego miesiąca**, rękaw kwalifikowany **60 dni** po pierwszym dniu z pozycją i z wariancją w oknie |
+| 4 | Kryterium i bramka | Jak pozostałe hipotezy krypto: **walk-forward** jako bramka in-sample; na holdoucie Sharpe netto > 0 i p < 0.1 z testu tasowania dni; porównanie ze składnikami i z równymi wagami opisowo |
+| 5 | Okresy | Trening **2018-01-01 → 2023-12-31**, holdout **2026-01-01 → 2026-08-31**, otwierany dopiero po zapisanych otwarciach holdoutów `mean_reversion_v1`, `pairs_v1` i `momentum_select_v1` (straż `open-holdout`, REQ-930); wagi na 2026 z historii do 2025-12-31 |
+| 6 | Liczba prób | Jedna próba i jedna konfiguracja: na `mvp-crypto` 2018–2023 razem 5 prób i 10 konfiguracji |
+
 ## Open questions
 
-Blokują zamrożenie (ostatni slice); kod powstaje na danych syntetycznych.
-
-| # | Question | Owner | Due |
-|---|---|---|---|
-| 1 | Składniki. Propozycja: wszystkie cztery hipotezy krypto — **`momentum_v1`, `mean_reversion_v1`, `pairs_v1`, `momentum_select_v1`** — z ich zamrożonymi parametrami i modelami kosztów. Alternatywa: bez `momentum_select_v1` (to też momentum szeregów czasowych, silnie skorelowane z `momentum_v1`) | Tomasz | przed zamrożeniem |
-| 2 | Reguła alokacji. Propozycja: **odwrotność zmienności** (wagi ∝ 1/σ zwrotów netto składnika w oknie estymacji) — odporna przy czterech składnikach, bez odwracania macierzy kowariancji; równe wagi i risk parity (równy wkład w ryzyko) opisowo. Alternatywa: risk parity jako reguła zamrożona (uwzględnia korelacje, np. dwóch momentum) | Tomasz | przed zamrożeniem |
-| 3 | Okno i harmonogram. Propozycja: okno estymacji **90 dni** zwrotów netto sprzed dnia rebalansu, rebalans wag **pierwszego dnia każdego miesiąca**, co najmniej **60 dni** od pierwszego dnia z pozycją, żeby składnik dostał wagę (składnik płaski przez część okna, jak para poza transakcją, zachowuje wagę); pozycje składników zmieniają się codziennie jak w ich definicjach | Tomasz | przed zamrożeniem |
-| 4 | Kryterium i bramka. Propozycja: jak pozostałe hipotezy krypto — walk-forward jako bramka in-sample, na holdoucie Sharpe netto > 0 i p < 0.1 z testu tasowania dni; porównanie z najlepszym składnikiem i z równymi wagami **opisowo**. Alternatywa: kryterium „Sharpe netto portfela > Sharpe najlepszego składnika na holdoucie" (pytanie o przewagę dywersyfikacji, nie o przewagę w ogóle) | Tomasz | przed zamrożeniem |
-| 5 | Okresy. Propozycja: trening **2018-01-01 → 2023-12-31** (jak składniki), holdout **2026-01-01 → 2026-08-31**, otwierany dopiero po otwarciu holdoutów `mean_reversion_v1`, `pairs_v1` i `momentum_select_v1` (`momentum_v1` ma już otwarty 2024–2025). Wagi na 2026 z historii do 2025-12-31 | Tomasz | przed zamrożeniem |
-| 6 | Liczba prób. Propozycja: portfel to jedna próba i jedna konfiguracja na `mvp-crypto` 2018–2023 (reguły opisowe nie są wybierane, więc nie są próbami): 5 prób, 10 konfiguracji | Tomasz | przed zamrożeniem |
+Brak — wszystkie decyzje potrzebne do zamrożenia (P7) przyjęte.

@@ -143,4 +143,4 @@ Diagnostyka treningu (tabela `diagnostics` magazynu, bez zmiany schematu v3):
 
 | # | Question | Owner |
 |---|---|---|
-| 1 | Pytania 1–6 z [01-story.md](01-story.md): składniki, reguła alokacji, okno i harmonogram, kryterium i bramka, okresy, liczba prób | Tomasz |
+| — | Brak: pytania 1–6 z [01-story.md](01-story.md) rozstrzygnięte 2026-09-25; definicja zamrożona w `config/holdout/portfolio_v1.yaml` | — |

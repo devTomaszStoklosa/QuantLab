@@ -1,0 +1,57 @@
+# Frozen definition of a portfolio of the lab's crypto hypotheses (q9, REQ-920,
+# REQ-950). Committed before any run of it reads market data: it is the single
+# source of its combining rule, dates and success criterion. Do not edit: a
+# change after this commit makes it a different hypothesis.
+# frozen_at_commit is read from git (the last commit touching this file).
+#
+# The four components are traded exactly as their own frozen definitions trade
+# them (strategy, sizer, rebalance policy, cost model), and loaded from those
+# committed files: a component changed or deleted after this commit stops the
+# run. On the first day of each month every sleeve gets a weight proportional
+# to 1/sigma of its last 90 daily net returns before that day, from a
+# standalone run anchored at history_start on bars dated before that day only;
+# a sleeve gets a weight 60 days after its first non-zero return, and needs
+# variance in the window (a sleeve flat for the whole window gets 0). The
+# portfolio holds the weighted sum of the sleeves' target positions per
+# instrument: opposite positions offset, and only changes of the net
+# positions are traded and costed, under the cost model below. Equal weights
+# and risk parity are reported alongside, descriptively.
+#
+# Question: does combining the lab's crypto strategies by their risk earn a
+# positive, significant net Sharpe out of sample? Comparison with each
+# component and with equal weights is descriptive. One trial, one
+# configuration on mvp-crypto 2018-2023.
+#
+# Training is the components' period. The holdout is the one mean_reversion_v1,
+# pairs_v1 and momentum_select_v1 froze: open-holdout refuses this one until
+# their one-time openings are recorded, so it reveals none of them. Weights
+# for 2026 come from history up to 2025-12-31. About 8 months: little power,
+# accepted upfront.
+hypothesis: portfolio_v1
+
+training_start: 2018-01-01
+training_end: 2023-12-31
+start: 2026-01-01
+end: 2026-08-31
+
+parameters:
+  strategy: strategy_portfolio
+  components: [momentum_v1, mean_reversion_v1, pairs_v1, momentum_select_v1]
+  allocation: inverse_volatility
+  window_days: 90
+  min_window_days: 60
+  history_start: 2018-01-01
+  universe: mvp-crypto
+  cost_model:
+    name: realistic
+    fee_bps: 10
+    k: 0.05
+    vol_window: 30
+
+success_criterion:
+  description: >-
+    Holdout net Sharpe under the realistic cost model > 0 and permutation-test
+    p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 ->
+    inconclusive; Sharpe > 0 and p < 0.1 -> passed.
+  min_sharpe: 0.0
+  max_p_value: 0.1

@@ -10,14 +10,15 @@ Cel nie jest jedna działająca strategia — cel jest pokazanie procesu badawcz
 
 MVP zamknięte (`lab-foundation` + `q1-momentum-research-mvp`): pierwsza hipoteza — time-series momentum na BTC-USDT i ETH-USDT — przeszła pełny pipeline (sygnał, silnik wektorowy z testem golden-master, trzy modele kosztów, walk-forward, zamrożony holdout otwarty raz, test permutacyjny, reżimy, stress test, rejestr transakcji, tear-sheet). Wynik: `inconclusive`, opisany w [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md).
 
-Rozszerzenia (`q2`–`q8`) mają gotowy kod; cztery kolejne hipotezy są zamrożone przed pierwszym przebiegiem i czekają na lokalne przebiegi (środowisko, w którym powstaje kod, nie ma dostępu do źródeł danych):
+Rozszerzenia (`q2`–`q9`) mają gotowy kod; pięć kolejnych hipotez jest zamrożonych przed pierwszym przebiegiem i czekają na lokalne przebiegi (środowisko, w którym powstaje kod, nie ma dostępu do źródeł danych):
 
 - `mean_reversion_v1` (`q3`) — krótkoterminowe odwrócenie na BTC i ETH;
 - `pairs_v1` (`q4`) — pairs trading na kointegracji ETH/BTC;
 - `xsmom_v1` (`q5`) — momentum przekrojowe 12-1 na S&P 500 point-in-time: skład odtwarzany z historii zmian indeksu, spółki zdjęte z obrotu i ich zwroty z delistingu, ceny skorygowane o splity i dywidendy (Tiingo), istotność z testu losowych portfeli z tego samego przekroju;
-- `momentum_select_v1` (`q8`) — momentum szeregów czasowych na BTC i ETH z lookbackiem dobieranym co rok z siatki 30–365 dni: zamrożona jest procedura wyboru, nie wartość, a jej bramką in-sample jest CPCV (wiele ścieżek spoza próby z purgingiem i embargo); sześć wartości siatki liczy się jako konfiguracje w progu deflated Sharpe.
+- `momentum_select_v1` (`q8`) — momentum szeregów czasowych na BTC i ETH z lookbackiem dobieranym co rok z siatki 30–365 dni: zamrożona jest procedura wyboru, nie wartość, a jej bramką in-sample jest CPCV (wiele ścieżek spoza próby z purgingiem i embargo); sześć wartości siatki liczy się jako konfiguracje w progu deflated Sharpe;
+- `portfolio_v1` (`q9`) — portfel czterech hipotez krypto ważonych co miesiąc odwrotnością zmienności z historii sprzed rebalansu, handlujący pozycjami netto (przeciwne pozycje strategii znoszą się przed zleceniem); jego holdout otwiera się dopiero po holdoutach składników.
 
-Gotowe są też: drugi silnik z egzekucją zleceń i parytetem z wektorowym (`q2`), PSR, deflated Sharpe i PBO z rejestrem prób liczonym z historii gita (`q6`), dobór parametru z siatki z CPCV (`q8`) oraz warstwa prezentacji (`q7`): API ASP.NET Core i aplikacja React nad magazynem wyników. Szczegóły w [docs/ROADMAP.md](docs/ROADMAP.md).
+Gotowe są też: drugi silnik z egzekucją zleceń i parytetem z wektorowym (`q2`), PSR, deflated Sharpe i PBO z rejestrem prób liczonym z historii gita (`q6`), dobór parametru z siatki z CPCV (`q8`), portfel strategii z regułami alokacji ryzyka (`q9`) oraz warstwa prezentacji (`q7`): API ASP.NET Core i aplikacja React nad magazynem wyników. Szczegóły w [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Uruchomienie
 
@@ -31,6 +32,8 @@ uv run quantlab trials                                       # wszystkie próby 
 uv run quantlab registry                                     # rejestr hipotez w magazynie wyników, bez pobierania danych
 uv run quantlab run momentum_select_v1                       # trening 2018-2023: historia wyborów, PBO siatki, CPCV (bramka)
 uv run quantlab open-holdout momentum_select_v1             # jednorazowe otwarcie holdoutu 2026-01..08
+uv run quantlab run portfolio_v1                             # trening 2018-2023: korelacje i wagi rękawów, Sharpe reguł
+uv run quantlab open-holdout portfolio_v1                   # dopiero po holdoutach składników
 ```
 
 Akcje (`q5`): skład S&P 500 buduje się raz z zapisanej rewizji Wikipedii, ceny pobiera adapter Tiingo (klucz w zmiennej środowiskowej; darmowy tier wymaga rozłożenia pobierania w czasie, patrz [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)):
