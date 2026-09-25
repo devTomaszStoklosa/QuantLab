@@ -33,7 +33,7 @@
     "configurations": 3,
     "frozenAtCommit": "0c7cc702348fb4d63af2cc024ed694d5bfa8dd3a",
     "registeredAt": "2026-09-06T09:00:00\u002B00:00",
-    "trialsOnSameData": 4,
+    "trialsOnSameData": 5,
     "status": "rejected",
     "hasRun": true,
     "holdout": {
@@ -253,14 +253,15 @@
         "demo_momentum",
         "demo_reversal",
         "demo_pairs",
-        "demo_select"
+        "demo_select",
+        "demo_portfolio"
       ],
-      "configurations": 6,
+      "configurations": 7,
       "returnsCount": 1095,
       "sharpeAnnualized": -0.17061385279057883,
       "psr": 0.38390349851612343,
-      "dsrThreshold": 0.7509796252443728,
-      "dsr": 0.05537811006063653
+      "dsrThreshold": 0.801020454878541,
+      "dsr": 0.04634279502273386
     },
     "contrast": null,
     "regimeMethod": "Re\u017Cim rynku: tercyl zmienno\u015Bci btc-usdt z 30 sesji wzgl\u0119dem jej warto\u015Bci z ostatnich 365 sesji, na sesj\u0119 przed ka\u017Cdym zwrotem.",

@@ -27,7 +27,7 @@
     "configurations": 1,
     "frozenAtCommit": "b5dbb40f111c4b78942bc1b661ca3f62588d651e",
     "registeredAt": "2026-09-01T09:00:00\u002B00:00",
-    "trialsOnSameData": 4,
+    "trialsOnSameData": 5,
     "status": "rejected",
     "hasRun": true,
     "holdout": {
@@ -219,14 +219,15 @@
         "demo_momentum",
         "demo_reversal",
         "demo_pairs",
-        "demo_select"
+        "demo_select",
+        "demo_portfolio"
       ],
-      "configurations": 6,
+      "configurations": 7,
       "returnsCount": 1095,
       "sharpeAnnualized": -0.6836948630594516,
       "psr": 0.11871817964426495,
-      "dsrThreshold": 0.7509796252443728,
-      "dsr": 0.006585621408656317
+      "dsrThreshold": 0.801020454878541,
+      "dsr": 0.005150241696845637
     },
     "contrast": {
       "hypothesis": "demo_pairs",

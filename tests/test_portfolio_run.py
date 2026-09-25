@@ -120,6 +120,13 @@ def test_run_trades_the_portfolio_of_the_frozen_components(tmp_path, monkeypatch
     assert trials.startswith("Trials on this universe and training period: 3 (")
     assert set(trials.split("(", 1)[1].rstrip(")").split(", ")) == {"mom_v1", "rev_v1", "port_v1"}
     assert "best of 3 no-edge trials" in result.output
+    for title in (
+        "Sleeve correlations (daily net returns)",
+        "Sleeve weights (inverse_volatility, monthly)",
+        "Net Sharpe by allocation rule and of each sleeve alone",
+    ):
+        assert title in result.output
+    assert "inverse_volatility (frozen)" in result.output
 
 
 def test_both_engines_trade_the_portfolio_alike(tmp_path, monkeypatch) -> None:

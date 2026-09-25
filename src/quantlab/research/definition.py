@@ -18,8 +18,10 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 from quantlab.backtest.rebalance import Daily, OnSignalChange, RebalancePolicy
 from quantlab.backtest.sizing import CarriedWeights, EqualWeightBySign, PairWeights, Sizer
 from quantlab.core.data.provider import PriceBar
+from quantlab.core.universe import Universe
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.portfolio.allocation import ALLOCATION_RULES
+from quantlab.portfolio.report import portfolio_report
 from quantlab.strategy.base import Strategy
 from quantlab.strategy.cointegration import engle_granger
 from quantlab.strategy.cross_sectional_momentum import CrossSectionalMomentum
@@ -476,6 +478,25 @@ class StrategyPortfolioParameters(StudyParametersBase):
 
     def build_sizer(self) -> Sizer:
         return CarriedWeights()
+
+    def training_diagnostics(
+        self, bars: dict[str, list[PriceBar]], start: date, end: date
+    ) -> list[TrainingDiagnostic]:
+        """Sleeve correlations, the frozen rule's weights and diversification ratio, and
+        the net Sharpe under each rule and of each sleeve alone (REQ-940, REQ-941)."""
+        report = portfolio_report(
+            history=self.sleeve_history(),
+            rules=ALLOCATION_RULES,
+            frozen=self.allocation,
+            window_days=self.window_days,
+            min_window_days=self.min_window_days,
+            cost_model=self.cost_model.build(),
+            bars=bars,
+            start=start,
+            end=end,
+            periods_per_year=Universe.load(self.universe).periods_per_year,
+        )
+        return [TrainingDiagnostic(title=title, values=values) for title, values in report.items()]
 
     def holdout_prerequisites(self, start: date, end: date) -> list[str]:
         return [

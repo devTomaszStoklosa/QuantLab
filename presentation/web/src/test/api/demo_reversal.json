@@ -27,7 +27,7 @@
     "configurations": 1,
     "frozenAtCommit": "324957ab0b4653e3550722fe836680404b9368f7",
     "registeredAt": "2026-09-02T09:00:00\u002B00:00",
-    "trialsOnSameData": 4,
+    "trialsOnSameData": 5,
     "status": "proposed",
     "hasRun": false,
     "holdout": null,

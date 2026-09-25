@@ -14,6 +14,9 @@ const ROUTES = {
   '/api/hypotheses/demo_select': captured.select,
   '/api/hypotheses/demo_select/equity': captured.momentumEquity,
   '/api/hypotheses/demo_select/trades': captured.momentumTrades,
+  '/api/hypotheses/demo_portfolio': captured.portfolio,
+  '/api/hypotheses/demo_portfolio/equity': captured.momentumEquity,
+  '/api/hypotheses/demo_portfolio/trades': captured.momentumTrades,
 };
 
 function renderWith(id: string, routes: Record<string, unknown> = ROUTES) {
@@ -58,7 +61,7 @@ describe('HypothesisScreen', () => {
     expect(within(panel(/^Walk-forward/)).getByText('failed')).toBeInTheDocument();
     expect(within(panel('Permutation test')).getByText('0.898')).toBeInTheDocument();
     expect(within(panel('Multiple testing')).getByText('0.01')).toBeInTheDocument();
-    expect(within(panel('Multiple testing')).getByText('Best of 6 no-edge configurations')).toBeInTheDocument();
+    expect(within(panel('Multiple testing')).getByText('Best of 7 no-edge configurations')).toBeInTheDocument();
     expect(within(panel('Contrast')).getByText('−0.44')).toBeInTheDocument();
     expect(within(panel('Regimes')).getAllByRole('row')).toHaveLength(1 + captured.momentum.regimes.length);
   });
@@ -156,6 +159,19 @@ describe('HypothesisScreen', () => {
     expect(screen.getByText(/CPCV failed; holdout inconclusive/)).toBeInTheDocument();
     expect(within(panel(/^Walk-forward/)).getByText(/Descriptive only: this hypothesis's frozen in-sample gate is CPCV/)).toBeInTheDocument();
     expect(within(panel('Frozen definition')).getByText('CPCV')).toBeInTheDocument();
+  });
+
+  it("shows a portfolio's sleeves: correlations, weights and each rule's Sharpe", async () => {
+    renderWith('demo_portfolio');
+
+    const correlations = within(
+      await screen.findByRole('heading', { name: 'Sleeve correlations (daily net returns)' }).then((h) => h.closest('section')!),
+    );
+    expect(correlations.getByText('demo_momentum ~ demo_reversal')).toBeInTheDocument();
+    expect(within(panel('Sleeve weights (inverse_volatility, monthly)')).getByText('diversification ratio (median)')).toBeInTheDocument();
+    expect(within(panel('Net Sharpe by allocation rule and of each sleeve alone')).getByText('inverse_volatility (frozen)')).toBeInTheDocument();
+    expect(within(panel('Frozen definition')).getByText('demo_momentum, demo_reversal, demo_pairs')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Parameter selection' })).toBeNull();
   });
 
   it('shows the API problem for an unknown hypothesis', async () => {

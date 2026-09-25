@@ -20,6 +20,7 @@ from quantlab.reporting.cost_comparison import RunMetrics
 from quantlab.reporting.grid_report import IN_SAMPLE_GATES, GridReport
 from quantlab.reporting.metrics import drawdown_series
 from quantlab.reporting.multiple_testing import MultipleTesting
+from quantlab.research.definition import TrainingDiagnostic
 from quantlab.research.hypothesis import concluded_status
 from quantlab.risk.conditional import RegimeMetrics
 from quantlab.risk.regime import VOLATILITY_REGIMES
@@ -99,6 +100,7 @@ class TearSheet(BaseModel):
     multiple_testing: MultipleTesting | None = None
     grid: GridReport | None = None
     in_sample_validation: Literal["walk_forward", "cpcv"] = "walk_forward"
+    diagnostics: list[TrainingDiagnostic] = []
 
     @property
     def in_sample_passed(self) -> bool | None:
@@ -489,6 +491,27 @@ def _no_edge(result: MultipleTesting) -> str:
     return f"{result.configurations} konfiguracji"
 
 
+def _diagnostics(diagnostics: list[TrainingDiagnostic]) -> str:
+    """Statistics of the training data this strategy's reader needs: a pair's
+    cointegration (q4), a portfolio's sleeves (q9)."""
+    if not diagnostics:
+        return ""
+    tables = "".join(
+        f"<h4>{_e(diagnostic.title)}</h4>"
+        + _table(
+            ["Miara", "Wartość"],
+            [[_e(label), _number(value, ".4g")] for label, value in diagnostic.values.items()],
+        )
+        for diagnostic in diagnostics
+    )
+    return (
+        '<h3 id="diagnostics">Diagnostyka treningu</h3>'
+        '<p class="muted">Statystyki okresu treningowego właściwe tej strategii. Opisowe: nie są '
+        "częścią żadnej reguły zaliczenia ani werdyktu hipotezy.</p>"
+        f"{tables}"
+    )
+
+
 def _multiple_testing(result: MultipleTesting | None, cost_model_name: str) -> str:
     if result is None:
         return ""
@@ -588,6 +611,7 @@ def _training_section(sheet: TearSheet) -> str:
         f"{_grid(sheet.grid, sheet.in_sample_validation == 'cpcv', cost_model)}"
         f'<h3 id="permutation">{_wording(sheet.permutation.detail)[0]}</h3>'
         f"{_permutation(sheet.permutation)}"
+        f"{_diagnostics(sheet.diagnostics)}"
         f"{_multiple_testing(sheet.multiple_testing, run.cost_model_name)}"
         f"{_contrast(sheet.contrast, run.cost_model_name)}"
         "</section>"
@@ -676,6 +700,7 @@ code { font-size: 0.92em; }
 h1 { font-size: 28px; margin: 4px 0 16px; }
 h2 { font-size: 20px; margin: 4px 0 8px; }
 h3 { font-size: 15px; margin: 28px 0 4px; }
+h4 { font-size: 13px; margin: 16px 0 4px; }
 .eyebrow, .tag, th {
   text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; font-weight: 600;
 }

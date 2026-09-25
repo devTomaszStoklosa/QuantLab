@@ -16,7 +16,7 @@ Dokument żywy: docelowy układ repo i kontrakty modułów wspólnych. Decyzje z
 
 1. **Data layer** (`core.data`, `core.universe`) — pozyskanie i kanoniczny schemat OHLCV, point-in-time uniwersum.
 2. **Research layer** (`quantlab.research`, notebooki) — rejestr `Hypothesis`, definicje hipotez (`research.definition`: strategia z parametrami, uniwersum, model kosztów; każdy wariant sam buduje swoją strategię), eksploracja przed kodem produkcyjnym.
-3. **Strategy layer** (`quantlab.strategy`) — interfejs `Strategy.generate_signals`, jedna implementacja per hipoteza: momentum szeregów czasowych, krótkoterminowe odwrócenie, spread pary (kointegracja), momentum przekrojowe 12-1 na point-in-time uniwersum (`q5`, rebalans przy zmianie sygnału).
+3. **Strategy layer** (`quantlab.strategy`) — interfejs `Strategy.generate_signals`, jedna implementacja per hipoteza: momentum szeregów czasowych, krótkoterminowe odwrócenie, spread pary (kointegracja), momentum przekrojowe 12-1 na point-in-time uniwersum (`q5`, rebalans przy zmianie sygnału), parametr wybierany co rok z siatki (`q8`, `SelectedParameter`) i portfel zamrożonych hipotez (`q9`, `StrategyPortfolio`: rękawy ważone co miesiąc zamrożoną regułą z `quantlab.portfolio.allocation` — równe wagi, odwrotność zmienności, risk parity — na historii sprzed dnia rebalansu, pozycje netto dla silnika przez sizer `CarriedWeights`). Definicja odwołująca się do innych hipotez ładuje je hakiem `resolve(load)`, który runner woła dla każdej definicji, a `open-holdout` sprawdza `holdout_prerequisites` (portfel nie otwiera holdoutu nachodzącego na nieotwarty holdout składnika).
 4. **Backtest engine** (`quantlab.backtest.vectorized`, `quantlab.backtest.event_driven`) — dwa silniki za wspólnym kontraktem `BacktestRun` (`quantlab.backtest.run`), jedną regułą wag (`quantlab.backtest.sizing`) i jedną polityką rebalansu (`quantlab.backtest.rebalance`: `Daily` domyślnie, `OnSignalChange` dla strategii miesięcznych); konsumenci wyników nie zależą od żadnego z silników.
 5. **Cost & execution model** (`quantlab.costs`) — interfejs `CostModel`, implementacje naiwna i realistyczna.
 6. **Validation layer** (`quantlab.validation`) — interfejs `Validator`: walk-forward, permutacyjny, docelowo purged k-fold/CPCV.
@@ -44,6 +44,7 @@ QuantLab/
 │   │   ├── vectorized/
 │   │   └── event_driven/
 │   ├── costs/                     # CostModel + implementacje
+│   ├── portfolio/                 # reguły alokacji rękawów i raport portfela (q9)
 │   ├── validation/                # Validator + implementacje
 │   ├── risk/                      # reżimy, metryki warunkowe
 │   ├── attribution/                # Trade ledger, cięcia P&L
