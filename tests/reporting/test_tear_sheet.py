@@ -12,6 +12,7 @@ from quantlab.reporting.grid_report import GridReport, GridYear
 from quantlab.reporting.metrics import drawdown_series
 from quantlab.reporting.multiple_testing import MultipleTesting
 from quantlab.reporting.tear_sheet import DISCLAIMER, Contrast, TearSheet, render_html
+from quantlab.research.definition import TrainingDiagnostic
 from quantlab.risk.conditional import RegimeMetrics, regime_conditional_metrics
 from quantlab.validation.cpcv import CPCV_GATE_RULE, CpcvResult
 from quantlab.validation.holdout import HoldoutRecord
@@ -515,3 +516,21 @@ def test_a_cpcv_gate_decides_the_verdict_and_walk_forward_turns_descriptive(
 def test_a_cpcv_gate_needs_the_grid_s_evidence() -> None:
     with pytest.raises(ValidationError, match="needs the grid's evidence"):
         _sheet(in_sample_validation="cpcv")
+
+
+def test_training_diagnostics_get_a_table_each() -> None:
+    diagnostics = [
+        TrainingDiagnostic(title="Cointegration of <eth> on btc", values={"p-value": 0.0123}),
+        TrainingDiagnostic(title="Sleeve weights", values={"a mean": -0.5, "b mean": None}),
+    ]
+
+    page = render_html(_sheet(diagnostics=diagnostics))
+
+    start = page.index('<h3 id="diagnostics">')
+    section = page[start : page.index("</section>", start)]
+    assert "<h4>Cointegration of &lt;eth&gt; on btc</h4>" in section
+    assert '<td class="num">0.0123</td>' in section
+    assert "\u22120.5" in section
+    assert '<td class="num">\u2014</td>' in section
+    assert "Opisowe" in section
+    assert '<h3 id="diagnostics">' not in render_html(_sheet())

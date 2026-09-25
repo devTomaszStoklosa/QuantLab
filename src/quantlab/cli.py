@@ -1073,6 +1073,7 @@ def run(
         multiple_testing=deflation,
         grid=grid,
         in_sample_validation=criterion.in_sample_validation,
+        diagnostics=diagnostics,
         generated_at=datetime.now(tz=UTC),
     )
     stored = write_run(
