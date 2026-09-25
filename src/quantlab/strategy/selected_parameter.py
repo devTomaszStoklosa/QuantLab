@@ -6,6 +6,8 @@ from itertools import pairwise
 
 from pydantic import BaseModel
 
+from quantlab.backtest.rebalance import RebalancePolicy
+from quantlab.backtest.sizing import Sizer
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core.data.provider import PriceBar, count_through
 from quantlab.costs.base import CostModel
@@ -31,8 +33,11 @@ def net_returns(
     bars: dict[str, list[PriceBar]],
     start: date,
     end: date,
+    sizer: Sizer | None = None,
+    rebalance: RebalancePolicy | None = None,
 ) -> list[float]:
-    """Daily net returns of a vectorized backtest of `strategy` over [start, end]."""
+    """Daily net returns of a vectorized backtest of `strategy` over [start, end],
+    sized and rebalanced as given (the engine's defaults otherwise)."""
     run = run_backtest(
         strategy=strategy,
         cost_model=cost_model,
@@ -44,6 +49,8 @@ def net_returns(
         git_sha="selection",
         strategy_name="selection",
         strategy_params={},
+        sizer=sizer,
+        rebalance=rebalance,
     )
     equity = [snapshot.equity for snapshot in run.snapshots]
     return [after / before - 1.0 for before, after in pairwise(equity)]
