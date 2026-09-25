@@ -12,6 +12,7 @@ from typer.testing import CliRunner
 from quantlab import cli
 from quantlab.core.data.provider import PriceBar, WithoutEvents
 from quantlab.core.universe import Instrument
+from quantlab.research.trials import registered_trials, trials_on_same_data
 from quantlab.validation.cpcv import CpcvSettings
 from quantlab.validation.holdout import (
     HoldoutConfig,
@@ -161,3 +162,27 @@ def test_frozen_definitions_keep_walk_forward_as_their_gate() -> None:
         config = parse_holdout_config(_REPO / "config" / "holdout" / f"{name}.yaml")
         assert config.success_criterion.in_sample_validation == "walk_forward"
         assert config.parameters.configurations == 1
+
+
+def test_momentum_select_v1_freezes_the_answers_to_the_story_s_questions() -> None:
+    config = parse_holdout_config(_REPO / "config" / "holdout" / "momentum_select_v1.yaml")
+    parameters = config.parameters
+    criterion = config.success_criterion
+
+    assert parameters.lookback_grid == [30, 60, 90, 180, 270, 365]
+    assert (parameters.history_start, parameters.min_history_days) == (date(2018, 1, 1), 365)
+    assert criterion.in_sample_validation == "cpcv"
+    assert criterion.cpcv == CpcvSettings(
+        groups=10, test_groups=2, purge_days=1, embargo_fraction=0.01
+    )
+    assert criterion.significance_test == "day_shuffle"
+    assert (config.training_start, config.training_end) == (date(2018, 1, 1), date(2023, 12, 31))
+    assert (config.start, config.end) == (date(2026, 1, 1), date(2026, 8, 31))
+    # The holdout's 2026 choice is made on all history since the anchor.
+    assert parameters.fetch_start(config.start) == date(2017, 1, 1)
+    # Its six lookbacks join the three single-configuration trials on these data.
+    trials = trials_on_same_data(
+        "momentum_select_v1", registered_trials(_REPO / "config" / "holdout")
+    )
+    assert [trial.hypothesis for trial in trials][-1] == "momentum_select_v1"
+    assert sum(trial.definition.parameters.configurations for trial in trials) == 9
