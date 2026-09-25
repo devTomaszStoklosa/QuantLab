@@ -4,7 +4,7 @@ from datetime import date
 
 import numpy as np
 
-from quantlab.core.data.provider import PriceBar
+from quantlab.core.data.provider import PriceBar, count_through
 from quantlab.strategy.cointegration import engle_granger
 from quantlab.strategy.signal import Signal
 
@@ -59,11 +59,13 @@ def pair_states(
     entry can happen on the same date. `may_enter(i)` gates new positions only
     (REQ-423). An undefined z closes the position.
     """
-    states = np.zeros(len(z), dtype=np.int8)
+    states = []
     state = 0
-    for i, value in enumerate(z):
+    # Plain floats: iterating a numpy array element by element is several times slower.
+    for i, value in enumerate(z.tolist()):
         if math.isnan(value):
             state = 0
+            states.append(0)
             continue
         if (state == 1 and value >= -exit_z) or (state == -1 and value <= exit_z):
             state = 0
@@ -72,8 +74,8 @@ def pair_states(
                 state = -1
             elif value <= -entry_z and may_enter(i):
                 state = 1
-        states[i] = state
-    return states
+        states.append(state)
+    return np.array(states, dtype=np.int8)
 
 
 class PairsSpreadReversion:
@@ -114,11 +116,17 @@ class PairsSpreadReversion:
         missing = {self.dependent, self.explanatory} - bars.keys()
         if missing:
             raise ValueError(f"No price history for pair leg(s) {sorted(missing)}")
-        explanatory = {bar.ts: bar.close for bar in bars[self.explanatory] if bar.ts <= as_of}
+        # Bars are sorted by date (data layer): cut each leg at as_of by bisection.
+        dependent = bars[self.dependent][: count_through(bars[self.dependent], as_of)]
+        explanatory_bars = bars[self.explanatory][: count_through(bars[self.explanatory], as_of)]
+        dates = [bar.ts for bar in dependent]
+        if dates == [bar.ts for bar in explanatory_bars]:  # the usual case: same dates
+            log_y = np.log(np.array([bar.close for bar in dependent], dtype=np.float64))
+            log_x = np.log(np.array([bar.close for bar in explanatory_bars], dtype=np.float64))
+            return dates, log_y, log_x
+        explanatory = {bar.ts: bar.close for bar in explanatory_bars}
         common = sorted(
-            (bar.ts, bar.close, explanatory[bar.ts])
-            for bar in bars[self.dependent]
-            if bar.ts <= as_of and bar.ts in explanatory
+            (bar.ts, bar.close, explanatory[bar.ts]) for bar in dependent if bar.ts in explanatory
         )
         dates = [day for day, _, _ in common]
         log_y = np.log(np.array([y for _, y, _ in common], dtype=np.float64))
