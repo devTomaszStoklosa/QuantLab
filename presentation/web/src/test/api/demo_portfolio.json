@@ -1,0 +1,740 @@
+{
+  "hypothesis": {
+    "hypothesis": "demo_portfolio",
+    "strategy": "strategy_portfolio",
+    "universe": "mvp-crypto",
+    "costModel": "realistic-10bps-k0.05-vol30d",
+    "parameters": {
+      "allocation": "inverse_volatility",
+      "components": [
+        "demo_momentum",
+        "demo_reversal",
+        "demo_pairs"
+      ],
+      "cost_model": {
+        "fee_bps": 10.0,
+        "k": 0.05,
+        "name": "realistic",
+        "vol_window": 30
+      },
+      "history_start": "2019-07-01",
+      "min_window_days": 60,
+      "strategy": "strategy_portfolio",
+      "universe": "mvp-crypto",
+      "window_days": 90
+    },
+    "trainingStart": "2020-01-01",
+    "trainingEnd": "2022-12-31",
+    "holdoutStart": "2023-01-01",
+    "holdoutEnd": "2023-06-30",
+    "criterion": "Synthetic demo. Holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1.",
+    "minSharpe": 0,
+    "maxPValue": 0.1,
+    "significanceTest": "day_shuffle",
+    "inSampleValidation": "walk_forward",
+    "configurations": 1,
+    "frozenAtCommit": "04ae6bb603034d7bb0a556c9607894374fcbbe61",
+    "registeredAt": "2026-09-07T09:00:00\u002B00:00",
+    "trialsOnSameData": 5,
+    "status": "testing",
+    "hasRun": true,
+    "holdout": null,
+    "trainingSharpe": -0.5434278986749496,
+    "sparkline": [
+      1,
+      1.0180962961880329,
+      1.0905559099671835,
+      1.1272278224329844,
+      1.2701882149425958,
+      1.1533167287677288,
+      1.149443594388971,
+      1.072251947620981,
+      1.032287923147823,
+      1.1375036244848176,
+      1.0327150619970311,
+      0.8765334844398521,
+      0.856645170549376,
+      0.932500531605559,
+      0.916411377000835,
+      0.9424841054978972,
+      0.9644793327803054,
+      1.0328715958454635,
+      1.0316212459239151,
+      1.124479998658732,
+      1.1183287808242448,
+      1.1524335595791053,
+      1.1605196297592077,
+      1.2078933643091236,
+      1.1010523126876073,
+      1.1768767404969473,
+      1.0552903423652906,
+      1.098932087044244,
+      1.017419030152971,
+      0.9157166792655046,
+      0.8853653233560934,
+      0.9836471475071341,
+      1.0322104664537928,
+      1.039292485382631,
+      0.9479637727488809,
+      0.8812966748424974,
+      0.9089972713002303,
+      0.8264203160861426,
+      0.8010310246812866,
+      0.7888152708983209,
+      0.7536101356553067,
+      0.7725191209860078,
+      0.8287261374036196,
+      0.8676621995373677,
+      0.8487390299784596,
+      0.8119952805967526,
+      0.8558472877719666,
+      0.7566359941623909,
+      0.7596399121523544,
+      0.7839958266394637,
+      0.8054716597049373,
+      0.9163769871996147,
+      0.9471438555229643,
+      1.06193794506982,
+      0.8951289643526651,
+      0.9247951702675328,
+      0.9226718205229195,
+      0.9239858136520946,
+      0.7961074495278919,
+      0.7789653478380946,
+      0.7217556747951134,
+      0.7346979499291834,
+      0.718780434330044,
+      0.65200438406135,
+      0.6893737529133911,
+      0.6528520069042288,
+      0.590160464852706,
+      0.5860883774921325,
+      0.5408792056525605,
+      0.5705882793947278,
+      0.5653792675864169,
+      0.5727250882230133,
+      0.5547447222435306,
+      0.5626847888169402,
+      0.5723111204897086,
+      0.5547203154808086,
+      0.545608346553243,
+      0.5818375426934396,
+      0.576798988257228,
+      0.5702176435857349,
+      0.6371553699733671,
+      0.6887930396375436,
+      0.624860489233267,
+      0.5735716261333417,
+      0.6420035142386452,
+      0.6324656610129021,
+      0.6361987555240615,
+      0.6502054871273525,
+      0.6502769137178992,
+      0.678005037165545,
+      0.5072413566285134,
+      0.5296650160867573,
+      0.553287664308596,
+      0.5083336475967014,
+      0.5269313663024474,
+      0.5370687261886962,
+      0.513413253993572,
+      0.4353044926759415,
+      0.44327587938678925,
+      0.42470069250170683,
+      0.43188700397798374,
+      0.44948319582387003,
+      0.38332971335342,
+      0.361955784370806,
+      0.33895641877078225,
+      0.3211905200735222,
+      0.3367333072626009,
+      0.3210180748783827,
+      0.3214519946519092,
+      0.33337543249567364,
+      0.3427886692288762,
+      0.3543457468454445,
+      0.3645385099441489,
+      0.3670121294404646,
+      0.3538128986244958,
+      0.36399843110325963,
+      0.3646554817946619,
+      0.3636672239762427,
+      0.367376853020295,
+      0.35230408383832906
+    ],
+    "dataSource": "synthetic"
+  },
+  "run": {
+    "runId": "00000000-0000-0000-0000-0000000000a8",
+    "strategy": "strategy_portfolio",
+    "strategyParams": {
+      "allocation": "inverse_volatility",
+      "components": [
+        "demo_momentum",
+        "demo_reversal",
+        "demo_pairs"
+      ],
+      "history_start": "2019-07-01",
+      "min_window_days": 60,
+      "window_days": 90
+    },
+    "universe": "mvp-crypto",
+    "costModel": "realistic-10bps-k0.05-vol30d",
+    "start": "2020-01-01",
+    "end": "2022-12-31",
+    "firstPosition": "2020-01-02",
+    "seed": 0,
+    "gitSha": "5e7f1c0de0000000000000000000000000000000",
+    "generatedAt": "2026-09-24T12:00:00\u002B00:00",
+    "dataSource": "synthetic",
+    "costSensitivity": {
+      "verdict": "cost-dependent",
+      "sharpeDifference": 0.3371143526388264,
+      "cagrSignFlip": false
+    },
+    "walkForward": {
+      "passed": false,
+      "rule": "Sharpe \u003E 0 in at least 2/3 of windows with a defined Sharpe, and aggregate Sharpe \u003E 0; inconclusive if fewer than 3 windows have a defined Sharpe",
+      "positiveWindows": 0,
+      "windowsWithSharpe": 3
+    },
+    "inSample": {
+      "validation": "walk_forward",
+      "passed": false
+    },
+    "grid": null,
+    "permutation": {
+      "passed": null,
+      "test": "day_shuffle",
+      "statistic": "annualized Sharpe of gross daily returns",
+      "count": 500,
+      "seed": 0,
+      "alpha": 0.1,
+      "activeDays": 1095,
+      "lowConfidence": false,
+      "actual": -0.047313319016379064,
+      "nullMean": 0.1205443498092267,
+      "nullStd": 0.5642913555563785,
+      "percentile": 0.396,
+      "pValue": 0.6047904191616766,
+      "reason": null
+    },
+    "multipleTesting": {
+      "trials": [
+        "demo_momentum",
+        "demo_reversal",
+        "demo_pairs",
+        "demo_select",
+        "demo_portfolio"
+      ],
+      "configurations": 7,
+      "returnsCount": 1095,
+      "sharpeAnnualized": -0.5434278986749496,
+      "psr": 0.17336741240976183,
+      "dsrThreshold": 0.801020454878541,
+      "dsr": 0.00995863469900099
+    },
+    "contrast": null,
+    "regimeMethod": "Re\u017Cim rynku: tercyl zmienno\u015Bci btc-usdt z 30 sesji wzgl\u0119dem jej warto\u015Bci z ostatnich 365 sesji, na sesj\u0119 przed ka\u017Cdym zwrotem.",
+    "trades": {
+      "total": 292,
+      "openAtEnd": 2,
+      "winning": 164
+    }
+  },
+  "metrics": [
+    {
+      "costModel": "zero-cost",
+      "cagr": -0.11604859864345685,
+      "sharpe": -0.04731331901637849,
+      "sortino": -0.0660435279682958,
+      "calmar": -0.185770328294633,
+      "maxDrawdown": -0.6246885587638247,
+      "turnover": 71.72641580774784,
+      "primary": false
+    },
+    {
+      "costModel": "naive-10bps",
+      "cagr": -0.17729818017304644,
+      "sharpe": -0.20631354603612317,
+      "sortino": -0.2863240867798121,
+      "calmar": -0.2669659709221691,
+      "maxDrawdown": -0.6641227702564972,
+      "turnover": 71.7394256494056,
+      "primary": false
+    },
+    {
+      "costModel": "realistic-10bps-k0.05-vol30d",
+      "cagr": -0.2937270729174929,
+      "sharpe": -0.5434278986749496,
+      "sortino": -0.7448537510419868,
+      "calmar": -0.3790041009071023,
+      "maxDrawdown": -0.7749970837109447,
+      "turnover": 71.77003232848209,
+      "primary": true
+    }
+  ],
+  "walkForward": [
+    {
+      "start": "2020-01-02",
+      "end": "2020-12-31",
+      "partial": true,
+      "aggregate": false,
+      "cagr": -0.25336428248593446,
+      "sharpe": -0.3726368537344528,
+      "maxDrawdown": -0.43783552285656124
+    },
+    {
+      "start": "2021-01-01",
+      "end": "2021-12-31",
+      "partial": false,
+      "aggregate": false,
+      "cagr": -0.1279012433202399,
+      "sharpe": -0.11133778683054335,
+      "maxDrawdown": -0.49277747709862635
+    },
+    {
+      "start": "2022-01-01",
+      "end": "2022-12-31",
+      "partial": false,
+      "aggregate": false,
+      "cagr": -0.45894271578012613,
+      "sharpe": -1.130326897751322,
+      "maxDrawdown": -0.5719347928421233
+    },
+    {
+      "start": "2020-01-02",
+      "end": "2022-12-31",
+      "partial": false,
+      "aggregate": true,
+      "cagr": -0.2937270729174929,
+      "sharpe": -0.5434278986749496,
+      "maxDrawdown": -0.7749970837109447
+    }
+  ],
+  "regimes": [
+    {
+      "regime": "low",
+      "days": 360,
+      "share": 0.3287671232876712,
+      "cagr": -0.2500772151785843,
+      "sharpe": -0.45023250820889227,
+      "sortino": -0.6202011468718365
+    },
+    {
+      "regime": "medium",
+      "days": 300,
+      "share": 0.273972602739726,
+      "cagr": -0.42904241073628124,
+      "sharpe": -0.9776860800008791,
+      "sortino": -1.289711939333677
+    },
+    {
+      "regime": "high",
+      "days": 345,
+      "share": 0.3150684931506849,
+      "cagr": -0.36408523104898116,
+      "sharpe": -0.8338943755885659,
+      "sortino": -1.1679859852149614
+    },
+    {
+      "regime": "undefined",
+      "days": 90,
+      "share": 0.0821917808219178,
+      "cagr": 0.6880732189159975,
+      "sharpe": 1.2167736196040895,
+      "sortino": 1.7359665586894317
+    }
+  ],
+  "monthly": [
+    {
+      "year": 2020,
+      "month": 1,
+      "netReturn": 0.21281094035237214
+    },
+    {
+      "year": 2020,
+      "month": 2,
+      "netReturn": -0.01730877190960811
+    },
+    {
+      "year": 2020,
+      "month": 3,
+      "netReturn": -0.0453176413578098
+    },
+    {
+      "year": 2020,
+      "month": 4,
+      "netReturn": -0.18268917885229308
+    },
+    {
+      "year": 2020,
+      "month": 5,
+      "netReturn": 0.05011826519354856
+    },
+    {
+      "year": 2020,
+      "month": 6,
+      "netReturn": 0.14653622884314244
+    },
+    {
+      "year": 2020,
+      "month": 7,
+      "netReturn": 0.027345540354392073
+    },
+    {
+      "year": 2020,
+      "month": 8,
+      "netReturn": -0.04282987006021699
+    },
+    {
+      "year": 2020,
+      "month": 9,
+      "netReturn": -0.16929614598857767
+    },
+    {
+      "year": 2020,
+      "month": 10,
+      "netReturn": 0.13337096757261446
+    },
+    {
+      "year": 2020,
+      "month": 11,
+      "netReturn": -0.22157011514614966
+    },
+    {
+      "year": 2020,
+      "month": 12,
+      "netReturn": -0.07469917695117656
+    },
+    {
+      "year": 2021,
+      "month": 1,
+      "netReturn": 0.0878038081585546
+    },
+    {
+      "year": 2021,
+      "month": 2,
+      "netReturn": 0.05329773596341614
+    },
+    {
+      "year": 2021,
+      "month": 3,
+      "netReturn": -0.08143941042363356
+    },
+    {
+      "year": 2021,
+      "month": 4,
+      "netReturn": 0.3316436098190907
+    },
+    {
+      "year": 2021,
+      "month": 5,
+      "netReturn": -0.11981877486677428
+    },
+    {
+      "year": 2021,
+      "month": 6,
+      "netReturn": -0.19105413324544407
+    },
+    {
+      "year": 2021,
+      "month": 7,
+      "netReturn": -0.16265106913980587
+    },
+    {
+      "year": 2021,
+      "month": 8,
+      "netReturn": -0.04300241499191715
+    },
+    {
+      "year": 2021,
+      "month": 9,
+      "netReturn": -0.032254683058263955
+    },
+    {
+      "year": 2021,
+      "month": 10,
+      "netReturn": -0.02510313951990939
+    },
+    {
+      "year": 2021,
+      "month": 11,
+      "netReturn": -0.031396403367902836
+    },
+    {
+      "year": 2021,
+      "month": 12,
+      "netReturn": 0.19342030790061582
+    },
+    {
+      "year": 2022,
+      "month": 1,
+      "netReturn": -0.022376878369684605
+    },
+    {
+      "year": 2022,
+      "month": 2,
+      "netReturn": 0.01316616279445637
+    },
+    {
+      "year": 2022,
+      "month": 3,
+      "netReturn": 0.041726799939225234
+    },
+    {
+      "year": 2022,
+      "month": 4,
+      "netReturn": -0.26263322100633424
+    },
+    {
+      "year": 2022,
+      "month": 5,
+      "netReturn": 0.044249352071737746
+    },
+    {
+      "year": 2022,
+      "month": 6,
+      "netReturn": -0.14888602455361077
+    },
+    {
+      "year": 2022,
+      "month": 7,
+      "netReturn": -0.15647155495595544
+    },
+    {
+      "year": 2022,
+      "month": 8,
+      "netReturn": -0.08293289543215021
+    },
+    {
+      "year": 2022,
+      "month": 9,
+      "netReturn": -0.02327254124194833
+    },
+    {
+      "year": 2022,
+      "month": 10,
+      "netReturn": 0.10943292941018079
+    },
+    {
+      "year": 2022,
+      "month": 11,
+      "netReturn": -0.012038789723880616
+    },
+    {
+      "year": 2022,
+      "month": 12,
+      "netReturn": -0.03384551188742069
+    }
+  ],
+  "yearly": [
+    {
+      "year": 2020,
+      "netReturn": -0.25336428248593446
+    },
+    {
+      "year": 2021,
+      "netReturn": -0.1279012433202399
+    },
+    {
+      "year": 2022,
+      "netReturn": -0.45894271578012613
+    }
+  ],
+  "pnlGroups": [
+    {
+      "dimension": "regime",
+      "key": "low",
+      "trades": 103,
+      "winRate": 0.5922330097087378,
+      "totalNetPnl": -0.11419992772597465,
+      "meanNetPnl": -0.0011087371623881034,
+      "medianNetPnl": 0.0003353786026293523,
+      "worstNetPnl": -0.090953799907641,
+      "bestNetPnl": 0.051512420548051246,
+      "costs": 0.13430095890988814
+    },
+    {
+      "dimension": "regime",
+      "key": "medium",
+      "trades": 78,
+      "winRate": 0.5384615384615384,
+      "totalNetPnl": -0.6496298872145466,
+      "meanNetPnl": -0.008328588297622393,
+      "medianNetPnl": 7.709140328444808E-05,
+      "worstNetPnl": -0.15443493695361105,
+      "bestNetPnl": 0.041238810878921846,
+      "costs": 0.14017126087821874
+    },
+    {
+      "dimension": "regime",
+      "key": "high",
+      "trades": 101,
+      "winRate": 0.5346534653465347,
+      "totalNetPnl": -0.021494320499699876,
+      "meanNetPnl": -0.000212815054452474,
+      "medianNetPnl": 9.087422399762696E-05,
+      "worstNetPnl": -0.08915903673942742,
+      "bestNetPnl": 0.2025828847545844,
+      "costs": 0.17181507702755278
+    },
+    {
+      "dimension": "regime",
+      "key": "undefined",
+      "trades": 10,
+      "winRate": 0.7,
+      "totalNetPnl": 0.13762821927855018,
+      "meanNetPnl": 0.013762821927855018,
+      "medianNetPnl": 0.0008621916691361863,
+      "worstNetPnl": -0.05914447472093571,
+      "bestNetPnl": 0.17008128449967608,
+      "costs": 0.07184871767515878
+    },
+    {
+      "dimension": "holding_period",
+      "key": "1-7d",
+      "trades": 186,
+      "winRate": 0.7580645161290323,
+      "totalNetPnl": 0.8711736883884663,
+      "meanNetPnl": 0.004683729507464872,
+      "medianNetPnl": 0.0009064483878532323,
+      "worstNetPnl": -0.041355200411284015,
+      "bestNetPnl": 0.058347878893498004,
+      "costs": 0.2124788643883834
+    },
+    {
+      "dimension": "holding_period",
+      "key": "8-30d",
+      "trades": 98,
+      "winRate": 0.19387755102040816,
+      "totalNetPnl": -1.9152466269959414,
+      "meanNetPnl": -0.019543332928530013,
+      "medianNetPnl": -0.002948662124881732,
+      "worstNetPnl": -0.15443493695361105,
+      "bestNetPnl": 0.049334035951198875,
+      "costs": 0.2000886672353413
+    },
+    {
+      "dimension": "holding_period",
+      "key": "31-90d",
+      "trades": 8,
+      "winRate": 0.5,
+      "totalNetPnl": 0.39637702244580414,
+      "meanNetPnl": 0.04954712780572552,
+      "medianNetPnl": 0.018177240993657806,
+      "worstNetPnl": -0.04870867835573098,
+      "bestNetPnl": 0.2025828847545844,
+      "costs": 0.10556848286709372
+    }
+  ],
+  "diagnostics": [
+    {
+      "title": "Sleeve correlations (daily net returns)",
+      "label": "demo_momentum ~ demo_reversal",
+      "value": -0.09169403086465616
+    },
+    {
+      "title": "Sleeve correlations (daily net returns)",
+      "label": "demo_momentum ~ demo_pairs",
+      "value": -0.09270159563378268
+    },
+    {
+      "title": "Sleeve correlations (daily net returns)",
+      "label": "demo_reversal ~ demo_pairs",
+      "value": 0.05916329605053178
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_momentum mean",
+      "value": 0.4426330899797024
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_momentum min",
+      "value": 0.11388191077658492
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_momentum max",
+      "value": 0.535351488563139
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_reversal mean",
+      "value": 0.46150027120894815
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_reversal min",
+      "value": 0.1256938585316503
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_reversal max",
+      "value": 0.5519836387500685
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_pairs mean",
+      "value": 0.09586663881134934
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_pairs min",
+      "value": 0
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "demo_pairs max",
+      "value": 0.7604242306917648
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "months allocated",
+      "value": 36
+    },
+    {
+      "title": "Sleeve weights (inverse_volatility, monthly)",
+      "label": "diversification ratio (median)",
+      "value": 1.4844265835349382
+    },
+    {
+      "title": "Net Sharpe by allocation rule and of each sleeve alone",
+      "label": "equal_weight",
+      "value": -0.6118009125124539
+    },
+    {
+      "title": "Net Sharpe by allocation rule and of each sleeve alone",
+      "label": "inverse_volatility (frozen)",
+      "value": -0.5434278986749496
+    },
+    {
+      "title": "Net Sharpe by allocation rule and of each sleeve alone",
+      "label": "risk_parity",
+      "value": -0.5409700216202907
+    },
+    {
+      "title": "Net Sharpe by allocation rule and of each sleeve alone",
+      "label": "demo_momentum alone",
+      "value": -0.6823311008017723
+    },
+    {
+      "title": "Net Sharpe by allocation rule and of each sleeve alone",
+      "label": "demo_reversal alone",
+      "value": -0.28863920427184
+    },
+    {
+      "title": "Net Sharpe by allocation rule and of each sleeve alone",
+      "label": "demo_pairs alone",
+      "value": 0.9817279532543843
+    }
+  ],
+  "selection": [],
+  "cpcvPaths": [],
+  "cpcvChoices": [],
+  "tradeInstruments": [
+    "btc-usdt",
+    "eth-usdt"
+  ]
+}

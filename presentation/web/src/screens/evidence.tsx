@@ -478,7 +478,7 @@ export function DefinitionPanel({ hypothesis }: { hypothesis: HypothesisSummary 
           ['Strategy', <code className="qf-code">{String(strategy)}</code>],
           ...Object.entries(parameters).map(([name, value]): [ReactNode, ReactNode] => [
             name,
-            <span className="qf-num">{value === null ? '—' : String(value)}</span>,
+            <span className="qf-num">{value === null ? '—' : Array.isArray(value) ? value.join(', ') : String(value)}</span>,
           ]),
           ['Universe', String(universe)],
           ['Cost model', <code className="qf-code">{hypothesis.costModel}</code>],

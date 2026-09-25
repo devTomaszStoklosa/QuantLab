@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 import pyarrow.parquet as pq
+import pytest
 from typer.testing import CliRunner
 
 from quantlab import cli
@@ -134,6 +135,37 @@ success_criterion:
     test_groups: 2
     purge_days: 1
     embargo_fraction: 0.01
+"""
+
+# A portfolio of three crypto demos weighted by inverse volatility (q9). Its holdout
+# overlaps its components' unopened ones, so it stays sealed (REQ-930).
+_PORTFOLIO_DEFINITION = """hypothesis: demo_portfolio
+
+training_start: 2020-01-01
+training_end: 2022-12-31
+start: 2023-01-01
+end: 2023-06-30
+
+parameters:
+  strategy: strategy_portfolio
+  components: [demo_momentum, demo_reversal, demo_pairs]
+  allocation: inverse_volatility
+  window_days: 90
+  min_window_days: 60
+  history_start: 2019-07-01
+  universe: mvp-crypto
+  cost_model:
+    name: realistic
+    fee_bps: 10
+    k: 0.05
+    vol_window: 30
+
+success_criterion:
+  description: >-
+    Synthetic demo. Holdout net Sharpe under the realistic cost model > 0 and
+    permutation-test p-value < 0.1.
+  min_sharpe: 0.0
+  max_p_value: 0.1
 """
 
 _STOCKS = [f"eq{i:02d}" for i in range(30)]
@@ -274,6 +306,10 @@ def generate(directory: Path, monkeypatch) -> Path:
     _commit(repo, "freeze demo_xsmom", datetime(2026, 9, 5, 9, 0, tzinfo=UTC), "demo_xsmom.yaml")
     (repo / "demo_select.yaml").write_text(_SELECTION_DEFINITION, encoding="utf-8", newline="\n")
     _commit(repo, "freeze demo_select", datetime(2026, 9, 6, 9, 0, tzinfo=UTC), "demo_select.yaml")
+    (repo / "demo_portfolio.yaml").write_text(_PORTFOLIO_DEFINITION, encoding="utf-8", newline="\n")
+    _commit(
+        repo, "freeze demo_portfolio", datetime(2026, 9, 7, 9, 0, tzinfo=UTC), "demo_portfolio.yaml"
+    )
     provider = _SyntheticProvider()
     load = Universe.load
     monkeypatch.setattr(
@@ -298,10 +334,13 @@ def generate(directory: Path, monkeypatch) -> Path:
         ["run", "demo_xsmom"],
         ["open-holdout", "demo_select"],
         ["run", "demo_select"],
+        ["run", "demo_portfolio"],
+        ["open-holdout", "demo_portfolio"],  # refused: its components' holdouts are sealed
         ["registry"],
     ):
         result = runner.invoke(cli.app, command)
-        assert result.exit_code == 0, result.output
+        expected = 1 if command == ["open-holdout", "demo_portfolio"] else 0
+        assert result.exit_code == expected, result.output
     return store
 
 
@@ -347,11 +386,18 @@ def test_the_synthetic_store_covers_each_registry_state() -> None:
         "demo_pairs": (True, None),
         "demo_xsmom": (True, None),
         "demo_select": (True, registry[4]["holdout_verdict"]),
+        "demo_portfolio": (True, None),
     }
     assert registry[0]["holdout_verdict"] is not None
     assert registry[4]["holdout_verdict"] is not None
     assert [row["status"] for row in registry][1:4] == ["proposed", "testing", "testing"]
-    for hypothesis in ("demo_momentum", "demo_pairs", "demo_xsmom", "demo_select"):
+    for hypothesis in (
+        "demo_momentum",
+        "demo_pairs",
+        "demo_xsmom",
+        "demo_select",
+        "demo_portfolio",
+    ):
         [run] = pq.read_table(FIXTURE / hypothesis / "run.parquet").to_pylist()
         assert run["data_source"] == "synthetic"
     assert {row["hypothesis"]: row["significance_test"] for row in registry} == {
@@ -360,8 +406,16 @@ def test_the_synthetic_store_covers_each_registry_state() -> None:
         "demo_pairs": "day_shuffle",
         "demo_xsmom": "random_portfolio",
         "demo_select": "day_shuffle",
+        "demo_portfolio": "day_shuffle",
     }
-    assert [row["in_sample_validation"] for row in registry] == ["walk_forward"] * 4 + ["cpcv"]
+    assert [row["in_sample_validation"] for row in registry] == [
+        "walk_forward",
+        "walk_forward",
+        "walk_forward",
+        "walk_forward",
+        "cpcv",
+        "walk_forward",
+    ]
 
 
 def test_the_equity_demo_is_a_point_in_time_cross_section() -> None:
@@ -394,8 +448,32 @@ def test_the_selection_demo_stores_its_grid_and_its_gate_decides() -> None:
     assert sum(row["chosen"] for row in selection) == 3  # one value a year
     # Its three lookbacks count toward the trials of the other crypto demos (REQ-820).
     [momentum] = pq.read_table(FIXTURE / "demo_momentum" / "run.parquet").to_pylist()
-    assert momentum["trials"][-1] == "demo_select"
+    assert "demo_select" in momentum["trials"]
     assert momentum["configurations"] == len(momentum["trials"]) + 2
     # The status follows the CPCV, not the walk-forward.
     verdict = holdout_passed(registry["demo_select"]["holdout_verdict"])
     assert registry["demo_select"]["status"] == concluded_status(run["in_sample_passed"], verdict)
+
+
+def test_the_portfolio_demo_nets_its_sleeves_and_reports_them() -> None:
+    registry = {
+        row["hypothesis"]: row for row in pq.read_table(FIXTURE / "hypotheses.parquet").to_pylist()
+    }
+    [run] = pq.read_table(FIXTURE / "demo_portfolio" / "run.parquet").to_pylist()
+    diagnostics = pq.read_table(FIXTURE / "demo_portfolio" / "diagnostics.parquet").to_pylist()
+
+    assert run["strategy"] == "strategy_portfolio"
+    assert registry["demo_portfolio"]["status"] == "testing"  # holdout sealed by the guard
+    assert registry["demo_portfolio"]["configurations"] == 1
+    titles = list(dict.fromkeys(row["title"] for row in diagnostics))
+    assert titles == [
+        "Sleeve correlations (daily net returns)",
+        "Sleeve weights (inverse_volatility, monthly)",
+        "Net Sharpe by allocation rule and of each sleeve alone",
+    ]
+    values = {row["label"]: row["value"] for row in diagnostics}
+    means = [
+        values[f"{sleeve} mean"] for sleeve in ("demo_momentum", "demo_reversal", "demo_pairs")
+    ]
+    assert sum(means) == pytest.approx(1.0)
+    assert -1.0 <= values["demo_momentum ~ demo_reversal"] <= 1.0

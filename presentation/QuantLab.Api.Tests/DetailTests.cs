@@ -21,7 +21,7 @@ public class DetailTests
         Assert.Equal(stored["permutation_p_value"], run.GetProperty("permutation").Number("pValue"));
         Assert.Equal(stored["dsr"], run.GetProperty("multipleTesting").Number("dsr"));
         Assert.Equal(
-            ["demo_momentum", "demo_reversal", "demo_pairs", "demo_select"],
+            ["demo_momentum", "demo_reversal", "demo_pairs", "demo_select", "demo_portfolio"],
             run.GetProperty("multipleTesting").GetProperty("trials").EnumerateArray().Select(t => t.GetString()));
         Assert.Equal(stored["configurations"], (object)run.GetProperty("multipleTesting").GetProperty("configurations").GetInt64());
         Assert.Equal("demo_pairs", run.GetProperty("contrast").GetProperty("hypothesis").GetString());
@@ -146,6 +146,22 @@ public class DetailTests
         Assert.Equal(
             choices.Select(c => ((string)c["value"]!, (double)c["share"]!)),
             detail.GetProperty("cpcvChoices").EnumerateArray().Select(c => (c.GetProperty("value").GetString()!, c.GetProperty("share").GetDouble())));
+    }
+
+    [Fact]
+    public async Task APortfolioRunCarriesItsSleeveDiagnostics()
+    {
+        var detail = await Http.Ok("/api/hypotheses/demo_portfolio");
+
+        var stored = Fixture.Query($"SELECT title, label, value FROM {Table("demo_portfolio", "diagnostics")} ORDER BY position");
+        Assert.Equal(
+            stored.Select(d => ((string)d["title"]!, (string)d["label"]!, (double?)d["value"])),
+            detail.GetProperty("diagnostics").EnumerateArray().Select(d => (
+                d.GetProperty("title").GetString()!, d.GetProperty("label").GetString()!, d.Number("value"))));
+        Assert.Equal("strategy_portfolio", detail.GetProperty("run").GetProperty("strategy").GetString());
+        Assert.Equal(
+            ["demo_momentum", "demo_reversal", "demo_pairs"],
+            detail.GetProperty("hypothesis").GetProperty("parameters").GetProperty("components").EnumerateArray().Select(c => c.GetString()));
     }
 
     [Fact]
