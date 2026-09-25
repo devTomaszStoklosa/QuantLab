@@ -130,4 +130,4 @@ Pre-rejestracja i wynik
 
 | # | Question | Owner |
 |---|---|---|
-| 1 | Pytania 1–6 z [01-story.md](01-story.md): hipoteza i uniwersum, reguła wyboru, ustawienia CPCV, bramka, okresy, liczba prób | Tomasz |
+| — | Brak: pytania 1–6 z [01-story.md](01-story.md) rozstrzygnięte 2026-09-25; definicja zamrożona w `config/holdout/momentum_select_v1.yaml` | — |

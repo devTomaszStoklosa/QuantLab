@@ -41,7 +41,7 @@ Jako badacz chcę zamrozić **procedurę** wyboru parametru (siatkę, miarę, ha
 
 ## Priority
 
-Should have — wybrane przez Tomasza 2026-09-24 jako następny epik po `q1`–`q7`. Kod (strategia z doborem, CPCV, raport) powstaje na danych syntetycznych; zamrożenie czeka na odpowiedzi poniżej, przebiegi — na lokalny dostęp do Binance.
+Should have — wybrane przez Tomasza 2026-09-24 jako następny epik po `q1`–`q7`. Kod (strategia z doborem, CPCV, raport) powstał na danych syntetycznych; definicja zamrożona po decyzjach 1–6 poniżej (P7, 2026-09-25); przebiegi czekają na lokalny dostęp do Binance.
 
 ## Dependencies and risks
 
@@ -51,15 +51,19 @@ Should have — wybrane przez Tomasza 2026-09-24 jako następny epik po `q1`–`
 - **Ryzyko: wielokrotne testowanie rośnie.** Siatka K wartości na `mvp-crypto` 2018–2023 zaostrza próg DSR pozostałych hipotez na tych danych — zgodnie z prawdą, opisowo.
 - **Ryzyko: CPCV bez kosztów przejść.** Ścieżka składa grupy testowe z różnych podziałów, być może z różnymi wybranymi wartościami; przejścia między nimi nie są kosztowane. Mitygacja: jawne ograniczenie w raporcie; najwyżej N − 1 przejść na ścieżkę.
 
+## Decisions
+
+Odpowiedzi na pytania 1–6, przyjęte przez Tomasza 2026-09-25 (wszystkie propozycje); zamrożone w `config/holdout/momentum_select_v1.yaml` (P7):
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Hipoteza i uniwersum | **`momentum_select_v1`**: time-series momentum na `mvp-crypto` (BTC, ETH), lookback z siatki **30, 60, 90, 180, 270, 365 dni**, jako kontrast z `momentum_v1` (365 z literatury). Momentum przekrojowe na S&P 500 odrzucone na teraz (cięższe, wymaga Tiingo) |
+| 2 | Reguła wyboru | Sharpe dziennych zwrotów netto (model realistyczny definicji) na historii zakotwiczonej od **2018-01-01** do dnia przed wyborem, we wspólnym oknie od dnia, w którym każda wartość ma sygnał; nowy wybór co rok, 1 stycznia; co najmniej **365 dni** historii (wcześniej brak pozycji); remis — krótszy lookback. Skutek: dane Binance od 2017-08-17, wspólne okno od 2018-08-17, pierwszy wybór na 2020, pierwsza pozycja 2020-01-02. **Korekta propozycji:** alternatywa „minimum 180 dni → pozycja od 2019" była błędna przy siatce do 365 — przed wyborem na 2019 wspólne okno ma tylko 137 dni; pozycję od 2019 dałaby dopiero siatka do 270 (232 dni) razem z minimum 180 |
+| 3 | Ustawienia CPCV | **N = 10** grup, **k = 2** testowe (45 podziałów, 9 ścieżek), purging **1 dzień** przed każdą grupą testową, embargo **1% okresów** po każdej (ok. 20 dni w oknie 2018-08-17 → 2023-12-31) |
+| 4 | Bramka in-sample | **CPCV**: zaliczona, gdy mediana Sharpe netto ścieżek > 0; niezaliczona, gdy ≤ 0; nierozstrzygnięta, gdy mniej niż połowa ścieżek ma Sharpe. Walk-forward (kalendarzowy, na strategii z re-optymalizacją) i PBO siatki — opisowo |
+| 5 | Okresy i kryterium | Trening **2018-01-01 → 2023-12-31** (jak `momentum_v1`), holdout **2026-01-01 → 2026-08-31** (ten sam, nieotwarty, co `mean_reversion_v1` i `pairs_v1`); kryterium: Sharpe netto > 0 i p < 0.1 z testu tasowania dni; wybór na 2026 z całej historii przed 2026-01-01 (także 2024–2025) |
+| 6 | Liczba prób | Każda wartość siatki to konfiguracja; próg DSR liczy konfiguracje wszystkich prób na `mvp-crypto` 2018–2023: `momentum_v1`, `mean_reversion_v1`, `pairs_v1` po 1 i `momentum_select_v1` 6 — razem 9. Opisowy DSR hipotez bez siatki zmienia się przy ich następnym przebiegu wyłącznie przez te konfiguracje |
+
 ## Open questions
 
-Blokują zamrożenie (ostatni slice); kod powstaje na danych syntetycznych.
-
-| # | Question | Owner | Due |
-|---|---|---|---|
-| 1 | Hipoteza i uniwersum. Propozycja: **`momentum_select_v1`** — time-series momentum na `mvp-crypto` (BTC, ETH), lookback z siatki **30, 60, 90, 180, 270, 365 dni**, jako kontrast z `momentum_v1` (365 z literatury): czy dobór na danych coś daje po uwzględnieniu przeuczenia? Alternatywa: formacja momentum przekrojowego na S&P 500 (3, 6, 9, 12 miesięcy) — cięższe, wymaga Tiingo | Tomasz | przed zamrożeniem |
-| 2 | Reguła wyboru. Propozycja: Sharpe netto (model realistyczny definicji), historia zakotwiczona od **2018-01-01** (początek treningu) do dnia przed wyborem, wspólne okno od dnia, w którym każda wartość ma już sygnał, nowy wybór na każdy rok kalendarzowy (1 stycznia), co najmniej **365 dni** historii przed wyborem (wcześniej brak pozycji), remis — pierwsza wartość siatki. **Skutek (pomiar P3):** dane Binance zaczynają się 2017-08-17, a najdłuższy lookback to 365 dni, więc wspólne okno startuje 2018-08-17 i pierwsza pozycja przypada na 2020-01-02 — trening ma cztery lata z pozycją zamiast sześciu. Alternatywa: minimum 180 dni (pozycja od 2019) albo siatka do 270 dni | Tomasz | przed zamrożeniem |
-| 3 | Ustawienia CPCV. Propozycja: **N = 10** grup, **k = 2** grupy testowe (45 podziałów, 9 ścieżek), purging **1 dzień** przed każdą grupą testową (horyzont zwrotu), embargo **1% okresów** treningu po każdej (López de Prado 2018, ok. 22 dni przy 6 latach) | Tomasz | przed zamrożeniem |
-| 4 | Bramka in-sample. Propozycja: **CPCV zamiast walk-forward**: zaliczona, gdy mediana Sharpe netto ścieżek > 0; niezaliczona, gdy ≤ 0; nierozstrzygnięta, gdy mniej niż połowa ścieżek ma zdefiniowany Sharpe. Walk-forward z re-optymalizacją i PBO — opisowo. Alternatywa: walk-forward z re-optymalizacją jako bramka, CPCV opisowo | Tomasz | przed zamrożeniem |
-| 5 | Okresy i kryterium holdoutu. Propozycja: trening 2018-01-01 → 2023-12-31 (jak pozostałe hipotezy krypto), holdout **2026-01-01 → 2026-08-31** (ten sam, jeszcze nieotwarty, co `mean_reversion_v1` i `pairs_v1`); kryterium: Sharpe netto > 0 i p < 0.1 z testu tasowania dni (momentum szeregów czasowych to timing); wybór na holdout z całej historii przed 2026-01-01 (także 2024–2025) | Tomasz | przed zamrożeniem |
-| 6 | Liczba prób. Propozycja: każda wartość siatki to konfiguracja, a próg DSR liczy konfiguracje wszystkich prób na tych samych danych (dziś 3 definicje → 3 + 6 = 9 konfiguracji na `mvp-crypto` 2018–2023) | Tomasz | przed zamrożeniem |
+Brak — wszystkie decyzje potrzebne do zamrożenia (P7) przyjęte.
