@@ -1,0 +1,66 @@
+# Frozen definition of time-series momentum with a lookback chosen on the data
+# (q8, REQ-801, REQ-850). Committed before any run of it reads market data: it
+# is the single source of its selection procedure, dates and success criterion.
+# Do not edit: a change after this commit makes it a different hypothesis.
+# frozen_at_commit is read from git (the last commit touching this file).
+#
+# What is frozen is the procedure, not a lookback: on 1 January of each year,
+# every lookback of the grid is backtested by the vectorized engine under the
+# realistic cost model below, on bars dated before that day only, over one
+# common window - from history_start, or from the first day every lookback has
+# a signal (the first bar plus the longest lookback: 2018-08-17 on Binance data,
+# which starts 2017-08-17), whichever is later - to 31 December. The lookback
+# with the highest Sharpe of net daily returns is traded for the year, ties
+# going to the shorter one. With fewer than min_history_days in the window
+# there is no position that year: the first choice is for 2020, so training
+# holds positions from 2020-01-02. A change of lookback is traded and costed.
+#
+# The contrast is momentum_v1 (lookback 365 from the literature, same data and
+# costs): does choosing on the data add anything once overfitting is counted?
+# The grid's six lookbacks are six configurations in the DSR threshold of every
+# trial on mvp-crypto 2018-2023 (REQ-820).
+#
+# In-sample gate: the CPCV of the choosing procedure (Lopez de Prado 2018,
+# ch. 12) over the training period, 10 groups with 2 for testing (45 splits,
+# 9 paths), 1 day purged before and 1% of the periods embargoed after each
+# test group. Passed if the median net Sharpe of the paths is > 0, failed if
+# <= 0, inconclusive if fewer than half the paths have a Sharpe. Calendar
+# walk-forward and the PBO of the grid are descriptive.
+#
+# Training is momentum_v1's period. The holdout is the one mean_reversion_v1
+# and pairs_v1 froze: data no run had read when this file was committed; about
+# 8 months, so the test has little power - accepted upfront. Its 2026 choice is
+# made on all history before 2026-01-01, 2024-2025 included.
+hypothesis: momentum_select_v1
+
+training_start: 2018-01-01
+training_end: 2023-12-31
+start: 2026-01-01
+end: 2026-08-31
+
+parameters:
+  strategy: time_series_momentum_selected
+  lookback_grid: [30, 60, 90, 180, 270, 365]
+  history_start: 2018-01-01
+  min_history_days: 365
+  universe: mvp-crypto
+  cost_model:
+    name: realistic
+    fee_bps: 10
+    k: 0.05
+    vol_window: 30
+
+success_criterion:
+  description: >-
+    In training, median net Sharpe of the CPCV paths of the choosing procedure
+    > 0. Holdout net Sharpe under the realistic cost model > 0 and
+    permutation-test p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and
+    p >= 0.1 -> inconclusive; Sharpe > 0 and p < 0.1 -> passed.
+  min_sharpe: 0.0
+  max_p_value: 0.1
+  in_sample_validation: cpcv
+  cpcv:
+    groups: 10
+    test_groups: 2
+    purge_days: 1
+    embargo_fraction: 0.01
