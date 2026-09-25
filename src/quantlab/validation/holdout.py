@@ -15,6 +15,10 @@ class HoldoutNotFrozenError(Exception):
     pass
 
 
+class HoldoutPrerequisitesError(Exception):
+    """Holdouts that must be opened first, so this one reveals none of them (q9, REQ-930)."""
+
+
 class HoldoutAlreadyOpenedError(Exception):
     pass
 

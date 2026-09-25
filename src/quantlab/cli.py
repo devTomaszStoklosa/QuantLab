@@ -78,7 +78,9 @@ from quantlab.validation.cpcv import CPCV_GATE_RULE, CpcvSettings, cpcv_gate
 from quantlab.validation.holdout import (
     FrozenHoldout,
     HoldoutAlreadyOpenedError,
+    HoldoutConfig,
     HoldoutNotFrozenError,
+    HoldoutPrerequisitesError,
     HoldoutRecord,
     holdout_passed,
     holdout_verdict,
@@ -437,7 +439,11 @@ class TrialsComparison(BaseModel):
 
 
 def run_trials(
-    provider: DataProvider, trials: list[Trial], seed: int, git_sha: str
+    provider: DataProvider,
+    trials: list[Trial],
+    seed: int,
+    git_sha: str,
+    load: Callable[[str], HoldoutConfig],
 ) -> TrialsComparison:
     """Each trial over its own training period, from its committed definition (REQ-641).
 
@@ -448,7 +454,7 @@ def run_trials(
     runs, universes = [], []
     for trial in trials:
         definition = trial.definition
-        parameters = definition.parameters
+        parameters = definition.parameters.resolve(load)
         universe = Universe.load(parameters.universe)
         universes.append(universe)
         runs.append(
@@ -501,6 +507,18 @@ def open_frozen_holdout(
 
     config = frozen.config
     parameters = config.parameters
+    # Records sit next to the definitions: a component's unopened overlapping
+    # holdout would be revealed by this one (q9, REQ-930).
+    unopened = [
+        hypothesis
+        for hypothesis in parameters.holdout_prerequisites(config.start, config.end)
+        if not (record_path.parent / f"{hypothesis}.opened.json").exists()
+    ]
+    if unopened:
+        raise HoldoutPrerequisitesError(
+            f"{config.hypothesis}'s holdout {config.start}..{config.end} overlaps the unopened "
+            f"holdouts of {', '.join(unopened)}; open them first"
+        )
     universe = Universe.load(parameters.universe)
     bars = _fetch_bars(provider, universe, parameters, config.start, config.end)
     run = _run_study(
@@ -542,13 +560,24 @@ def open_frozen_holdout(
     return record
 
 
+def _frozen_config(hypothesis: str) -> HoldoutConfig:
+    """A hypothesis's committed definition as it stands, unresolved (a portfolio's component)."""
+    return load_frozen_holdout(_definition_path(hypothesis)).config
+
+
 def _load_definition(hypothesis: str) -> FrozenHoldout:
-    """The hypothesis's committed definition, or exit before fetching any data (REQ-303)."""
+    """The hypothesis's committed definition, with the committed definitions it refers
+    to loaded (q9), or exit before fetching any data (REQ-303)."""
     try:
-        return load_frozen_holdout(_definition_path(hypothesis))
-    except HoldoutNotFrozenError as error:
+        frozen = load_frozen_holdout(_definition_path(hypothesis))
+        config = frozen.config
+        parameters = config.parameters.resolve(_frozen_config)
+    except (HoldoutNotFrozenError, ValueError) as error:
         typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(1) from error
+    return frozen.model_copy(
+        update={"config": config.model_copy(update={"parameters": parameters})}
+    )
 
 
 def _print_grid(grid: GridReport, gate: bool) -> None:
@@ -1172,7 +1201,11 @@ def trials_command(
             raise typer.Exit(1) from error
 
     provider = _provider(_universe(target.parameters.universe))
-    comparison = run_trials(provider, trials, _SEED, _current_git_sha())
+    try:
+        comparison = run_trials(provider, trials, _SEED, _current_git_sha(), _frozen_config)
+    except (HoldoutNotFrozenError, ValueError) as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
 
     typer.echo(
         f"Trials on {target.parameters.universe} with a training period overlapping "
@@ -1270,15 +1303,19 @@ def open_holdout(hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYP
         )
     else:
         frozen = _load_definition(hypothesis)
-        record = open_frozen_holdout(
-            provider=_provider(_universe(frozen.config.parameters.universe)),
-            frozen=frozen,
-            record_path=record_path,
-            n_permutations=_PERMUTATIONS,
-            seed=_SEED,
-            git_sha=_current_git_sha(),
-            opened_at=datetime.now(tz=UTC),
-        )
+        try:
+            record = open_frozen_holdout(
+                provider=_provider(_universe(frozen.config.parameters.universe)),
+                frozen=frozen,
+                record_path=record_path,
+                n_permutations=_PERMUTATIONS,
+                seed=_SEED,
+                git_sha=_current_git_sha(),
+                opened_at=datetime.now(tz=UTC),
+            )
+        except HoldoutPrerequisitesError as error:
+            typer.echo(f"Error: {error}", err=True)
+            raise typer.Exit(1) from error
         typer.echo(f"Holdout opened. Result recorded in {record_path} - commit it.")
     _print_holdout(record)
     try:

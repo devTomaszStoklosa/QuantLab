@@ -7,21 +7,24 @@ own strategy: the runner never branches on the strategy type (REQ-301).
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal, Protocol, Self
 
 import numpy as np
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from quantlab.backtest.rebalance import Daily, OnSignalChange, RebalancePolicy
-from quantlab.backtest.sizing import EqualWeightBySign, PairWeights, Sizer
+from quantlab.backtest.sizing import CarriedWeights, EqualWeightBySign, PairWeights, Sizer
 from quantlab.core.data.provider import PriceBar
 from quantlab.costs.realistic import RealisticCostModel
+from quantlab.portfolio.allocation import ALLOCATION_RULES
 from quantlab.strategy.base import Strategy
 from quantlab.strategy.cointegration import engle_granger
 from quantlab.strategy.cross_sectional_momentum import CrossSectionalMomentum
 from quantlab.strategy.pairs_spread import PairsSpreadReversion
+from quantlab.strategy.portfolio import Sleeve, SleeveHistory, StrategyPortfolio
 from quantlab.strategy.selected_parameter import (
     SelectedParameter,
     SelectionRecord,
@@ -65,6 +68,17 @@ class GridEvidence:
     end: date
     returns: np.ndarray  # T x K net daily returns of each value over the window
     history: list[SelectionRecord]  # the yearly choices over the run's window
+
+
+class ComponentDefinition(Protocol):
+    """What a definition referring to other hypotheses reads of each (a HoldoutConfig)."""
+
+    hypothesis: str
+    start: date  # its holdout
+    end: date
+
+    @property
+    def parameters(self) -> "StudyParametersBase": ...
 
 
 class StudyParametersBase(BaseModel, ABC):
@@ -119,6 +133,17 @@ class StudyParametersBase(BaseModel, ABC):
     ) -> GridEvidence | None:
         """The grid's returns and choices over [start, end]; None without a grid (q8)."""
         return None
+
+    def resolve(self, load: Callable[[str], ComponentDefinition]) -> Self:
+        """This definition with the frozen definitions it refers to loaded by `load`
+        (q9, REQ-920); itself for a hypothesis that refers to none. The runner calls it
+        on every definition it loads, never asking what kind it is."""
+        return self
+
+    def holdout_prerequisites(self, start: date, end: date) -> list[str]:
+        """Hypotheses whose one-time holdout opening must be recorded before a holdout
+        [start, end] of this one may be opened (q9, REQ-930); none by default."""
+        return []
 
 
 class TimeSeriesMomentumParameters(StudyParametersBase):
@@ -352,6 +377,114 @@ class TimeSeriesMomentumSelectedParameters(StudyParametersBase):
         )
 
 
+class StrategyPortfolioParameters(StudyParametersBase):
+    """A portfolio of frozen hypotheses traded as net positions (q9, REQ-910..923).
+
+    The frozen hypothesis is the rule for combining them: the components (by
+    hypothesis id, each traded as its own frozen definition trades it), the
+    allocation rule, the estimation window and the anchor of the sleeves'
+    history; weights change on the first day of each month. The components are
+    loaded by `resolve`, through the same path as any run's definition, so a
+    component changed or deleted after freezing stops the run.
+    """
+
+    strategy: Literal["strategy_portfolio"]
+    components: list[str] = Field(min_length=2)
+    allocation: str
+    window_days: int = Field(ge=2)
+    min_window_days: int = Field(ge=2)
+    history_start: date
+    _definitions: dict[str, ComponentDefinition] | None = PrivateAttr(default=None)
+    _history: SleeveHistory | None = PrivateAttr(default=None)
+
+    @model_validator(mode="after")
+    def _rule(self) -> Self:
+        if len(set(self.components)) != len(self.components):
+            raise ValueError("components must not repeat")
+        if self.allocation not in ALLOCATION_RULES:
+            raise ValueError(
+                f"Unknown allocation {self.allocation!r}; one of {sorted(ALLOCATION_RULES)}"
+            )
+        return self
+
+    def resolve(self, load: Callable[[str], ComponentDefinition]) -> Self:
+        definitions = {name: load(name) for name in self.components}
+        for name, definition in definitions.items():
+            parameters = definition.parameters
+            if parameters.strategy == self.strategy:
+                raise ValueError(f"Component {name} is itself a portfolio")
+            if parameters.universe != self.universe:
+                raise ValueError(
+                    f"Component {name} trades {parameters.universe}, the portfolio {self.universe}"
+                )
+        resolved = self.model_copy()
+        resolved._definitions = definitions
+        resolved._history = None
+        return resolved
+
+    def _loaded(self) -> dict[str, ComponentDefinition]:
+        if self._definitions is None:
+            raise ValueError("The portfolio's components are not loaded: resolve() it first")
+        return self._definitions
+
+    @property
+    def warm_up_days(self) -> int:
+        return max(definition.parameters.warm_up_days for definition in self._loaded().values())
+
+    def fetch_start(self, start: date) -> date:
+        # The sleeves' history starts at the anchor, and each sleeve needs its own warm-up.
+        anchor = min(start, self.history_start)
+        return min(
+            definition.parameters.fetch_start(anchor) for definition in self._loaded().values()
+        )
+
+    def strategy_params(self) -> dict:
+        return {
+            "components": self.components,
+            "allocation": self.allocation,
+            "window_days": self.window_days,
+            "min_window_days": self.min_window_days,
+            "history_start": self.history_start.isoformat(),
+        }
+
+    def sleeve_history(self) -> SleeveHistory:
+        """The sleeves' returns before each rebalance day, shared by every strategy this
+        definition builds (cost models, engines, stress scenarios alike)."""
+        if self._history is None:
+            self._history = SleeveHistory(
+                [
+                    Sleeve(
+                        name=name,
+                        build=definition.parameters.build_strategy,
+                        sizer=definition.parameters.build_sizer(),
+                        rebalance=definition.parameters.build_rebalance_policy(),
+                        cost_model=definition.parameters.cost_model.build(),
+                    )
+                    for name, definition in self._loaded().items()
+                ],
+                self.history_start,
+            )
+        return self._history
+
+    def build_strategy(self) -> Strategy:
+        return StrategyPortfolio(
+            self.sleeve_history(),
+            ALLOCATION_RULES[self.allocation],
+            self.window_days,
+            self.min_window_days,
+        )
+
+    def build_sizer(self) -> Sizer:
+        return CarriedWeights()
+
+    def holdout_prerequisites(self, start: date, end: date) -> list[str]:
+        return [
+            name
+            for name, definition in self._loaded().items()
+            if definition.start <= end and start <= definition.end
+        ]
+
+
 # A definition's `strategy` field picks the variant; a new strategy is a new
 # variant here, never a branch in the runner.
 StudyParameters = Annotated[
@@ -359,6 +492,7 @@ StudyParameters = Annotated[
     | ShortTermReversalParameters
     | PairsSpreadParameters
     | CrossSectionalMomentumParameters
-    | TimeSeriesMomentumSelectedParameters,
+    | TimeSeriesMomentumSelectedParameters
+    | StrategyPortfolioParameters,
     Field(discriminator="strategy"),
 ]
