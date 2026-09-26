@@ -121,4 +121,4 @@ Plik uniwersum (`src/quantlab/config/universes/<name>.yaml`):
 
 | # | Question | Owner |
 |---|---|---|
-| 1–7 | Pytania pre-rejestracji z [01-story](01-story.md) (koszyk, hipotezy, lookback, skalowanie, koszty, okresy, kryterium) | Tomasz, przed C5 |
+| — | Brak — pytania pre-rejestracji rozstrzygnięte 2026-09-26 ([01-story](01-story.md), Decisions) | — |

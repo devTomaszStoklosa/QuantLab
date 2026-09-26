@@ -1,0 +1,49 @@
+# Frozen definition of time-series momentum scaled to a target volatility on a
+# basket of ETFs across asset classes (q12, with q11's scaling). Committed before
+# any run of this hypothesis reads market data: it is the single source of its
+# parameters, dates and success criterion. Do not edit: a change after this
+# commit makes it a different hypothesis.
+# frozen_at_commit is read from git (the last commit touching this file).
+#
+# The signal is momentum_multiasset_v1's (sign of the 252-session return above
+# cash, daily rebalancing); only the position size differs. Each ETF's
+# equal-weight share is multiplied by min(1, 0.10 / annualized ex-ante
+# volatility), the volatility exponentially weighted with a 60-session center of
+# mass over the last 252 daily returns up to the decision day. Moskowitz, Ooi and
+# Pedersen (2012) target 40% on futures with leverage; with no leverage (cap 1,
+# no financing cost in the engines) 40% would cut only the most volatile ETFs,
+# while 10% balances equity, commodity and bond risk and leaves the calmest ETFs
+# (7-10 year Treasuries, the dollar) at the cap.
+#
+# Costs, periods and criterion as momentum_multiasset_v1. Second trial on this
+# universe (pre-registration 2026-09-26).
+hypothesis: momentum_voltarget_multiasset_v1
+
+training_start: 2008-07-01
+training_end: 2017-12-31
+start: 2018-01-01
+end: 2026-08-31
+
+parameters:
+  strategy: time_series_momentum_vol_target
+  lookback_days: 252
+  target_volatility: 0.10
+  max_scale: 1.0
+  volatility:
+    estimator: ewma
+    center_of_mass_days: 60
+    window_days: 252
+  universe: multiasset-etf
+  cost_model:
+    name: realistic
+    fee_bps: 3
+    k: 0.05
+    vol_window: 21
+
+success_criterion:
+  description: >-
+    Holdout net Sharpe under the realistic cost model > 0 and permutation-test
+    p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 ->
+    inconclusive; Sharpe > 0 and p < 0.1 -> passed.
+  min_sharpe: 0.0
+  max_p_value: 0.1
