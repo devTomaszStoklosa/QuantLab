@@ -66,6 +66,18 @@ describe('HypothesisScreen', () => {
     expect(within(panel('Regimes')).getAllByRole('row')).toHaveLength(1 + captured.momentum.regimes.length);
   });
 
+  it('splits the P&L by asset class and by instrument, as stored', async () => {
+    renderWith('demo_momentum');
+    await screen.findByRole('heading', { name: 'Where the P&L came from' });
+    const pnl = within(panel('Where the P&L came from'));
+
+    expect(pnl.getByText('By asset class')).toBeInTheDocument();
+    expect(pnl.getByText('crypto')).toBeInTheDocument();
+    expect(pnl.getByText('By instrument')).toBeInTheDocument();
+    expect(pnl.getByText('btc-usdt')).toBeInTheDocument();
+    expect(pnl.getByText('eth-usdt')).toBeInTheDocument();
+  });
+
   it('names the significance test the criterion chose', async () => {
     const detail = structuredClone(captured.momentum);
     detail.run!.permutation.test = 'random_portfolio';

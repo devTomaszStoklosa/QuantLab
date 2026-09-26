@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 from quantlab import cli
 from quantlab.core.data.provider import PriceBar, WithoutEvents
-from quantlab.core.universe import Instrument
+from quantlab.core.universe import Instrument, Universe
 from quantlab.research.definition import StrategyPortfolioParameters
 from quantlab.research.trials import registered_trials, trials_on_same_data
 from quantlab.validation.holdout import (
@@ -254,7 +254,9 @@ def test_a_resolved_portfolio_fetches_every_sleeve_s_warm_up_and_counts_once(tmp
 
     assert parameters.configurations == 1
     # The anchor 2017-06-01 less the momentum sleeve's 60 days.
-    assert parameters.fetch_start(date(2018, 1, 1)) == date(2017, 6, 1) - timedelta(days=60)
+    assert parameters.fetch_start(date(2018, 1, 1), Universe.load(parameters.universe)) == date(
+        2017, 6, 1
+    ) - timedelta(days=60)
     assert parameters.holdout_prerequisites(date(2022, 6, 1), date(2022, 12, 31)) == [
         "mom_v1",
         "rev_v1",

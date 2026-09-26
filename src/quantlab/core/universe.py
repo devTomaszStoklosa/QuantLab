@@ -1,17 +1,26 @@
 import importlib.resources
+import math
 from collections import defaultdict
 from datetime import date
 from itertools import pairwise
-from typing import Literal, Self
+from typing import Literal, Self, get_args
 
 import yaml
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
+
+# What an instrument gives exposure to; descriptive only - the ledger groups P&L by
+# it (q12, REQ-1220), and no strategy or sizer branches on it.
+AssetClass = Literal["crypto", "equity", "bond", "commodity", "currency", "real_estate", "cash"]
+ASSET_CLASSES: tuple[str, ...] = get_args(AssetClass)
+
+# Sessions a year of a market that trades every calendar day.
+_EVERY_DAY = 365
 
 
 class Instrument(BaseModel):
     id: str
     symbol: str
-    asset_class: Literal["crypto", "equity"]
+    asset_class: AssetClass
     quote_asset: str
 
 
@@ -60,6 +69,11 @@ class Universe(BaseModel):
     # In a point-in-time universe it may have no membership: then it is a
     # benchmark that no strategy sees or trades (REQ-501).
     market_proxy: str | None = None
+    # The market's cash (q12, REQ-1210): a short-term Treasury bill ETF whose total
+    # return is the rate cash earns. Never a member and never traded; with it, the
+    # run prices every bar in units of cash, so returns are returns above it. None:
+    # returns are total returns and cash earns nothing (crypto, quoted in USDT).
+    cash: Instrument | None = None
 
     _periods: dict[str, list[Membership]] = PrivateAttr(default_factory=dict)
 
@@ -71,6 +85,13 @@ class Universe(BaseModel):
             raise ValueError(f"Duplicate instrument id(s) in universe '{self.name}': {duplicates}")
         if self.market_proxy is not None and self.market_proxy not in ids:
             raise ValueError(f"Market proxy {self.market_proxy} is not in universe '{self.name}'")
+        if self.cash is not None:
+            if self.cash.id in ids:
+                raise ValueError(
+                    f"Cash {self.cash.id} of universe '{self.name}' is also one of its instruments"
+                )
+            if self.cash.asset_class != "cash":
+                raise ValueError(f"Cash {self.cash.id} of universe '{self.name}' is not class cash")
         if not self.memberships:
             return self
         periods: dict[str, list[Membership]] = defaultdict(list)
@@ -95,6 +116,21 @@ class Universe(BaseModel):
     @property
     def is_static(self) -> bool:
         return not self.memberships
+
+    def calendar_days(self, sessions: int) -> int:
+        """Calendar days holding at least `sessions` of this market's sessions (q12, REQ-1201).
+
+        Windows count bars, but data are fetched and windows start by date. A
+        market that trades every day needs exactly that many days, so crypto's
+        warm-ups are what they always were. A market closed at weekends needs 7/5
+        as many days plus its holidays and unscheduled closures: 1.5 a session and
+        10 days more bound that from above (a US year has had as few as 248
+        sessions). Extra history costs nothing, since strategies read only the bars
+        they count.
+        """
+        if self.periods_per_year >= _EVERY_DAY:
+            return sessions
+        return math.ceil(1.5 * sessions) + 10
 
     def members(self, as_of: date) -> set[str]:
         """Ids of the instruments that belong to the universe on `as_of`."""

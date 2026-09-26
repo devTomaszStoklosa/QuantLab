@@ -193,3 +193,17 @@ def test_a_static_universe_fetches_every_instrument() -> None:
     universe = Universe.load("mvp-crypto")
 
     assert universe.instruments_between(date(2020, 1, 1), date(2020, 1, 2)) == universe.instruments
+
+
+@pytest.mark.parametrize(
+    "asset_class", ["crypto", "equity", "bond", "commodity", "currency", "real_estate", "cash"]
+)
+def test_an_instrument_names_its_asset_class(asset_class: str) -> None:
+    instrument = Instrument(id="x", symbol="X", asset_class=asset_class, quote_asset="USD")
+
+    assert instrument.asset_class == asset_class
+
+
+def test_an_unknown_asset_class_is_refused() -> None:
+    with pytest.raises(ValidationError, match="asset_class"):
+        Instrument(id="x", symbol="X", asset_class="stock", quote_asset="USD")

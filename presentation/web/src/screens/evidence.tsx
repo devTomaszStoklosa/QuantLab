@@ -444,6 +444,8 @@ export function PnlPanel({ groups, run }: { groups: PnlGroup[]; run: RunSummary 
   const dimensions: Array<[PnlGroup['dimension'], string]> = [
     ['regime', 'By regime at entry'],
     ['holding_period', 'By holding period'],
+    ['asset_class', 'By asset class'],
+    ['instrument', 'By instrument'],
   ];
   return (
     <QF.Panel

@@ -20,6 +20,8 @@ from quantlab.strategy.selected_parameter import SelectedParameter
 from quantlab.strategy.signal import Signal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
 
+_CRYPTO = Universe.load("mvp-crypto")
+
 _FIRST = date(2016, 1, 1)
 _LAST = date(2021, 12, 31)
 _COSTS = CostModelParameters(name="realistic", fee_bps=10, k=0.05, vol_window=30)
@@ -183,8 +185,12 @@ def test_the_definition_fetches_the_anchored_history_and_counts_its_grid() -> No
     parameters = _parameters()
 
     assert parameters.configurations == 3
-    assert parameters.fetch_start(date(2020, 1, 1)) == date(2017, 1, 1) - timedelta(days=180)
-    assert parameters.fetch_start(date(2016, 6, 1)) == date(2016, 6, 1) - timedelta(days=180)
+    assert parameters.fetch_start(date(2020, 1, 1), _CRYPTO) == date(2017, 1, 1) - timedelta(
+        days=180
+    )
+    assert parameters.fetch_start(date(2016, 6, 1), _CRYPTO) == date(2016, 6, 1) - timedelta(
+        days=180
+    )
     assert parameters.strategy_params() == {
         "lookback_grid": [30, 90, 180],
         "history_start": "2017-01-01",

@@ -82,8 +82,7 @@ public class DetailTests
             detail.GetProperty("tradeInstruments").EnumerateArray().Select(i => i.GetString()!));
 
         var groups = detail.GetProperty("pnlGroups").EnumerateArray().Select(g => g.GetProperty("dimension").GetString()).ToList();
-        Assert.Equal("regime", groups[0]);
-        Assert.Equal("holding_period", groups[^1]);
+        Assert.Equal(["regime", "holding_period", "asset_class", "instrument"], groups.Distinct());
         Assert.Empty(detail.GetProperty("diagnostics").EnumerateArray());
     }
 

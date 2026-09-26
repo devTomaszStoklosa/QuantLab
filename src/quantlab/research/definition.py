@@ -106,11 +106,17 @@ class StudyParametersBase(BaseModel, ABC):
     @property
     @abstractmethod
     def warm_up_days(self) -> int:
-        """Days of history needed before a window starts for a signal on its first day."""
+        """Bars of history needed before a window starts for a signal on its first day:
+        sessions of the universe's market, as the strategy's windows count them."""
 
-    def fetch_start(self, start: date) -> date:
-        """The first day of data a run over a window starting on `start` needs."""
-        return start - timedelta(days=self.warm_up_days)
+    def warm_up_calendar_days(self, universe: Universe) -> int:
+        """The warm-up as calendar days on `universe`'s market (q12, REQ-1202): what the
+        dates of fetching and of a first common day are moved back by."""
+        return universe.calendar_days(self.warm_up_days)
+
+    def fetch_start(self, start: date, universe: Universe) -> date:
+        """The first day of data a run on `universe` over a window starting on `start` needs."""
+        return start - timedelta(days=self.warm_up_calendar_days(universe))
 
     @property
     def configurations(self) -> int:
@@ -287,6 +293,10 @@ class CrossSectionalMomentumParameters(StudyParametersBase):
         # Back to the start of month m-1-formation_months for the first day of the window.
         return (self.formation_months + 2) * 31
 
+    def warm_up_calendar_days(self, universe: Universe) -> int:
+        # Its windows are calendar months, so its warm-up is in calendar days already.
+        return self.warm_up_days
+
     def strategy_params(self) -> dict:
         return {
             "formation_months": self.formation_months,
@@ -336,9 +346,12 @@ class TimeSeriesMomentumSelectedParameters(StudyParametersBase):
     def warm_up_days(self) -> int:
         return max(self.lookback_grid)
 
-    def fetch_start(self, start: date) -> date:
+    def fetch_start(self, start: date, universe: Universe) -> date:
         # The choices read the anchored history, and its first day needs the longest warm-up.
-        return min(start, self.history_start) - timedelta(days=self.warm_up_days)
+        return min(start, self.history_start) - timedelta(days=self.warm_up_calendar_days(universe))
+
+    def _calendar_warm_up(self) -> int:
+        return self.warm_up_calendar_days(Universe.load(self.universe))
 
     @property
     def configurations(self) -> int:
@@ -356,7 +369,7 @@ class TimeSeriesMomentumSelectedParameters(StudyParametersBase):
     ) -> GridEvidence | None:
         """One backtest per lookback over the window all of them can signal in, under
         this definition's cost model (REQ-813), and the procedure's yearly choices."""
-        window_start = common_start(bars, self.warm_up_days, start)
+        window_start = common_start(bars, self._calendar_warm_up(), start)
         if window_start is None or window_start > end:
             raise ValueError(f"No window between {start} and {end} in which every lookback signals")
         cost_model = self.cost_model.build()
@@ -382,7 +395,7 @@ class TimeSeriesMomentumSelectedParameters(StudyParametersBase):
                 for lookback in self.lookback_grid
             },
             cost_model=self.cost_model.build(),
-            warm_up_days=self.warm_up_days,
+            warm_up_days=self._calendar_warm_up(),
             history_start=self.history_start,
             min_history_days=self.min_history_days,
         )
@@ -442,11 +455,12 @@ class StrategyPortfolioParameters(StudyParametersBase):
     def warm_up_days(self) -> int:
         return max(definition.parameters.warm_up_days for definition in self._loaded().values())
 
-    def fetch_start(self, start: date) -> date:
+    def fetch_start(self, start: date, universe: Universe) -> date:
         # The sleeves' history starts at the anchor, and each sleeve needs its own warm-up.
         anchor = min(start, self.history_start)
         return min(
-            definition.parameters.fetch_start(anchor) for definition in self._loaded().values()
+            definition.parameters.fetch_start(anchor, universe)
+            for definition in self._loaded().values()
         )
 
     def strategy_params(self) -> dict:
@@ -595,7 +609,9 @@ class VolatilityTargetedMomentumParameters(StudyParametersBase):
             unscaled=TimeSeriesMomentum(lookback_days=self.lookback_days),
             cost_model=self.cost_model.build(),
             bars=bars,
-            start=common_start(bars, self.warm_up_days, start),
+            start=common_start(
+                bars, self.warm_up_calendar_days(Universe.load(self.universe)), start
+            ),
             end=end,
             periods_per_year=Universe.load(self.universe).periods_per_year,
         )

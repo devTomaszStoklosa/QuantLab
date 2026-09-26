@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, NamedTuple
@@ -18,7 +18,9 @@ from quantlab.attribution.trade_ledger import (
     HOLDING_PERIOD_BUCKETS,
     PnlGroup,
     build_trade_ledger,
+    by_asset_class,
     by_holding_period,
+    by_instrument,
     group_pnl,
 )
 from quantlab.attribution.trade_ledger import by_regime as by_regime_at_entry
@@ -34,11 +36,17 @@ from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core import sp500
 from quantlab.core.data.binance import BinanceProvider
-from quantlab.core.data.corporate_actions import MarketData, with_assumed_return, with_events
+from quantlab.core.data.cash import above_cash
+from quantlab.core.data.corporate_actions import (
+    MarketData,
+    adjust_bars,
+    with_assumed_return,
+    with_events,
+)
 from quantlab.core.data.coverage import price_coverage
 from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
 from quantlab.core.data.tiingo import TiingoProvider
-from quantlab.core.universe import Universe
+from quantlab.core.universe import ASSET_CLASSES, Universe
 from quantlab.costs.base import CostModel
 from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.zero import ZeroCostModel
@@ -133,6 +141,8 @@ _PBO_BLOCKS = 16
 # CPCV of a parameter grid when the definition's criterion freezes none (then it is
 # descriptive): Lopez de Prado's (2018) example sizes (q8 story, question 3).
 _CPCV_DEFAULT = CpcvSettings(groups=10, test_groups=2, purge_days=1, embargo_fraction=0.01)
+# The ledger's instrument cut in the terminal: this many best and worst (REQ-1222).
+_SHOWN_INSTRUMENTS = 10
 # Parity differences above this are not floating-point noise.
 _PARITY_NOISE = 1e-9
 _DEFAULT_HYPOTHESIS = "momentum_v1"
@@ -219,10 +229,11 @@ def _fetch_market_data(
     """History from the hypothesis's warm-up before `start`, so a signal can exist
     from the window's first day where data allows; nothing after `end` is
     requested. Bars come adjusted for corporate actions and ended by delistings,
-    unknown delisting returns taking the definition's assumption (q5). Only the
-    window's members and the market proxy are fetched (REQ-505).
+    unknown delisting returns taking the definition's assumption (q5), and priced
+    in units of the universe's cash when it names one (q12). Only the window's
+    members and the market proxy are fetched (REQ-505).
     """
-    fetch_start = parameters.fetch_start(start)
+    fetch_start = parameters.fetch_start(start, universe)
     instruments = universe.instruments_between(start, end)
     bars = {
         instrument.id: provider.fetch(instrument, fetch_start, end) for instrument in instruments
@@ -230,7 +241,35 @@ def _fetch_market_data(
     events = {
         instrument.id: provider.events(instrument, fetch_start, end) for instrument in instruments
     }
-    return with_events(bars, events, parameters.missing_delisting_return)
+    market = with_events(bars, events, parameters.missing_delisting_return)
+    return _above_cash(provider, universe, market, fetch_start, end)
+
+
+def _above_cash(
+    provider: DataProvider, universe: Universe, market: MarketData, start: date, end: date
+) -> MarketData:
+    """The market's bars in units of the universe's cash, so its returns are returns
+    above cash (q12, REQ-1211..1213); unchanged when the universe names no cash. The
+    cash instrument's prices adjusted for its distributions are the index."""
+    cash = universe.cash
+    if cash is None:
+        return market
+    index = adjust_bars(provider.fetch(cash, start, end), provider.events(cash, start, end).actions)
+    if not index:
+        raise DataSourceUnavailableError(
+            f"{universe.source} has no prices of {cash.symbol}, the cash of universe "
+            f"{universe.name}, from {start} to {end}: there are no returns above cash without them"
+        )
+    return replace(market, bars=above_cash(market.bars, index))
+
+
+def _echo_cash(universe: Universe) -> None:
+    """Say that a run's returns are above the universe's cash (q12, REQ-1214)."""
+    if universe.cash is not None:
+        typer.echo(
+            f"Returns:        above cash ({universe.cash.symbol}); prices in the trade ledger "
+            "are in units of cash, not quotes"
+        )
 
 
 def _fetch_bars(
@@ -659,6 +698,20 @@ def _in_order(groups: dict[str, PnlGroup], order: tuple[str, ...]) -> dict[str, 
     return {key: groups[key] for key in order if key in groups}
 
 
+def _by_total(groups: dict[str, PnlGroup]) -> dict[str, PnlGroup]:
+    """Highest total net P&L first; ties by key, so the order is reproducible."""
+    return dict(sorted(groups.items(), key=lambda item: (-item[1].total_net_pnl, item[0])))
+
+
+def _extremes(groups: dict[str, PnlGroup], each: int) -> dict[str, PnlGroup]:
+    """The first and last `each` of groups sorted by total, all of them when that is
+    no fewer (REQ-1222): an S&P 500 run has hundreds of instruments."""
+    if len(groups) <= 2 * each:
+        return groups
+    keys = list(groups)
+    return {key: groups[key] for key in keys[:each] + keys[-each:]}
+
+
 def _current_git_sha() -> str:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
@@ -727,6 +780,7 @@ def run(
     first_position = next((snapshot.ts for snapshot in first.snapshots if snapshot.positions), None)
     typer.echo(f"Hypothesis:     {config.hypothesis} (defined at {frozen.frozen_at_commit[:7]})")
     typer.echo(f"Universe:       {first.universe_name}")
+    _echo_cash(universe)
     typer.echo(f"Strategy:       {first.strategy_name} {first.strategy_params}")
     typer.echo(f"Period:         {first.start} .. {first.end} (training only)")
     typer.echo(f"First position: {first_position}")
@@ -1002,9 +1056,19 @@ def run(
     pnl_groups = {
         "regime": _in_order(group_pnl(trades, by_regime_at_entry), VOLATILITY_REGIMES),
         "holding_period": _in_order(group_pnl(trades, by_holding_period), HOLDING_PERIOD_BUCKETS),
+        "asset_class": _in_order(group_pnl(trades, by_asset_class(universe)), ASSET_CLASSES),
+        "instrument": _by_total(group_pnl(trades, by_instrument)),
     }
     _print_groups("Regime", pnl_groups["regime"])
     _print_groups("Holding", pnl_groups["holding_period"])
+    _print_groups("Asset class", pnl_groups["asset_class"])
+    _print_groups("Instrument", _extremes(pnl_groups["instrument"], _SHOWN_INSTRUMENTS))
+    instruments = len(pnl_groups["instrument"])
+    if instruments > 2 * _SHOWN_INSTRUMENTS:
+        typer.echo(
+            f"Instrument: the {_SHOWN_INSTRUMENTS} highest and {_SHOWN_INSTRUMENTS} lowest total "
+            f"net P&L of {instruments} instruments traded; every one is in the results store."
+        )
     typer.echo("Regime = market regime as of the entry close. Descriptive only.")
 
     contrast_result = None
@@ -1133,6 +1197,7 @@ def compare_engines(
 
     typer.echo(f"Hypothesis:     {config.hypothesis} (defined at {frozen.frozen_at_commit[:7]})")
     typer.echo(f"Universe:       {parameters.universe}")
+    _echo_cash(universe)
     typer.echo(f"Strategy:       {parameters.strategy} {parameters.strategy_params()}")
     typer.echo(f"Period:         {config.training_start} .. {config.training_end} (training only)")
     typer.echo(f"Cost model:     {comparison.rows[0].metrics.cost_model_name}")
