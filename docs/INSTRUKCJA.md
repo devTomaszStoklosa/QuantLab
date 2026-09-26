@@ -73,11 +73,11 @@ uv sync
 uv run pytest -q
 ```
 
-Potrzebny jest pełny klon, bez `--depth`, bo rejestr prób czyta całą historię definicji. Ostatnia komenda uruchamia ok. 700 testów na syntetycznych danych, bez sieci; wszystkie powinny przejść. Jeśli repozytorium już jest na dysku, wystarczą `git pull` i `uv sync`.
+Repozytorium jest prywatne ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)), więc `git clone` poprosi o zalogowanie do GitHuba. Git for Windows otwiera wtedy okno logowania przez przeglądarkę. Potrzebny jest pełny klon, bez `--depth`, bo rejestr prób czyta całą historię definicji. Ostatnia komenda uruchamia ok. 700 testów na syntetycznych danych, bez sieci; wszystkie powinny przejść. Jeśli repozytorium już jest na dysku, wystarczą `git pull` i `uv sync`.
 
 ### 2.3 Klucz Tiingo (`xsmom_v1` i hipotezy na ETF-ach)
 
-Darmowy klucz daje konto na tiingo.com. Ustawienie:
+Klucz daje darmowe konto na tiingo.com (plan Starter, $0). Płatny plan nie jest potrzebny: limity darmowego pilnuje adapter (rozdział 8). Licencja darmowego planu pozwala tylko na użytek własny. Dlatego repozytorium jest prywatne, a rejestru transakcji i tear-sheetów z cenami się nie publikuje. Ustawienie:
 
 ```powershell
 $env:TIINGO_API_KEY = "twój-klucz"     # tylko w bieżącym oknie
@@ -320,7 +320,7 @@ Ta ścieżka trwa najdłużej, dni albo tygodnie, przez limity darmowego Tiingo.
 
 4. **Trening z kluczem Tiingo:** przez `plan --run` albo bezpośrednio `uv run quantlab run xsmom_v1 --tear-sheet reports/xsmom_v1.html`.
    - **Czas pobierania.** Domyślny odstęp między zapytaniami to 90 s, a każdy ticker to dwa zapytania. Około 875 tickerów w treningu daje ok. 44 godzin, holdout dokłada ok. 16 godzin.
-   - **Limit darmowego tieru.** Tiingo pozwala na ok. 500 unikalnych symboli miesięcznie, więc całość zajmie 2–3 miesiące. Alternatywą jest jeden miesiąc płatnego tieru; wtedy odstęp skraca się zmienną `TIINGO_REQUEST_INTERVAL_SECONDS`. Szczegóły i zastrzeżenia są w [DATA-SOURCES.md](DATA-SOURCES.md).
+   - **Limit darmowego planu.** Plan Starter Tiingo pozwala na 500 różnych tickerów miesięcznie, więc całość zajmie trzy miesiące kalendarzowe. Adapter liczy tickery i przed przekroczeniem limitu zatrzymuje przebieg komunikatem `rerun next month`. Po 1. dniu następnego miesiąca uruchamiasz `plan --run` ponownie, a pobieranie wznawia się z cache. Płatny plan nie jest potrzebny ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)).
    - **Wznawianie.** Przerwane pobieranie (limit, zamknięte okno, restart komputera) wznawia się od miejsca przerwania, bo odpowiedzi są w `data/cache/`. Wyczerpany limit kończy komendę jednym komunikatem; wystarczy uruchomić ją ponownie później.
    - **Pokrycie cenami.** Przebieg drukuje udział dni członkostwa z ceną i członków bez żadnej ceny w źródle.
 
@@ -384,6 +384,7 @@ Zamrożonych definicji się nie edytuje: każda zmiana po zamrożeniu to nowa hi
 | `check:dotnet` w stanie `blocked` | `dotnet` nie jest na ścieżce. Jest potrzebny tylko do aplikacji: zainstaluj .NET 10 SDK albo pomiń ten krok. |
 | `binance: not reachable - …` | Brak sieci, proxy albo blokada regionalna Binance. Po zmianie sieci sprawdź `uv run quantlab check-source binance`. |
 | `tiingo: not reachable - TIINGO_API_KEY is not set` | Ustaw klucz (rozdział 2.3) w tym samym oknie, w którym uruchamiasz plan. |
+| `Tiingo's free plan serves 500 different tickers a month … rerun next month` | Wykorzystany miesięczny limit darmowego planu (dotyczy `xsmom_v1`). Uruchom `plan --run` po 1. dniu następnego miesiąca; pobieranie wznowi się z cache. |
 | `<plik>.yaml has uncommitted changes; commit it first` | Zamrożona definicja w `config/holdout/` ma lokalne zmiany. Przywróć ją komendą `git restore config/holdout/<plik>.yaml`, bo zamrożonych definicji się nie zmienia. Nowa definicja wymaga commitu. |
 | Przebieg w stanie `pending`, choć był już uruchamiany | Plan podaje powód: inną wersję schematu magazynu albo nowe próby na tych samych danych. Uruchom `plan --run`. |
 | `open-holdout portfolio_v1` odmawia | Holdouty składników nie są jeszcze otwarte; komunikat i plan wymieniają, które. |

@@ -188,7 +188,7 @@ Rollback: `git revert` per slice; żaden slice nie zmienia plików w `config/hol
 | Zmiana wyników krypto przez uniwersum/dane/silniki | niska | wysoki | zrzut bajt w bajt przed i po; bary krypto przechodzą nietknięte (ten sam obiekt) |
 | Look-ahead przez korektę wstecz | niska | wysoki | reguła: poziom ceny tylko z `unadjusted_close`; test, że ranking nie zależy od przyszłej dywidendy |
 | Wolna strategia przekrojowa (ranking co dzień) | wysoka | średni | ranking raz na miesiąc formacji, zapamiętany |
-| Limity darmowego tieru Tiingo przy ok. 1 050 tickerach S&P 500 z lat 2004–2025 | wysoka | średni | cache odpowiedzi, wznawianie pobierania, konfigurowalny odstęp żądań; ewentualnie miesiąc płatnego tieru |
+| Limity darmowego tieru Tiingo przy ok. 1 050 tickerach S&P 500 z lat 2004–2025 | wysoka | średni | cache odpowiedzi, wznawianie pobierania, odstęp żądań w limicie godzinowym, licznik tickerów w limicie miesięcznym; pobieranie w trzech miesiącach darmowego planu ([ADR-0009](../../adr/0009-private-repo-free-tiingo-plan.md)) |
 | Ponownie użyte i zmienione tickery (Wikipedia pisze ticker z dnia zmiany, Tiingo — dzisiejszy) | wysoka | wysoki | mapa zmian tickerów w repo, raport niespójności budowy, raport pokrycia cenami w `run` |
 | Niekompletna tabela zmian w Wikipedii | średnia | średni | raport niespójności (m.in. data dodania bieżących członków vs odtworzona); wynik opisany z tym ograniczeniem |
 

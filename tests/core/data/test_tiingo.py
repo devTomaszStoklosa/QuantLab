@@ -85,6 +85,8 @@ def _offline(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv(tiingo.INTERVAL_VARIABLE, "0")
     monkeypatch.setattr(tiingo, "_last_request_at", None)
     monkeypatch.setattr(tiingo, "_today", lambda: date(2026, 9, 24))
+    monkeypatch.setattr(tiingo, "_month", lambda: "2026-09")
+    monkeypatch.delenv(tiingo.MONTHLY_SYMBOLS_VARIABLE, raising=False)
 
 
 def test_fetch_gives_the_raw_bars_of_the_range() -> None:
@@ -247,3 +249,33 @@ def test_requests_are_spaced_by_the_configured_interval(monkeypatch) -> None:
 def test_the_default_spacing_keeps_within_the_free_tiers_hourly_and_daily_limits() -> None:
     assert 3600 / tiingo.DEFAULT_INTERVAL_SECONDS <= 50
     assert 86400 / tiingo.DEFAULT_INTERVAL_SECONDS <= 1000
+
+
+def _etf(symbol: str) -> Instrument:
+    return Instrument(id=symbol.lower(), symbol=symbol, asset_class="equity", quote_asset="USD")
+
+
+def test_a_run_stops_before_the_month_s_ticker_limit_and_resumes_next_month(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv(tiingo.MONTHLY_SYMBOLS_VARIABLE, "2")
+    get = _tiingo()
+    with patch("quantlab.core.data.tiingo.requests.get", get):
+        provider = TiingoProvider()
+        provider.fetch(_etf("AAA"), _START, _END)
+        provider.events(_etf("AAA"), _START, _END)  # the same ticker's metadata
+        provider.fetch(_etf("BBB"), _START, _END)
+        asked = get.call_count
+        with pytest.raises(DataSourceUnavailableError, match="2 different tickers a month"):
+            provider.fetch(_etf("CCC"), _START, _END)
+        assert get.call_count == asked  # stopped before asking Tiingo
+        # What is cached asks nothing, so it counts nothing and still serves.
+        assert len(provider.fetch(_etf("AAA"), _START, _END)) == len(_PRICES)
+
+        monkeypatch.setattr(tiingo, "_month", lambda: "2026-10")
+        assert len(provider.fetch(_etf("CCC"), _START, _END)) == len(_PRICES)
+
+
+def test_the_default_budget_is_the_free_plan_s_monthly_tickers() -> None:
+    assert tiingo.DEFAULT_MONTHLY_SYMBOLS == 500
+    assert TiingoProvider()._monthly_symbols == 500

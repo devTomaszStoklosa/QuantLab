@@ -55,7 +55,7 @@ uv run quantlab open-holdout portfolio_v1                   # dopiero po holdout
 uv run quantlab run momentum_voltarget_v1                    # trening 2018-2023: skala pozycji i porównanie z wersją bez skalowania
 ```
 
-Akcje (`q5`): skład S&P 500 buduje się raz z zapisanej rewizji Wikipedii, ceny pobiera adapter Tiingo (klucz w zmiennej środowiskowej; darmowy tier wymaga rozłożenia pobierania w czasie, patrz [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)):
+Akcje (`q5`): skład S&P 500 buduje się raz z zapisanej rewizji Wikipedii, ceny pobiera adapter Tiingo (darmowy plan Starter, klucz w zmiennej środowiskowej; limit 500 tickerów miesięcznie rozkłada pobieranie S&P 500 na trzy miesiące, a adapter sam go pilnuje). Wszystkie źródła są darmowe, a repozytorium jest prywatne ze względu na licencję użytku własnego ([ADR-0009](docs/adr/0009-private-repo-free-tiingo-plan.md), [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)):
 
 ```bash
 uv run quantlab build-universe                               # src/quantlab/config/universes/sp500.yaml + raport sprzeczności
