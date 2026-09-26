@@ -45,6 +45,7 @@ from quantlab.core.data.corporate_actions import (
 )
 from quantlab.core.data.coverage import price_coverage
 from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
+from quantlab.core.data.quality import Finding, QualityReport, quality_report, reference_sessions
 from quantlab.core.data.tiingo import TiingoProvider
 from quantlab.core.universe import ASSET_CLASSES, Universe
 from quantlab.costs.base import CostModel
@@ -76,7 +77,7 @@ from quantlab.reporting.results_store import (
     write_run,
 )
 from quantlab.reporting.tear_sheet import Contrast, TearSheet, render_html
-from quantlab.research.definition import StudyParameters
+from quantlab.research.definition import StudyParameters, TrainingDiagnostic
 from quantlab.research.hypothesis import concluded_status
 from quantlab.research.plan import Step, build_plan, read_state
 from quantlab.research.trials import (
@@ -284,6 +285,39 @@ def _fetch_bars(
     end: date,
 ) -> dict[str, list[PriceBar]]:
     return _fetch_market_data(provider, universe, parameters, start, end).bars
+
+
+# --- q14: data quality --------------------------------------------------------------
+
+DATA_QUALITY_TITLE = "Data quality"
+# Findings a run shows in the terminal; `quantlab check-data` lists them all.
+_SHOWN_FINDINGS = 10
+
+
+class DataQualityError(Exception):
+    """The data hold a defect that makes any statistic on them meaningless (REQ-1410)."""
+
+
+def _quality(universe: Universe, bars: dict[str, list[PriceBar]]) -> QualityReport:
+    """The lab's checks on the bars a run uses, against the market's sessions (q14)."""
+    return quality_report(bars, reference_sessions(universe, bars))
+
+
+def _finding_line(finding: Finding) -> str:
+    return f"  {finding.check}: {finding.instrument_id} {finding.day or ''} - {finding.detail}"
+
+
+def _refuse_errors(report: QualityReport, hypothesis: str) -> None:
+    """Stop before any computation on data with an error (REQ-1410, REQ-1411)."""
+    errors = report.errors
+    if not errors:
+        return
+    lines = [_finding_line(finding) for finding in errors[:_SHOWN_FINDINGS]]
+    raise DataQualityError(
+        f"the data hold {len(errors)} error(s) that make any result on them meaningless; "
+        f"nothing was computed:\n" + "\n".join(lines) + f"\nAll findings: uv run quantlab "
+        f"check-data {hypothesis}"
+    )
 
 
 def _strategy(parameters: StudyParameters, universe: Universe) -> Strategy:
@@ -569,6 +603,8 @@ def open_frozen_holdout(
         )
     universe = Universe.load(parameters.universe)
     bars = _fetch_bars(provider, universe, parameters, config.start, config.end)
+    # Nothing is computed, recorded or shown on holdout data with an error (REQ-1411).
+    _refuse_errors(_quality(universe, bars), config.hypothesis)
     run = _run_study(
         bars,
         parameters,
@@ -763,6 +799,16 @@ def run(
             err=True,
         )
         raise typer.Exit(1)
+    # Checked before any backtest; the runs below read the same bars from the cache.
+    market = _fetch_market_data(
+        provider, universe, parameters, config.training_start, config.training_end
+    )
+    quality = _quality(universe, market.bars)
+    try:
+        _refuse_errors(quality, config.hypothesis)
+    except DataQualityError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
     runs = run_cost_comparison(
         provider=provider,
         parameters=parameters,
@@ -847,10 +893,7 @@ def run(
         gate_name = GATE_NAMES[config.success_criterion.in_sample_validation]
         typer.echo(f"Descriptive only: this hypothesis's frozen in-sample gate is {gate_name}.")
 
-    # Same bars the runs used; a cache hit, not a second download.
-    market = _fetch_market_data(
-        provider, universe, parameters, config.training_start, config.training_end
-    )
+    # The bars checked before the runs, which the runs used.
     bars = market.bars
     if market.delistings:
         assumed = market.assumed_delistings
@@ -921,7 +964,10 @@ def run(
     if detail["low_confidence"]:
         typer.echo(f"Low confidence: only {detail['active_days']} days with a position")
 
-    diagnostics = parameters.training_diagnostics(bars, config.training_start, config.training_end)
+    diagnostics = [
+        TrainingDiagnostic(title=DATA_QUALITY_TITLE, values=quality.summary()),
+        *parameters.training_diagnostics(bars, config.training_start, config.training_end),
+    ]
     for diagnostic in diagnostics:
         typer.echo("")
         typer.echo(
@@ -934,6 +980,14 @@ def run(
             )
         )
         typer.echo("Descriptive only: not part of any pass rule or of the hypothesis verdict.")
+    warnings = quality.warnings
+    if warnings:
+        typer.echo(
+            f"Data quality warnings to look at ({min(len(warnings), _SHOWN_FINDINGS)} of "
+            f"{len(warnings)}; all: uv run quantlab check-data {config.hypothesis}):"
+        )
+        for finding in warnings[:_SHOWN_FINDINGS]:
+            typer.echo(_finding_line(finding))
 
     deflation = multiple_testing(
         runs[2],
@@ -1388,7 +1442,7 @@ def open_holdout(hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYP
                 git_sha=_current_git_sha(),
                 opened_at=datetime.now(tz=UTC),
             )
-        except HoldoutPrerequisitesError as error:
+        except (HoldoutPrerequisitesError, DataQualityError) as error:
             typer.echo(f"Error: {error}", err=True)
             raise typer.Exit(1) from error
         typer.echo(f"Holdout opened. Result recorded in {record_path} - commit it.")
@@ -1489,6 +1543,34 @@ def registry_command() -> None:
             f"{_holdout_state(row)}"
         )
     typer.echo(f"Registry written to {_RESULTS_DIR / REGISTRY_FILE}")
+
+
+@app.command("check-data")
+def check_data(hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYPOTHESIS) -> None:
+    """Check a hypothesis's training data, with its warm-up, and list every finding (q14).
+
+    Reads the training range only, from the cache when present: the holdout's data
+    are read once, when it is opened. Exits with 1 when the data hold an error.
+    """
+    config = _load_definition(hypothesis).config
+    parameters = config.parameters
+    universe = _universe(parameters.universe)
+    provider = _provider(universe)
+    bars = _fetch_bars(provider, universe, parameters, config.training_start, config.training_end)
+    report = _quality(universe, bars)
+    typer.echo(
+        f"Data quality of {hypothesis}, training {config.training_start} .. "
+        f"{config.training_end} with its warm-up: {report.instruments} instruments, "
+        f"{report.bars:,} bars, {len(report.errors)} error(s), {len(report.warnings)} warning(s)"
+    )
+    for check in report.checks:
+        findings = [finding for finding in report.findings if finding.check == check]
+        level = findings[0].level if findings else ""
+        typer.echo(f"{check}: {len(findings)}" + (f" ({level})" if findings else ""))
+        for finding in findings:
+            typer.echo(_finding_line(finding))
+    if report.errors:
+        raise typer.Exit(1)
 
 
 # --- q13: the narrative of a result ---------------------------------------------------

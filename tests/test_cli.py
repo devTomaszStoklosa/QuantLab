@@ -665,7 +665,10 @@ def test_run_writes_its_evidence_and_the_registry_to_the_results_store(
     assert run["data_source"] == "test"
     assert run["trials"] == ["momentum_v1", "pairs_x"]
     diagnostics = pq.read_table(store / "pairs_x" / "diagnostics.parquet").to_pylist()
-    assert {row["title"] for row in diagnostics} == {"Cointegration of eth-usdt on btc-usdt"}
+    assert {row["title"] for row in diagnostics} == {
+        "Data quality",  # the lab's checks on the training data (q14)
+        "Cointegration of eth-usdt on btc-usdt",
+    }
     registry = pq.read_table(store / "hypotheses.parquet").to_pylist()
     assert [(row["hypothesis"], row["status"]) for row in registry] == [
         ("momentum_v1", "proposed"),

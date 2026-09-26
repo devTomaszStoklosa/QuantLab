@@ -110,7 +110,7 @@ def test_run_reports_the_scales_and_the_unscaled_contrast(tmp_path, monkeypatch)
     assert f"{SCALE_TITLE} (training 2018-01-01 .. 2021-12-31):" in result.output
     assert f"{CONTRAST_TITLE} (training 2018-01-01 .. 2021-12-31):" in result.output
     stored = pq.read_table(tmp_path / "results" / "vt_v1" / "diagnostics.parquet").to_pylist()
-    assert {row["title"] for row in stored} == {SCALE_TITLE, CONTRAST_TITLE}
+    assert {row["title"] for row in stored} == {"Data quality", SCALE_TITLE, CONTRAST_TITLE}
     assert {row["label"] for row in stored} >= {"btc-usdt share at the cap", "Sharpe unscaled"}
 
 
