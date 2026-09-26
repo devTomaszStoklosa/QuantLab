@@ -17,6 +17,7 @@ lab-foundation
        -> q9-strategy-portfolio         (po q8; korzysta z q2, q4, q6, q7, q8)
        -> q10-local-runbook             (po q9; plan przebiegów lokalnych)
        -> q11-volatility-targeted-momentum (po q10; skalowanie pozycji zmiennością)
+       -> q12-cross-asset-momentum      (po q11; momentum na koszyku ETF z różnych klas aktywów)
 ```
 
 q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
@@ -44,6 +45,13 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 **Po `q9`-P7 (2026-09-25):** `portfolio_v1` zamrożony; wszystkie epiki `q1`–`q9` mają kod, a otwarte są przebiegi lokalne: sześć hipotez bez treningu, holdouty w kolejności chroniącej `portfolio_v1`, budowa `sp500.yaml` i pobranie z Tiingo dla `xsmom_v1`, sprawdzenie DuckDB bez AVX2. Tomasz wybrał jako następny epik **`q10-local-runbook`**: `quantlab plan` — stan każdego pozostałego kroku z powodem i komendą — oraz `quantlab plan --run`, który wykonuje kroki automatyczne w poprawnej kolejności, a otwarcia holdoutów, commity i wpisy w dzienniku zostawia badaczowi.
 
 **Po `q10` (2026-09-26):** wszystkie epiki `q1`–`q10` mają kod, a instrukcja obsługi ([INSTRUKCJA.md](INSTRUKCJA.md)) opisuje przebiegi lokalne. Następny z listy kandydatów jest **`q11-volatility-targeted-momentum`**: momentum z pozycjami skalowanymi do docelowej zmienności ex-ante (Moskowitz, Ooi, Pedersen 2012), bez dźwigni, jako nowa hipoteza i kontrast do `momentum_v1` — jedyną różnicą jest wielkość pozycji. Wariant powstaje po obejrzeniu wyniku `momentum_v1`, więc to kolejna próba na `mvp-crypto` 2018–2023 z holdoutem na danych jeszcze nieoglądanych. Kod na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q11-volatility-targeted-momentum/01-story.md), przebiegi lokalnie (Binance).
+
+**Po `q11` (2026-09-26):** `momentum_voltarget_v1` zamrożona. Wszystkie hipotezy timingu testują dotąd tylko BTC i ETH, a Tomasz zapytał, czy rozwiązanie jest „pod krypto", czy równie skuteczne dla każdego instrumentu. Następny jest więc ostatni kandydat z listy, portfel międzyrynkowy, jako **`q12-cross-asset-momentum`**: reguła `momentum_v1` na koszyku ETF z różnych klas aktywów (akcje, obligacje, surowce, dolar, nieruchomości) z Tiingo. Epik naprawia też dwie rzeczy, które na krypto nie wychodziły na jaw:
+
+- rozgrzewka liczona w dniach kalendarzowych zamiast w sesjach, przez co na rynku z 252 sesjami początek okna nie miał sygnału;
+- brak oprocentowania gotówki; teraz zwroty liczą się ponad ETF na bony skarbowe.
+
+Dochodzi też podział P&L per klasa aktywów i instrument. Kod powstaje na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q12-cross-asset-momentum/01-story.md), przebiegi lokalnie (Tiingo).
 
 ## Epiki
 
@@ -125,6 +133,18 @@ Slice'y: V1 dokumentacja · V2 estymatory zmienności, opakowanie strategii, siz
 
 **Po zamrożeniu (2026-09-26):** `momentum_voltarget_v1` — sygnał `momentum_v1` (znak zwrotu 365-dniowego, rebalans dzienny) z udziałem każdego instrumentu pomnożonym przez min(1, 0.40 / roczna zmienność ex-ante), EWMA ze środkiem masy 60 dni w oknie 365 zwrotów; bramka walk-forward, holdout 2026-01-01 → 2026-08-31, niezależny od holdoutów innych hipotez. Kolejna próba na `mvp-crypto` 2018–2023 (razem 6 prób, 11 konfiguracji), więc opisowy DSR pozostałych spadnie przy ich następnym przebiegu, a `quantlab plan` pokaże ich przebiegi jako nieaktualne. Lokalnie: `uv run quantlab plan --run`, potem jednorazowo `open-holdout momentum_voltarget_v1`, wpis w dzienniku z porównaniem z `momentum_v1`.
 
+### q12-cross-asset-momentum (rozszerzenie, w toku)
+
+Momentum szeregów czasowych na statycznym koszyku ETF z różnych klas aktywów (źródło Tiingo, 252 sesje w roku). Trzy zmiany w platformie:
+
+- uniwersum przelicza sesje na dni kalendarzowe (`Universe.calendar_days`, dla krypto tożsamość), a definicje liczące bary podają przez nie rozgrzewkę;
+- uniwersum może wskazać instrument gotówkowy (ETF na bony), a warstwa danych przelicza bary na zwroty ponad gotówkę, więc silniki zostają bez zmian;
+- rejestr transakcji dzieli P&L także po klasie aktywów i instrumencie.
+
+Pełna specyfikacja: [specs/q12-cross-asset-momentum/](specs/q12-cross-asset-momentum/).
+
+Slice'y: C1 dokumentacja · C2 rozgrzewka w sesjach i klasy aktywów · C3 gotówka i zwroty ponad nią · C4 podział P&L per klasa aktywów i instrument · C5 plik uniwersum i zamrożenie hipotez · przebiegi lokalne i dziennik.
+
 ## Zakres MVP
 
 Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
@@ -155,3 +175,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q9-strategy-portfolio | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, reguły alokacji, strategia portfelowa z pozycjami netto, definicja ze składnikami i strażą holdoutu, raport w diagnostyce i tear-sheecie, `demo_portfolio`, przyspieszenie strategii par bez zmiany wyników; decyzje 1–6 przyjęte 2026-09-25, `portfolio_v1` zamrożona); przebiegi lokalnie na Binance, holdout po holdoutach składników |
 | q10-local-runbook | Ready for dev | Ready for dev | Ready for dev | R1–R4 gotowe (dokumentacja, `quantlab plan`, `plan --run`, `check-source`, README „Przebiegi lokalne"); na maszynie deweloperskiej: `uv run quantlab plan --run` |
 | q11-volatility-targeted-momentum | Ready for dev | Ready for dev | Ready for dev | V1–V3 gotowe (dokumentacja, estymatory zmienności EWMA i kroczący, opakowanie `VolatilityTargeted`, sizer `ScaledEqualWeight`, definicja `time_series_momentum_vol_target`, diagnostyka skali i porównanie z wersją bez skalowania; zrzut regresji bez zmian); V4 gotowe: decyzje 1–6 przyjęte 2026-09-26, `momentum_voltarget_v1` zamrożona; przebiegi (trening, holdout, dziennik) lokalnie na Binance |
+| q12-cross-asset-momentum | Ready for dev | Ready for dev | Ready for dev | C1 gotowe (dokumentacja); C2–C4 na danych syntetycznych; C5 (koszyk, zamrożenie) po pytaniach 1–7; przebiegi lokalnie (Tiingo) |
