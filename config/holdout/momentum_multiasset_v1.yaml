@@ -1,0 +1,46 @@
+# Frozen definition of time-series momentum on a basket of ETFs across asset
+# classes (q12). Committed before any run of this hypothesis reads market data:
+# it is the single source of its parameters, dates and success criterion. Do not
+# edit: a change after this commit makes it a different hypothesis.
+# frozen_at_commit is read from git (the last commit touching this file).
+#
+# momentum_v1's rule outside crypto: long each ETF whose return over the last
+# 252 sessions (12 months) is positive, short it when negative, equal weights by
+# sign, daily rebalancing. On universe multiasset-etf every return is above cash
+# (BIL), so the signal is the sign of the 12-month excess return, as in
+# Moskowitz, Ooi and Pedersen (2012), and positions earn returns above cash;
+# shorts are not charged ETF borrowing, a limitation reported with the result.
+#
+# Costs: 3 bps fee (commission and half the spread of liquid ETFs, with a
+# margin for 2008), k 0.05 of daily volatility for slippage from the close,
+# volatility over 21 sessions (one month).
+#
+# Training starts once 252 sessions of returns above cash exist (BIL listed in
+# May 2007). The holdout, 2018 to August 2026, is data no run in this project
+# has read; the rule and its parameters come from the literature and from
+# momentum_v1, not from these data. First trial on this universe; its sibling
+# momentum_voltarget_multiasset_v1 is the second (pre-registration 2026-09-26).
+hypothesis: momentum_multiasset_v1
+
+training_start: 2008-07-01
+training_end: 2017-12-31
+start: 2018-01-01
+end: 2026-08-31
+
+parameters:
+  strategy: time_series_momentum
+  lookback_days: 252
+  universe: multiasset-etf
+  cost_model:
+    name: realistic
+    fee_bps: 3
+    k: 0.05
+    vol_window: 21
+
+success_criterion:
+  description: >-
+    Holdout net Sharpe under the realistic cost model > 0 and permutation-test
+    p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 ->
+    inconclusive; Sharpe > 0 and p < 0.1 -> passed.
+  min_sharpe: 0.0
+  max_p_value: 0.1
