@@ -9,6 +9,7 @@ import pytest
 from typer.testing import CliRunner
 
 from quantlab import cli
+from quantlab.attribution.trade_ledger import PnlGroup
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.cli import app, run_cost_comparison, run_engine_comparison, run_study
 from quantlab.core.data.provider import PriceBar, WithoutEvents
@@ -299,6 +300,38 @@ def test_run_takes_the_hypothesis_from_its_committed_definition(tmp_path, monkey
     assert '<h3 id="multiple-testing">' in page
     # Crypto's calendar: a month and a year of daily sessions (REQ-506).
     assert "btc-usdt 30-session volatility tercile vs its last 365 sessions" in result.output
+    # The ledger's P&L by asset class and by instrument (q12, REQ-1221); no cash, so
+    # returns are total returns and the run does not mention cash.
+    lines = result.output.splitlines()
+    assert any(line.startswith("Asset class") and "Win rate" in line for line in lines)
+    assert any(line.startswith("crypto ") for line in lines)
+    assert any(line.startswith("Instrument") and "Win rate" in line for line in lines)
+    assert {"btc-usdt", "eth-usdt"} <= {line.split()[0] for line in lines if line}
+    assert "Returns:        above cash" not in result.output
+
+
+def test_the_terminal_shows_the_best_and_worst_instruments_of_a_wide_ledger() -> None:
+    def group(key: str, total: float) -> PnlGroup:
+        return PnlGroup(
+            key=key,
+            trades=1,
+            win_rate=1.0,
+            total_net_pnl=total,
+            mean_net_pnl=total,
+            median_net_pnl=total,
+            worst_net_pnl=total,
+            best_net_pnl=total,
+            costs=0.0,
+        )
+
+    wide = cli._by_total({f"s{i:02d}": group(f"s{i:02d}", float(i % 7 - i)) for i in range(25)})
+    narrow = cli._by_total({key: wide[key] for key in list(wide)[:20]})
+
+    totals = [g.total_net_pnl for g in wide.values()]
+    assert totals == sorted(totals, reverse=True)
+    shown = cli._extremes(wide, 10)
+    assert list(shown) == list(wide)[:10] + list(wide)[-10:]
+    assert cli._extremes(narrow, 10) == narrow
 
 
 def test_run_refuses_a_universe_whose_data_source_is_unknown(tmp_path, monkeypatch) -> None:

@@ -92,7 +92,7 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
             Table(db, summary.Hypothesis, "regimes", "position", Rows.Regime),
             Table(db, summary.Hypothesis, "monthly", "year, month", Rows.Month),
             Table(db, summary.Hypothesis, "yearly", "year", Rows.Year),
-            Table(db, summary.Hypothesis, "pnl_groups", orderBy: null, Rows.Group), // as written: regime, then holding period
+            Table(db, summary.Hypothesis, "pnl_groups", orderBy: null, Rows.Group), // as written: regime, holding period, asset class, instrument
             Table(db, summary.Hypothesis, "diagnostics", "position", Rows.Diagnostic),
             Table(db, summary.Hypothesis, "selection", "year, position", Rows.Selection),
             Table(db, summary.Hypothesis, "cpcv_paths", "position", Rows.CpcvPath),

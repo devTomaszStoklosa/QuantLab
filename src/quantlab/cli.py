@@ -18,7 +18,9 @@ from quantlab.attribution.trade_ledger import (
     HOLDING_PERIOD_BUCKETS,
     PnlGroup,
     build_trade_ledger,
+    by_asset_class,
     by_holding_period,
+    by_instrument,
     group_pnl,
 )
 from quantlab.attribution.trade_ledger import by_regime as by_regime_at_entry
@@ -44,7 +46,7 @@ from quantlab.core.data.corporate_actions import (
 from quantlab.core.data.coverage import price_coverage
 from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
 from quantlab.core.data.tiingo import TiingoProvider
-from quantlab.core.universe import Universe
+from quantlab.core.universe import ASSET_CLASSES, Universe
 from quantlab.costs.base import CostModel
 from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.zero import ZeroCostModel
@@ -139,6 +141,8 @@ _PBO_BLOCKS = 16
 # CPCV of a parameter grid when the definition's criterion freezes none (then it is
 # descriptive): Lopez de Prado's (2018) example sizes (q8 story, question 3).
 _CPCV_DEFAULT = CpcvSettings(groups=10, test_groups=2, purge_days=1, embargo_fraction=0.01)
+# The ledger's instrument cut in the terminal: this many best and worst (REQ-1222).
+_SHOWN_INSTRUMENTS = 10
 # Parity differences above this are not floating-point noise.
 _PARITY_NOISE = 1e-9
 _DEFAULT_HYPOTHESIS = "momentum_v1"
@@ -694,6 +698,20 @@ def _in_order(groups: dict[str, PnlGroup], order: tuple[str, ...]) -> dict[str, 
     return {key: groups[key] for key in order if key in groups}
 
 
+def _by_total(groups: dict[str, PnlGroup]) -> dict[str, PnlGroup]:
+    """Highest total net P&L first; ties by key, so the order is reproducible."""
+    return dict(sorted(groups.items(), key=lambda item: (-item[1].total_net_pnl, item[0])))
+
+
+def _extremes(groups: dict[str, PnlGroup], each: int) -> dict[str, PnlGroup]:
+    """The first and last `each` of groups sorted by total, all of them when that is
+    no fewer (REQ-1222): an S&P 500 run has hundreds of instruments."""
+    if len(groups) <= 2 * each:
+        return groups
+    keys = list(groups)
+    return {key: groups[key] for key in keys[:each] + keys[-each:]}
+
+
 def _current_git_sha() -> str:
     result = subprocess.run(
         ["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True
@@ -1038,9 +1056,19 @@ def run(
     pnl_groups = {
         "regime": _in_order(group_pnl(trades, by_regime_at_entry), VOLATILITY_REGIMES),
         "holding_period": _in_order(group_pnl(trades, by_holding_period), HOLDING_PERIOD_BUCKETS),
+        "asset_class": _in_order(group_pnl(trades, by_asset_class(universe)), ASSET_CLASSES),
+        "instrument": _by_total(group_pnl(trades, by_instrument)),
     }
     _print_groups("Regime", pnl_groups["regime"])
     _print_groups("Holding", pnl_groups["holding_period"])
+    _print_groups("Asset class", pnl_groups["asset_class"])
+    _print_groups("Instrument", _extremes(pnl_groups["instrument"], _SHOWN_INSTRUMENTS))
+    instruments = len(pnl_groups["instrument"])
+    if instruments > 2 * _SHOWN_INSTRUMENTS:
+        typer.echo(
+            f"Instrument: the {_SHOWN_INSTRUMENTS} highest and {_SHOWN_INSTRUMENTS} lowest total "
+            f"net P&L of {instruments} instruments traded; every one is in the results store."
+        )
     typer.echo("Regime = market regime as of the entry close. Descriptive only.")
 
     contrast_result = None

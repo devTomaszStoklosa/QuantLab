@@ -7,13 +7,16 @@ from pydantic import ValidationError
 from quantlab.attribution.trade_ledger import (
     Trade,
     build_trade_ledger,
+    by_asset_class,
     by_exit_month,
     by_holding_period,
+    by_instrument,
     by_regime,
     group_pnl,
 )
 from quantlab.backtest.vectorized.engine import run
 from quantlab.core.data.provider import PriceBar
+from quantlab.core.universe import Instrument, Universe
 from quantlab.costs.naive import NaiveCostModel
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.strategy.signal import Signal
@@ -268,3 +271,32 @@ def test_exit_month_groups_by_calendar_month_of_exit() -> None:
 def test_trade_must_exit_after_it_enters() -> None:
     with pytest.raises(ValidationError):
         _trade(0.0, holding_days=0)
+
+
+def test_pnl_groups_by_instrument_and_by_its_asset_class() -> None:
+    universe = Universe(
+        name="etfs",
+        asof_date=_FIRST_DAY,
+        source="synthetic",
+        periods_per_year=252,
+        instruments=[
+            Instrument(id=i, symbol=i.upper(), asset_class=c, quote_asset="USD")
+            for i, c in (("spy", "equity"), ("eem", "equity"), ("tlt", "bond"))
+        ],
+    )
+    trades = [
+        _trade(0.03).model_copy(update={"instrument_id": "spy"}),
+        _trade(-0.01).model_copy(update={"instrument_id": "eem"}),
+        _trade(0.02).model_copy(update={"instrument_id": "tlt"}),
+        _trade(-0.04).model_copy(update={"instrument_id": "tlt"}),
+    ]
+
+    classes = group_pnl(trades, by_asset_class(universe))
+    instruments = group_pnl(trades, by_instrument)
+
+    assert {key: (g.trades, round(g.total_net_pnl, 12)) for key, g in classes.items()} == {
+        "equity": (2, 0.02),
+        "bond": (2, -0.02),
+    }
+    assert {key: g.trades for key, g in instruments.items()} == {"spy": 1, "eem": 1, "tlt": 2}
+    assert instruments["tlt"].win_rate == 0.5

@@ -7,6 +7,7 @@ from pydantic import BaseModel, model_validator
 
 from quantlab.backtest.run import BacktestRun
 from quantlab.core.data.provider import PriceBar
+from quantlab.core.universe import Universe
 
 Side = Literal["long", "short"]
 
@@ -216,3 +217,13 @@ def by_holding_period(trade: Trade) -> str:
 
 def by_exit_month(trade: Trade) -> str:
     return f"{trade.exit_ts:%Y-%m}"
+
+
+def by_instrument(trade: Trade) -> str:
+    return trade.instrument_id
+
+
+def by_asset_class(universe: Universe) -> Callable[[Trade], str]:
+    """The asset class of the trade's instrument in `universe` (q12, REQ-1221)."""
+    classes = {instrument.id: instrument.asset_class for instrument in universe.instruments}
+    return lambda trade: classes[trade.instrument_id]

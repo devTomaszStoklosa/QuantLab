@@ -186,7 +186,7 @@ export interface YearlyReturn {
 }
 
 export interface PnlGroup {
-  dimension: 'regime' | 'holding_period';
+  dimension: 'regime' | 'holding_period' | 'asset_class' | 'instrument';
   key: string;
   trades: number;
   winRate: number;

@@ -567,6 +567,42 @@
       "worstNetPnl": -0.07749063021324877,
       "bestNetPnl": 0.14829283110351213,
       "costs": 0.02602890414776632
+    },
+    {
+      "dimension": "asset_class",
+      "key": "crypto",
+      "trades": 8,
+      "winRate": 0.5,
+      "totalNetPnl": 0.22967553266868546,
+      "meanNetPnl": 0.028709441583585682,
+      "medianNetPnl": 0.021671669354057704,
+      "worstNetPnl": -0.07749063021324877,
+      "bestNetPnl": 0.14829283110351213,
+      "costs": 0.0324596223364926
+    },
+    {
+      "dimension": "instrument",
+      "key": "eth-usdt",
+      "trades": 4,
+      "winRate": 0.5,
+      "totalNetPnl": 0.15394385981289369,
+      "meanNetPnl": 0.03848596495322342,
+      "medianNetPnl": 0.021671669354057704,
+      "worstNetPnl": -0.03769230999873386,
+      "bestNetPnl": 0.14829283110351213,
+      "costs": 0.01831715653255349
+    },
+    {
+      "dimension": "instrument",
+      "key": "btc-usdt",
+      "trades": 4,
+      "winRate": 0.5,
+      "totalNetPnl": 0.07573167285579177,
+      "meanNetPnl": 0.018932918213947943,
+      "medianNetPnl": 0.022232360276570187,
+      "worstNetPnl": -0.07749063021324877,
+      "bestNetPnl": 0.10875758251590018,
+      "costs": 0.014142465803939113
     }
   ],
   "diagnostics": [

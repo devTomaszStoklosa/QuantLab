@@ -283,8 +283,9 @@ class RunEvidence(BaseModel):
     """Everything the store keeps of one training run: the tear-sheet and what
     `quantlab run` prints beside it.
 
-    `pnl_groups` maps a dimension (`regime`, `holding_period`) to its groups in
-    display order; `data_source` names where the bars came from (REQ-705).
+    `pnl_groups` maps a dimension (`regime`, `holding_period`, `asset_class`,
+    `instrument`) to its groups in display order; `data_source` names where the
+    bars came from (REQ-705).
     """
 
     sheet: TearSheet

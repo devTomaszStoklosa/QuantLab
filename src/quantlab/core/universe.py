@@ -3,7 +3,7 @@ import math
 from collections import defaultdict
 from datetime import date
 from itertools import pairwise
-from typing import Literal, Self
+from typing import Literal, Self, get_args
 
 import yaml
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, PrivateAttr, model_validator
 # What an instrument gives exposure to; descriptive only - the ledger groups P&L by
 # it (q12, REQ-1220), and no strategy or sizer branches on it.
 AssetClass = Literal["crypto", "equity", "bond", "commodity", "currency", "real_estate", "cash"]
+ASSET_CLASSES: tuple[str, ...] = get_args(AssetClass)
 
 # Sessions a year of a market that trades every calendar day.
 _EVERY_DAY = 365
