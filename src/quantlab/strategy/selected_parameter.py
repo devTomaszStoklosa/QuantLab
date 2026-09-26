@@ -20,7 +20,8 @@ def common_start(
     bars: dict[str, list[PriceBar]], warm_up_days: int, not_before: date
 ) -> date | None:
     """The first day every grid value can signal on every instrument (the latest first
-    bar plus the longest warm-up), or `not_before` if later; None without bars."""
+    bar plus the longest warm-up, in calendar days), or `not_before` if later; None
+    without bars."""
     firsts = [series[0].ts for series in bars.values() if series]
     if not firsts:
         return None

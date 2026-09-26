@@ -29,7 +29,7 @@ ADRs: docs/adr/0002-dual-backtest-engine.md, docs/adr/0004-validation-first-froz
 
 ### Decyzja 1 — rozgrzewka w sesjach
 
-- **A. Uniwersum przelicza sesje na dni (`Universe.calendar_days`), a definicje liczące bary podają rozgrzewkę przez nie.** Na rynku z 365 sesjami to tożsamość, więc krypto się nie zmienia. Na rynku z weekendami ⌈1.5·n⌉ + 10 dni daje górne ograniczenie. Nadmiar historii nie szkodzi: strategie czytają dokładnie tyle barów, ile potrzebują.
+- **A. Uniwersum przelicza sesje na dni (`Universe.calendar_days`). Definicja podaje rozgrzewkę w barach, a runner przelicza ją uniwersum, które już trzyma (`warm_up_calendar_days(universe)`, `fetch_start(start, universe)`).** Na rynku z 365 sesjami to tożsamość, więc krypto się nie zmienia. Na rynku z weekendami ⌈1.5·n⌉ + 10 dni daje górne ograniczenie. Nadmiar historii nie szkodzi: strategie czytają dokładnie tyle barów, ile potrzebują.
 - B. Pobieranie całej dostępnej historii od początku źródła. Zmienia pobieranie krypto i `common_start` wyborów `q8`, co grozi zmianą zamrożonych wyników, a w Tiingo mnoży zapytania.
 - C. Kalendarz giełdy z biblioteki (`exchange_calendars`). Dokładny, ale to nowa zależność tylko po to, by znać górne ograniczenie, a ADR-0001 każe testować import każdej zależności natywnej.
 
@@ -83,7 +83,7 @@ Revisit if: pojawi się hipoteza wymagająca kosztu pożyczki przy krótkiej spr
 ```
 universe (source, periods_per_year, market_proxy, cash, instruments[asset_class])
    │
-definition.warm_up_days = universe.calendar_days(longest bar window)     # 365/yr: identity
+definition.warm_up_days (bars) -> warm_up_calendar_days(universe)      # 365/yr: identity
    │ fetch_start
    ▼
 _fetch_market_data:
@@ -112,9 +112,10 @@ def above_cash(bars: dict[str, list[PriceBar]], cash: list[PriceBar]) -> dict[st
 
 # research/definition.py
 class StudyParametersBase:
-    def calendar_days(self, sessions: int) -> int   # the universe's conversion
-# TimeSeriesMomentum…, ShortTermReversal…, PairsSpread…, VolatilityTargetedMomentum…:
-#   warm_up_days = self.calendar_days(<longest bar window>)
+    warm_up_days: int                                        # bars of the longest window
+    def warm_up_calendar_days(self, universe: Universe) -> int  # universe.calendar_days(warm_up_days)
+    def fetch_start(self, start: date, universe: Universe) -> date
+class CrossSectionalMomentumParameters:  # months: warm_up_calendar_days = warm_up_days
 
 # attribution/trade_ledger.py
 def by_instrument(trade: Trade) -> str

@@ -29,7 +29,7 @@ Rozgrzewka w sesjach
 - REQ-1201 (AC-1): A universe shall convert a number of sessions n to calendar days that hold at least n of its sessions:
   - on a market that trades every calendar day (`periods_per_year` ≥ 365): exactly n days;
   - otherwise ⌈1.5 · n⌉ + 10 days: 7/5 for weekends, the rest for exchange holidays and unscheduled closures.
-- REQ-1202 (AC-1): A definition whose windows count bars shall give its warm-up as its universe's calendar days for its longest window. This applies to time-series momentum, short-term reversal, pairs and momentum scaled by volatility. A definition whose windows are calendar months keeps its warm-up (cross-sectional momentum).
+- REQ-1202 (AC-1): A definition shall give its warm-up in bars of its longest window. The runner shall move the fetch start and every first common day back by the universe's calendar days for that many sessions. This applies to time-series momentum, short-term reversal, pairs, momentum with a selected lookback and momentum scaled by volatility. A definition whose windows are calendar months (cross-sectional momentum) shall give its calendar days itself, as today.
 - REQ-1203 (AC-1): The warm-up shall be the only thing that changes. Signals, estimators, cost models and regimes keep counting bars.
 
 Gotówka i zwroty ponad nią

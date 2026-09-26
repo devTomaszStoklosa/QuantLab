@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 
 from quantlab import cli
 from quantlab.core.data.provider import PriceBar, WithoutEvents
-from quantlab.core.universe import Instrument
+from quantlab.core.universe import Instrument, Universe
 from quantlab.research.trials import registered_trials, trials_on_same_data
 from quantlab.validation.cpcv import CpcvSettings
 from quantlab.validation.holdout import (
@@ -179,7 +179,9 @@ def test_momentum_select_v1_freezes_the_answers_to_the_story_s_questions() -> No
     assert (config.training_start, config.training_end) == (date(2018, 1, 1), date(2023, 12, 31))
     assert (config.start, config.end) == (date(2026, 1, 1), date(2026, 8, 31))
     # The holdout's 2026 choice is made on all history since the anchor.
-    assert parameters.fetch_start(config.start) == date(2017, 1, 1)
+    assert parameters.fetch_start(config.start, Universe.load(parameters.universe)) == date(
+        2017, 1, 1
+    )
     # Its six lookbacks join the single-configuration trials on these data.
     trials = trials_on_same_data(
         "momentum_select_v1", registered_trials(_REPO / "config" / "holdout")

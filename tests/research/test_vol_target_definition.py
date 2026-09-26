@@ -6,6 +6,7 @@ from pydantic import TypeAdapter, ValidationError
 
 from quantlab.backtest.sizing import ScaledEqualWeight
 from quantlab.core.data.provider import PriceBar
+from quantlab.core.universe import Universe
 from quantlab.reporting.volatility_scaling import CONTRAST_TITLE, SCALE_TITLE
 from quantlab.research.definition import (
     StudyParameters,
@@ -105,7 +106,11 @@ def test_the_first_holdout_day_sees_what_a_longer_history_would() -> None:
     bars = _bars()
     start = date(2019, 6, 1)
     fetched = {
-        instrument_id: [bar for bar in series if bar.ts >= parameters.fetch_start(start)]
+        instrument_id: [
+            bar
+            for bar in series
+            if bar.ts >= parameters.fetch_start(start, Universe.load(parameters.universe))
+        ]
         for instrument_id, series in bars.items()
     }
 
