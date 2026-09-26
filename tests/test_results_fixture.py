@@ -467,6 +467,7 @@ def test_the_portfolio_demo_nets_its_sleeves_and_reports_them() -> None:
     assert registry["demo_portfolio"]["configurations"] == 1
     titles = list(dict.fromkeys(row["title"] for row in diagnostics))
     assert titles == [
+        "Data quality",  # the lab's checks of the training data come first (q14)
         "Sleeve correlations (daily net returns)",
         "Sleeve weights (inverse_volatility, monthly)",
         "Net Sharpe by allocation rule and of each sleeve alone",

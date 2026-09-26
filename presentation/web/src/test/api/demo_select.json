@@ -705,7 +705,48 @@
       "costs": 0.1641699409913845
     }
   ],
-  "diagnostics": [],
+  "diagnostics": [
+    {
+      "title": "Data quality",
+      "label": "instruments checked",
+      "value": 2
+    },
+    {
+      "title": "Data quality",
+      "label": "bars checked",
+      "value": 2920
+    },
+    {
+      "title": "Data quality",
+      "label": "duplicate dates",
+      "value": 0
+    },
+    {
+      "title": "Data quality",
+      "label": "non-positive prices",
+      "value": 0
+    },
+    {
+      "title": "Data quality",
+      "label": "inconsistent OHLC",
+      "value": 0
+    },
+    {
+      "title": "Data quality",
+      "label": "missing sessions",
+      "value": 0
+    },
+    {
+      "title": "Data quality",
+      "label": "stale closes",
+      "value": 0
+    },
+    {
+      "title": "Data quality",
+      "label": "extreme moves",
+      "value": 0
+    }
+  ],
   "selection": [
     {
       "year": 2020,

@@ -20,7 +20,7 @@ uv run quantlab narrate <id> --output reports/<id>-log.md   # szkic wpisu z poli
 
 ## 1. Co jest gotowe
 
-Kod wszystkich epików (`lab-foundation`, `q1`–`q13`) jest gotowy i przechodzi testy w CI na Linuksie i Windowsie. Zostały przebiegi na prawdziwych danych: środowisko, w którym powstawał kod, nie ma dostępu do Binance, Tiingo ani Wikipedii, więc te kroki wykonuje się lokalnie.
+Kod wszystkich epików (`lab-foundation`, `q1`–`q14`) jest gotowy i przechodzi testy w CI na Linuksie i Windowsie. Zostały przebiegi na prawdziwych danych: środowisko, w którym powstawał kod, nie ma dostępu do Binance, Tiingo ani Wikipedii, więc te kroki wykonuje się lokalnie.
 
 Hipotezy zamrożone w `config/holdout/`, czyli z parametrami, zakresami dat i kryterium sukcesu zacommitowanymi przed pierwszym przebiegiem:
 
@@ -214,6 +214,11 @@ Co jest w wynikach:
 - **Bramka in-sample** zamrożona w definicji. Zwykle jest to walk-forward w oknach rocznych. W `momentum_select_v1` jest to CPCV: wiele ścieżek spoza próby z purgingiem i embargo.
 - **Test istotności.** Test permutacyjny sprawdza, czy wyczucie momentu jest lepsze od losowego sparowania pozycji ze zwrotami. W `xsmom_v1` test losowych portfeli sprawdza, czy selekcja spółek jest lepsza od losowego wyboru z tego samego przekroju.
 - **Korekta na wielokrotne testowanie:** PSR, deflated Sharpe (DSR) liczony przy wszystkich próbach na tych samych danych, łącznie z usuniętymi definicjami, oraz PBO.
+- **Kontrola danych** (`q14`), przed jakimkolwiek obliczeniem.
+  - Błędy zatrzymują przebieg: zduplikowane daty i ceny ≤ 0.
+  - Ostrzeżenia trafiają do diagnostyki „Data quality" z liczbami, a do 10 przykładów z datami do terminala: niespójne OHLC, brakujące sesje, cena bez zmian przez 5+ sesji, skrajne ruchy względem zwykłej zmienności instrumentu.
+  - Pełną listę daje `uv run quantlab check-data <id>`.
+  - Skrajny ruch bywa prawdziwym krachem, a bywa niezastosowanym splitem. Obejrzyj daty przed otwarciem holdoutu.
 - **Reżimy zmienności, stress test i rejestr transakcji.** Mają charakter opisowy.
 - **Diagnostyka zależna od hipotezy:**
   - `pairs_v1`: kointegracja;
@@ -367,6 +372,7 @@ API udostępnia też endpointy JSON tylko do odczytu: `/api/health`, `/api/hypot
 | `uv run quantlab compare-engines <id>` | opisowe porównanie silnika wektorowego z silnikiem event-driven (egzekucja zleceń) na okresie treningowym |
 | `uv run quantlab check-source binance` | czy Binance odpowiada z tego komputera |
 | `uv run quantlab check-source tiingo` | czy jest klucz Tiingo i czy API odpowiada |
+| `uv run quantlab check-data <id>` | kontrola danych treningowych hipotezy (z rozgrzewką): wszystkie błędy i ostrzeżenia z datami; danych holdoutu nie czyta; kod wyjścia 1 przy błędzie |
 | `uv run quantlab run <id> --contrast <inny_id>` | dodatkowo korelacja dziennych zwrotów netto z inną hipotezą |
 | `uv run quantlab --help`, `uv run quantlab <komenda> --help` | opis komend i opcji |
 
@@ -399,6 +405,7 @@ Zamrożonych definicji się nie edytuje: każda zmiana po zamrożeniu to nowa hi
 | `check:python` kończy się błędem | Natywna paczka (DuckDB albo statsmodels) nie działa na tym procesorze, który nie ma AVX2. Nie uruchamiaj przebiegów i zapisz komunikat testu: naprawa wymaga zmiany wersji paczki w repozytorium. |
 | `check:dotnet` w stanie `blocked` | `dotnet` nie jest na ścieżce. Jest potrzebny tylko do aplikacji: zainstaluj .NET 10 SDK albo pomiń ten krok. |
 | `binance: not reachable - …` | Brak sieci, proxy albo blokada regionalna Binance. Po zmianie sieci sprawdź `uv run quantlab check-source binance`. |
+| `the data hold N error(s) that make any result on them meaningless; nothing was computed` | Dane mają wadę krytyczną (zduplikowana data albo cena ≤ 0). Nic nie zostało policzone ani zapisane, a holdout nie został otwarty. `uv run quantlab check-data <id>` pokaże szczegóły. Wada pochodzi ze źródła albo z adaptera, nie z hipotezy: zgłoś ją albo popraw adapter, nie definicję. |
 | `tiingo: not reachable - TIINGO_API_KEY is not set` | Ustaw klucz (rozdział 2.3) w tym samym oknie, w którym uruchamiasz plan. |
 | `Tiingo's free plan serves 500 different tickers a month … rerun next month` | Wykorzystany miesięczny limit darmowego planu (dotyczy `xsmom_v1`). Uruchom `plan --run` po 1. dniu następnego miesiąca; pobieranie wznowi się z cache. |
 | `<plik>.yaml has uncommitted changes; commit it first` | Zamrożona definicja w `config/holdout/` ma lokalne zmiany. Przywróć ją komendą `git restore config/holdout/<plik>.yaml`, bo zamrożonych definicji się nie zmienia. Nowa definicja wymaga commitu. |

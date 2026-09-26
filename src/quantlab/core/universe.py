@@ -128,9 +128,14 @@ class Universe(BaseModel):
         sessions). Extra history costs nothing, since strategies read only the bars
         they count.
         """
-        if self.periods_per_year >= _EVERY_DAY:
+        if self.trades_every_day:
             return sessions
         return math.ceil(1.5 * sessions) + 10
+
+    @property
+    def trades_every_day(self) -> bool:
+        """Whether every calendar day is a session of this market (crypto)."""
+        return self.periods_per_year >= _EVERY_DAY
 
     def members(self, as_of: date) -> set[str]:
         """Ids of the instruments that belong to the universe on `as_of`."""

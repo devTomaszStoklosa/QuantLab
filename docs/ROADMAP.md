@@ -19,6 +19,7 @@ lab-foundation
        -> q11-volatility-targeted-momentum (po q10; skalowanie pozycji zmiennością)
        -> q12-cross-asset-momentum      (po q11; momentum na koszyku ETF z różnych klas aktywów)
        -> q13-research-narrative        (po q12; opis wyniku z szablonów, szkic wpisu w dzienniku)
+       -> q14-data-quality              (po q13; kontrola danych przed przebiegiem i holdoutem)
 ```
 
 q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
@@ -55,6 +56,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 Dochodzi też podział P&L per klasa aktywów i instrument. Kod powstaje na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q12-cross-asset-momentum/01-story.md), przebiegi lokalnie (Tiingo).
 
 **Po `q12` (2026-09-26):** wszystkie dane są darmowe, a repozytorium prywatne ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)). Ostatni kandydat z listy to **`q13-research-narrative`**. Tomasz wybrał wersję z szablonów w kodzie zamiast modelu językowego: płatne API łamie zasadę darmowych danych, a lokalny model jest za wolny na maszynie deweloperskiej. `quantlab narrate` składa szkic wpisu do dziennika z liczb w magazynie wyników i zapisu otwarcia holdoutu, a aplikacja pokazuje ten sam opis. Dziewięć zaległych wpisów zaczyna się więc od szkicu bez przepisywania liczb.
+
+**Po `q13` (2026-09-26):** lista kandydatów jest wyczerpana, a wszystkie epiki mają kod. Przed pierwszymi lokalnymi przebiegami ośmiu hipotez na prawdziwych danych (Binance, Tiingo z tysiącem tickerów S&P 500) następny jest **`q14-data-quality`**: kontrola pobranych danych przed backtestem. Wady krytyczne (zduplikowane daty, ceny ≤ 0) zatrzymują przebieg i otwarcie holdoutu. Braki sesji, zamrożone ceny, niespójne OHLC i skrajne ruchy są raportowane z datami. Dane się nie zmieniają.
 
 ## Epiki
 
@@ -161,6 +164,12 @@ Opis wyniku hipotezy po polsku, składany przez `TemplateNarrator` z faktów w m
 
 Slice'y: N1 dokumentacja · N2 fakty, narrator, szkic wpisu, `quantlab narrate` · N3 opis w magazynie, API i aplikacji · N4 dokumentacja użytkowa.
 
+### q14-data-quality (narzędzie, w toku)
+
+Kontrole pobranych barów po korektach (`core.data.quality`, protokół `DataCheck`): zduplikowane daty i ceny ≤ 0 (błędy), niespójne OHLC, brakujące sesje względem sesji rynku, zamrożone ceny i skrajne ruchy względem odpornej zmienności instrumentu (ostrzeżenia). `quantlab run` i otwarcie holdoutu zatrzymują się na błędach przed obliczeniami. Ostrzeżenia trafiają do diagnostyki „Data quality" (terminal, tear-sheet, magazyn, aplikacja), a `quantlab check-data` wypisuje wszystkie ustalenia dla danych treningowych. Pełna specyfikacja: [specs/q14-data-quality/](specs/q14-data-quality/).
+
+Slice'y: D1 dokumentacja · D2 kontrole, `run`, holdout, `check-data` · D3 dokumentacja użytkowa.
+
 ## Zakres MVP
 
 Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
@@ -193,3 +202,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q11-volatility-targeted-momentum | Ready for dev | Ready for dev | Ready for dev | V1–V3 gotowe (dokumentacja, estymatory zmienności EWMA i kroczący, opakowanie `VolatilityTargeted`, sizer `ScaledEqualWeight`, definicja `time_series_momentum_vol_target`, diagnostyka skali i porównanie z wersją bez skalowania; zrzut regresji bez zmian); V4 gotowe: decyzje 1–6 przyjęte 2026-09-26, `momentum_voltarget_v1` zamrożona; przebiegi (trening, holdout, dziennik) lokalnie na Binance |
 | q12-cross-asset-momentum | Ready for dev | Ready for dev | Ready for dev | C1–C4 gotowe (dokumentacja; rozgrzewka w sesjach rynku przez `Universe.calendar_days`, tożsamość dla krypto; instrument gotówkowy i zwroty ponad gotówkę w warstwie danych; klasy aktywów i P&L per klasa aktywów i instrument w terminalu, magazynie i aplikacji; zrzut regresji bez zmian); C5 gotowe: decyzje 1–7 przyjęte 2026-09-26, uniwersum `multiasset-etf`, `momentum_multiasset_v1` i `momentum_voltarget_multiasset_v1` zamrożone; przebiegi (trening, holdout, dziennik) lokalnie na Tiingo |
 | q13-research-narrative | Ready for dev | Ready for dev | Ready for dev | N1–N4 gotowe (opis z szablonów w kodzie, decyzja 2026-09-26; `TemplateNarrator` na faktach z magazynu wyników, `quantlab narrate` ze szkicem wpisu, komenda w kroku planu `log:`, tabela `narrative` przy odświeżeniu rejestru, panel „Narrative" w aplikacji; zrzut regresji bez zmian); na maszynie deweloperskiej: szkice wpisów po otwarciu holdoutów |
+| q14-data-quality | Ready for dev | Ready for dev | Ready for dev | D1–D3 gotowe (kontrole `DataCheck`: błędy zatrzymują `run` i otwarcie holdoutu, ostrzeżenia w diagnostyce „Data quality", `quantlab check-data`; zrzut regresji bez zmian); na maszynie deweloperskiej: kontrola przy pierwszych przebiegach na Binance i Tiingo |

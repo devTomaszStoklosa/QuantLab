@@ -115,7 +115,10 @@ public class DetailTests
 
         var groups = detail.GetProperty("pnlGroups").EnumerateArray().Select(g => g.GetProperty("dimension").GetString()).ToList();
         Assert.Equal(["regime", "holding_period", "asset_class", "instrument"], groups.Distinct());
-        Assert.Empty(detail.GetProperty("diagnostics").EnumerateArray());
+        // Momentum has no diagnostics of its own: only the lab's data checks (q14).
+        Assert.Equal(
+            ["Data quality"],
+            detail.GetProperty("diagnostics").EnumerateArray().Select(d => d.GetProperty("title").GetString()).Distinct());
     }
 
     [Fact]

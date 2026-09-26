@@ -64,7 +64,8 @@ class CostModelParameters(BaseModel):
 
 
 class TrainingDiagnostic(BaseModel):
-    """A strategy-specific statistic of the training data, reported descriptively."""
+    """Statistics of the training data - the lab's data checks (q14) or a strategy's own -
+    reported descriptively."""
 
     title: str
     values: dict[str, float | None]  # label -> value, in display order
