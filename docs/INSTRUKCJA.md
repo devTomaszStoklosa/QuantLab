@@ -14,12 +14,13 @@ uv run quantlab plan --run                # sprawdzenia środowiska i przebiegi 
 # przegląd raportów w reports/ albo w aplikacji, potem ręcznie, jedna hipoteza naraz:
 uv run quantlab open-holdout <id>         # jednorazowe otwarcie holdoutu
 git add config/holdout/<id>.opened.json   # potem git commit i git push
-# wpis w docs/RESEARCH_LOG.md, commit, i znów: uv run quantlab plan
+uv run quantlab narrate <id> --output reports/<id>-log.md   # szkic wpisu z policzonych liczb
+# interpretacja w szkicu, wpis w docs/RESEARCH_LOG.md, commit, i znów: uv run quantlab plan
 ```
 
 ## 1. Co jest gotowe
 
-Kod wszystkich epików (`lab-foundation`, `q1`–`q12`) jest gotowy i przechodzi testy w CI na Linuksie i Windowsie. Zostały przebiegi na prawdziwych danych: środowisko, w którym powstawał kod, nie ma dostępu do Binance, Tiingo ani Wikipedii, więc te kroki wykonuje się lokalnie.
+Kod wszystkich epików (`lab-foundation`, `q1`–`q13`) jest gotowy i przechodzi testy w CI na Linuksie i Windowsie. Zostały przebiegi na prawdziwych danych: środowisko, w którym powstawał kod, nie ma dostępu do Binance, Tiingo ani Wikipedii, więc te kroki wykonuje się lokalnie.
 
 Hipotezy zamrożone w `config/holdout/`, czyli z parametrami, zakresami dat i kryterium sukcesu zacommitowanymi przed pierwszym przebiegiem:
 
@@ -274,6 +275,20 @@ Opisy commitów są w repozytorium po angielsku, dokumentacja po polsku.
 
 Każda hipoteza z otwartym holdoutem dostaje wpis w [RESEARCH_LOG.md](RESEARCH_LOG.md), bez względu na wynik. Format jest opisany na początku pliku, a wzorem jest wpis `momentum_v1`.
 
+**Zacznij od szkicu.** Komendę podaje też `plan` przy kroku `log:<id>`:
+
+```powershell
+uv run quantlab narrate <id> --output reports/<id>-log.md
+```
+
+Szkic składa kod z liczb zapisanych przez przebieg treningowy i otwarcie holdoutu (`q13`). Nie pobiera danych i nie nadpisuje istniejącego pliku.
+
+- **Co zawiera:** nagłówek w poprawnej postaci, metodologię, tabelę metryk trzech modeli kosztów, bramkę in-sample z oknami, test istotności, PSR i DSR, reżimy, P&L per klasa aktywów, transakcje, wynik holdoutu i status końcowy.
+- **Co uzupełniasz:** zdanie hipotezy i interpretację (co mówią liczby poza werdyktem, ograniczenia, co dalej). Te miejsca są oznaczone kursywą.
+- **Co robisz na koniec:** przeglądasz szkic, uzupełniasz go, wklejasz do dziennika i commitujesz.
+
+Liczb w szkicu nie poprawiaj ręcznie. Jeśli coś się nie zgadza, źródłem jest magazyn wyników i zapis otwarcia.
+
 Nagłówek musi mieć postać `## RRRR-MM-DD — <id hipotezy>…`, z długą pauzą (—) otoczoną spacjami. Po tym nagłówku plan rozpoznaje, że wpis istnieje. Najprościej skopiować nagłówek istniejącego wpisu i podmienić datę oraz nazwę:
 
 ```
@@ -287,7 +302,7 @@ Treść wpisu, po polsku:
 - **Wynik**: liczby z treningu i osobno z holdoutu.
 - **Wniosek**: `confirmed`, `rejected` albo `inconclusive`, z uzasadnieniem, ograniczeniami i tym, co dalej.
 
-Liczby przepisuj z raportu i zapisu otwarcia, nie licz ich ręcznie. Wpis opisuje wyniki historyczne i ryzyko, bez rekomendacji inwestycyjnych w rodzaju „kup" czy „zwiększ". We wpisie `portfolio_v1` porównaj wynik portfela z wynikami składników.
+Liczby bierz ze szkicu `narrate`, raportu albo zapisu otwarcia, nie licz ich ręcznie. Wpis opisuje wyniki historyczne i ryzyko, bez rekomendacji inwestycyjnych w rodzaju „kup" czy „zwiększ". We wpisie `portfolio_v1` porównaj wynik portfela z wynikami składników.
 
 Na koniec `git add docs/RESEARCH_LOG.md`, `git commit`, `git push` i `uv run quantlab plan`.
 
@@ -336,7 +351,7 @@ cd ..\..
 dotnet run --project presentation/QuantLab.Api
 ```
 
-Pod http://localhost:5080 działa ta sama aplikacja co w trybie demo, ale czyta `results/` z Twoich przebiegów. Nowy przebieg widać po odświeżeniu strony, bez restartu API. Hipoteza bez przebiegu pokazuje komunikat „No runs yet" z komendą, która przebieg utworzy.
+Pod http://localhost:5080 działa ta sama aplikacja co w trybie demo, ale czyta `results/` z Twoich przebiegów. Panel „Narrative" pokazuje wynik słowami, po polsku, z tych samych liczb co szkic wpisu. Opis odświeża się przy każdym `run`, `open-holdout` i `registry`, więc po otwarciu holdoutu zawiera werdykt. Nowy przebieg widać po odświeżeniu strony, bez restartu API. Hipoteza bez przebiegu pokazuje komunikat „No runs yet" z komendą, która przebieg utworzy.
 
 `npm ci` i `npm run build` trzeba powtarzać tylko po zmianach w `presentation/web`. Przy pracy nad interfejsem wygodniejszy jest `npm run dev` w `presentation\web`: serwer Vite na porcie 5173 z przekierowaniem `/api` do API na 5080.
 
@@ -346,6 +361,7 @@ API udostępnia też endpointy JSON tylko do odczytu: `/api/health`, `/api/hypot
 
 | Komenda | Co robi |
 |---|---|
+| `uv run quantlab narrate <id> [--output plik]` | szkic wpisu do dziennika z liczb w magazynie wyników i zapisu otwarcia holdoutu; bez pobierania danych, nigdy nie nadpisuje pliku |
 | `uv run quantlab registry` | odświeża rejestr hipotez w magazynie na podstawie definicji i zapisów otwarć, bez pobierania danych; drukuje tabelę statusów |
 | `uv run quantlab trials <id>` | wszystkie próby na danych hipotezy: Sharpe, PSR i DSR każdej oraz PBO wyboru jednej z nich; tylko okresy treningowe |
 | `uv run quantlab compare-engines <id>` | opisowe porównanie silnika wektorowego z silnikiem event-driven (egzekucja zleceń) na okresie treningowym |
