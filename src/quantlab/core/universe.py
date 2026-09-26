@@ -68,6 +68,11 @@ class Universe(BaseModel):
     # In a point-in-time universe it may have no membership: then it is a
     # benchmark that no strategy sees or trades (REQ-501).
     market_proxy: str | None = None
+    # The market's cash (q12, REQ-1210): a short-term Treasury bill ETF whose total
+    # return is the rate cash earns. Never a member and never traded; with it, the
+    # run prices every bar in units of cash, so returns are returns above it. None:
+    # returns are total returns and cash earns nothing (crypto, quoted in USDT).
+    cash: Instrument | None = None
 
     _periods: dict[str, list[Membership]] = PrivateAttr(default_factory=dict)
 
@@ -79,6 +84,13 @@ class Universe(BaseModel):
             raise ValueError(f"Duplicate instrument id(s) in universe '{self.name}': {duplicates}")
         if self.market_proxy is not None and self.market_proxy not in ids:
             raise ValueError(f"Market proxy {self.market_proxy} is not in universe '{self.name}'")
+        if self.cash is not None:
+            if self.cash.id in ids:
+                raise ValueError(
+                    f"Cash {self.cash.id} of universe '{self.name}' is also one of its instruments"
+                )
+            if self.cash.asset_class != "cash":
+                raise ValueError(f"Cash {self.cash.id} of universe '{self.name}' is not class cash")
         if not self.memberships:
             return self
         periods: dict[str, list[Membership]] = defaultdict(list)

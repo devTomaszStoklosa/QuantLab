@@ -5,7 +5,7 @@ import shutil
 import subprocess
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Annotated, NamedTuple
@@ -34,7 +34,13 @@ from quantlab.backtest.run import BacktestRun
 from quantlab.backtest.vectorized.engine import run as run_backtest
 from quantlab.core import sp500
 from quantlab.core.data.binance import BinanceProvider
-from quantlab.core.data.corporate_actions import MarketData, with_assumed_return, with_events
+from quantlab.core.data.cash import above_cash
+from quantlab.core.data.corporate_actions import (
+    MarketData,
+    adjust_bars,
+    with_assumed_return,
+    with_events,
+)
 from quantlab.core.data.coverage import price_coverage
 from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
 from quantlab.core.data.tiingo import TiingoProvider
@@ -219,8 +225,9 @@ def _fetch_market_data(
     """History from the hypothesis's warm-up before `start`, so a signal can exist
     from the window's first day where data allows; nothing after `end` is
     requested. Bars come adjusted for corporate actions and ended by delistings,
-    unknown delisting returns taking the definition's assumption (q5). Only the
-    window's members and the market proxy are fetched (REQ-505).
+    unknown delisting returns taking the definition's assumption (q5), and priced
+    in units of the universe's cash when it names one (q12). Only the window's
+    members and the market proxy are fetched (REQ-505).
     """
     fetch_start = parameters.fetch_start(start, universe)
     instruments = universe.instruments_between(start, end)
@@ -230,7 +237,35 @@ def _fetch_market_data(
     events = {
         instrument.id: provider.events(instrument, fetch_start, end) for instrument in instruments
     }
-    return with_events(bars, events, parameters.missing_delisting_return)
+    market = with_events(bars, events, parameters.missing_delisting_return)
+    return _above_cash(provider, universe, market, fetch_start, end)
+
+
+def _above_cash(
+    provider: DataProvider, universe: Universe, market: MarketData, start: date, end: date
+) -> MarketData:
+    """The market's bars in units of the universe's cash, so its returns are returns
+    above cash (q12, REQ-1211..1213); unchanged when the universe names no cash. The
+    cash instrument's prices adjusted for its distributions are the index."""
+    cash = universe.cash
+    if cash is None:
+        return market
+    index = adjust_bars(provider.fetch(cash, start, end), provider.events(cash, start, end).actions)
+    if not index:
+        raise DataSourceUnavailableError(
+            f"{universe.source} has no prices of {cash.symbol}, the cash of universe "
+            f"{universe.name}, from {start} to {end}: there are no returns above cash without them"
+        )
+    return replace(market, bars=above_cash(market.bars, index))
+
+
+def _echo_cash(universe: Universe) -> None:
+    """Say that a run's returns are above the universe's cash (q12, REQ-1214)."""
+    if universe.cash is not None:
+        typer.echo(
+            f"Returns:        above cash ({universe.cash.symbol}); prices in the trade ledger "
+            "are in units of cash, not quotes"
+        )
 
 
 def _fetch_bars(
@@ -727,6 +762,7 @@ def run(
     first_position = next((snapshot.ts for snapshot in first.snapshots if snapshot.positions), None)
     typer.echo(f"Hypothesis:     {config.hypothesis} (defined at {frozen.frozen_at_commit[:7]})")
     typer.echo(f"Universe:       {first.universe_name}")
+    _echo_cash(universe)
     typer.echo(f"Strategy:       {first.strategy_name} {first.strategy_params}")
     typer.echo(f"Period:         {first.start} .. {first.end} (training only)")
     typer.echo(f"First position: {first_position}")
@@ -1133,6 +1169,7 @@ def compare_engines(
 
     typer.echo(f"Hypothesis:     {config.hypothesis} (defined at {frozen.frozen_at_commit[:7]})")
     typer.echo(f"Universe:       {parameters.universe}")
+    _echo_cash(universe)
     typer.echo(f"Strategy:       {parameters.strategy} {parameters.strategy_params()}")
     typer.echo(f"Period:         {config.training_start} .. {config.training_end} (training only)")
     typer.echo(f"Cost model:     {comparison.rows[0].metrics.cost_model_name}")
