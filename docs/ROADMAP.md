@@ -18,6 +18,7 @@ lab-foundation
        -> q10-local-runbook             (po q9; plan przebiegów lokalnych)
        -> q11-volatility-targeted-momentum (po q10; skalowanie pozycji zmiennością)
        -> q12-cross-asset-momentum      (po q11; momentum na koszyku ETF z różnych klas aktywów)
+       -> q13-research-narrative        (po q12; opis wyniku z szablonów, szkic wpisu w dzienniku)
 ```
 
 q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
@@ -52,6 +53,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 - brak oprocentowania gotówki; teraz zwroty liczą się ponad ETF na bony skarbowe.
 
 Dochodzi też podział P&L per klasa aktywów i instrument. Kod powstaje na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q12-cross-asset-momentum/01-story.md), przebiegi lokalnie (Tiingo).
+
+**Po `q12` (2026-09-26):** wszystkie dane są darmowe, a repozytorium prywatne ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)). Ostatni kandydat z listy to **`q13-research-narrative`**. Tomasz wybrał wersję z szablonów w kodzie zamiast modelu językowego: płatne API łamie zasadę darmowych danych, a lokalny model jest za wolny na maszynie deweloperskiej. `quantlab narrate` składa szkic wpisu do dziennika z liczb w magazynie wyników i zapisu otwarcia holdoutu, a aplikacja pokazuje ten sam opis. Dziewięć zaległych wpisów zaczyna się więc od szkicu bez przepisywania liczb.
 
 ## Epiki
 
@@ -152,6 +155,12 @@ Slice'y: C1 dokumentacja · C2 rozgrzewka w sesjach i klasy aktywów · C3 gotó
 
 Obie mają koszty 3 bps, k 0.05 i okno 21 sesji. Trening obejmuje 2008-07-01 → 2017-12-31 z bramką walk-forward, a holdout 2018-01-01 → 2026-08-31 (Sharpe netto > 0, p < 0.1). To dwie pierwsze próby na nowym uniwersum; próby krypto się nie zmieniają. Lokalnie: klucz `TIINGO_API_KEY`, `uv run quantlab plan --run`, potem jednorazowo `open-holdout` obu, wpis w dzienniku z porównaniem z `momentum_v1` i P&L per klasa aktywów.
 
+### q13-research-narrative (rozszerzenie, w toku)
+
+Opis wyniku hipotezy po polsku, składany przez `TemplateNarrator` z faktów w magazynie wyników i rejestrze: definicja, metryki trzech modeli kosztów, walk-forward, test istotności, PSR/DSR, reżimy, P&L per klasa aktywów i zapis otwarcia holdoutu. `quantlab narrate <hipoteza>` daje szkic wpisu w formacie dziennika z miejscem na interpretację badacza. Odświeżenie rejestru zapisuje akapity opisu w tabeli `narrative`, którą pokazuje aplikacja. Bez modelu językowego i bez rekomendacji. Pełna specyfikacja: [specs/q13-research-narrative/](specs/q13-research-narrative/).
+
+Slice'y: N1 dokumentacja · N2 fakty, narrator, szkic wpisu, `quantlab narrate` · N3 opis w magazynie, API i aplikacji · N4 dokumentacja użytkowa.
+
 ## Zakres MVP
 
 Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
@@ -183,3 +192,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q10-local-runbook | Ready for dev | Ready for dev | Ready for dev | R1–R4 gotowe (dokumentacja, `quantlab plan`, `plan --run`, `check-source`, README „Przebiegi lokalne"); na maszynie deweloperskiej: `uv run quantlab plan --run` |
 | q11-volatility-targeted-momentum | Ready for dev | Ready for dev | Ready for dev | V1–V3 gotowe (dokumentacja, estymatory zmienności EWMA i kroczący, opakowanie `VolatilityTargeted`, sizer `ScaledEqualWeight`, definicja `time_series_momentum_vol_target`, diagnostyka skali i porównanie z wersją bez skalowania; zrzut regresji bez zmian); V4 gotowe: decyzje 1–6 przyjęte 2026-09-26, `momentum_voltarget_v1` zamrożona; przebiegi (trening, holdout, dziennik) lokalnie na Binance |
 | q12-cross-asset-momentum | Ready for dev | Ready for dev | Ready for dev | C1–C4 gotowe (dokumentacja; rozgrzewka w sesjach rynku przez `Universe.calendar_days`, tożsamość dla krypto; instrument gotówkowy i zwroty ponad gotówkę w warstwie danych; klasy aktywów i P&L per klasa aktywów i instrument w terminalu, magazynie i aplikacji; zrzut regresji bez zmian); C5 gotowe: decyzje 1–7 przyjęte 2026-09-26, uniwersum `multiasset-etf`, `momentum_multiasset_v1` i `momentum_voltarget_multiasset_v1` zamrożone; przebiegi (trening, holdout, dziennik) lokalnie na Tiingo |
+| q13-research-narrative | Ready for dev | Ready for dev | Ready for dev | N1–N4 gotowe (opis z szablonów w kodzie, decyzja 2026-09-26; `TemplateNarrator` na faktach z magazynu wyników, `quantlab narrate` ze szkicem wpisu, komenda w kroku planu `log:`, tabela `narrative` przy odświeżeniu rejestru, panel „Narrative" w aplikacji; zrzut regresji bez zmian); na maszynie deweloperskiej: szkice wpisów po otwarciu holdoutów |

@@ -22,6 +22,7 @@ from quantlab.attribution.trade_ledger import PnlGroup, Trade
 from quantlab.reporting.cost_comparison import CostSensitivity
 from quantlab.reporting.grid_report import GridReport
 from quantlab.reporting.metrics import drawdown_series, monthly_returns, yearly_returns
+from quantlab.reporting.narrative import Facts, Narrator, TemplateNarrator, narrative_rows
 from quantlab.reporting.tear_sheet import TearSheet
 from quantlab.research.definition import TrainingDiagnostic
 from quantlab.research.hypothesis import Status, concluded_status
@@ -152,6 +153,18 @@ RUN_SCHEMA = pa.schema(
         _field("trades", pa.int64()),
         _field("trades_open_at_end", pa.int64()),
         _field("trades_winning", pa.int64()),
+    ]
+)
+
+# The narrative of a hypothesis's result (q13, REQ-1330): written by every refresh of
+# the registry, so it follows the holdout record. An addition readers treat as
+# optional, so SCHEMA_VERSION stays (REQ-1332).
+NARRATIVE_FILE = "narrative.parquet"
+NARRATIVE_SCHEMA = pa.schema(
+    [
+        _field("position", pa.int64()),
+        _field("section", pa.string()),
+        _field("text", pa.string()),
     ]
 )
 
@@ -627,8 +640,11 @@ def registry_rows(store: Path, definitions_dir: Path) -> list[RegistryRow]:
     return rows
 
 
-def write_registry(store: Path, definitions_dir: Path) -> list[RegistryRow]:
-    """Rewrite `store/hypotheses.parquet` from the committed definitions (REQ-710)."""
+def write_registry(
+    store: Path, definitions_dir: Path, narrator: Narrator | None = None
+) -> list[RegistryRow]:
+    """Rewrite `store/hypotheses.parquet` from the committed definitions (REQ-710), and
+    the narrative of every hypothesis with a stored run (q13, REQ-1330)."""
     rows = registry_rows(store, definitions_dir)
     records = []
     for row in rows:
@@ -653,4 +669,44 @@ def write_registry(store: Path, definitions_dir: Path) -> list[RegistryRow]:
     staging = store / f".{REGISTRY_FILE}.new"
     _write_table(staging, REGISTRY_SCHEMA, records)
     staging.replace(store / REGISTRY_FILE)
+    narrator = narrator or TemplateNarrator()
+    for row in rows:
+        if row.has_run:
+            _write_narrative(store, row, narrator)
     return rows
+
+
+def _write_narrative(store: Path, row: RegistryRow, narrator: Narrator) -> None:
+    directory = store / row.hypothesis
+    staging = directory / f".{NARRATIVE_FILE}.new"
+    rows = narrative_rows(narrator.sections(stored_facts(store, row)))
+    _write_table(staging, NARRATIVE_SCHEMA, rows)
+    staging.replace(directory / NARRATIVE_FILE)
+
+
+class NarrativeUnavailableError(Exception):
+    """A hypothesis whose facts the store does not hold (q13, REQ-1302)."""
+
+
+def stored_facts(store: Path, row: RegistryRow) -> Facts:
+    """The facts of a hypothesis's stored training run, for its narrative (q13, REQ-1301):
+    nothing but what `quantlab run` wrote and the registry row, so no market data."""
+    if not row.has_run:
+        raise NarrativeUnavailableError(
+            f"{row.hypothesis} has no training run of this version in {store}; "
+            f"`uv run quantlab run {row.hypothesis}` writes one"
+        )
+    directory = store / row.hypothesis
+
+    def rows(name: str) -> list[dict]:
+        path = directory / f"{name}.parquet"
+        return pq.read_table(path).to_pylist() if path.exists() else []
+
+    return Facts(
+        row=row,
+        run=rows("run")[0],
+        metrics=rows("metrics"),
+        windows=rows("walk_forward"),
+        regimes=rows("regimes"),
+        asset_classes=[g for g in rows("pnl_groups") if g["dimension"] == "asset_class"],
+    )

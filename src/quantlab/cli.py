@@ -64,10 +64,14 @@ from quantlab.reporting.multiple_testing import (
     aligned_active_returns,
     multiple_testing,
 )
+from quantlab.reporting.narrative import Narrator, TemplateNarrator, research_log_draft
 from quantlab.reporting.results_store import (
     REGISTRY_FILE,
+    NarrativeUnavailableError,
     RegistryRow,
     RunEvidence,
+    registry_rows,
+    stored_facts,
     write_registry,
     write_run,
 )
@@ -1485,6 +1489,57 @@ def registry_command() -> None:
             f"{_holdout_state(row)}"
         )
     typer.echo(f"Registry written to {_RESULTS_DIR / REGISTRY_FILE}")
+
+
+# --- q13: the narrative of a result ---------------------------------------------------
+
+# Turns a hypothesis's stored facts into Polish text; templates, no language model
+# (q13, decision of 2026-09-26).
+_NARRATOR: Narrator = TemplateNarrator()
+
+
+def _today() -> date:
+    return datetime.now(tz=UTC).date()
+
+
+@app.command("narrate")
+def narrate(
+    hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT] = _DEFAULT_HYPOTHESIS,
+    output: Annotated[
+        Path | None,
+        typer.Option(help="Write the draft to this file instead of printing it; never overwrites."),
+    ] = None,
+) -> None:
+    """Draft a research-log entry of a hypothesis from its stored results (q13, REQ-1320).
+
+    Reads the results store and the committed definitions only, no market data. The
+    numbers come from the stored training run and the holdout record; the researcher
+    adds the interpretation and commits the entry to docs/RESEARCH_LOG.md.
+    """
+    try:
+        rows = {row.hypothesis: row for row in registry_rows(_RESULTS_DIR, _HOLDOUT_DIR)}
+    except TrialRegistryError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
+    row = rows.get(hypothesis)
+    if row is None:
+        typer.echo(f"Error: {hypothesis} has no committed definition in {_HOLDOUT_DIR}", err=True)
+        raise typer.Exit(1)
+    try:
+        facts = stored_facts(_RESULTS_DIR, row)
+    except NarrativeUnavailableError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
+    draft = research_log_draft(facts, _NARRATOR.sections(facts), _today())
+    if output is None:
+        typer.echo(draft)
+        return
+    if output.exists():
+        typer.echo(f"Error: {output} exists; the draft never overwrites a file", err=True)
+        raise typer.Exit(1)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(draft, encoding="utf-8")
+    typer.echo(f"Draft of the research-log entry written to {output}")
 
 
 # --- q10: the plan of what is left to do locally --------------------------------------
