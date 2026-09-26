@@ -374,6 +374,16 @@ def build_plan(state: RepositoryState) -> list[Step]:
                     if h.record
                     else f"waits for holdout:{h.hypothesis}"
                 ),
+                # A draft from the stored numbers to start from (q13, REQ-1340).
+                command=None
+                if logged or not h.record
+                else [
+                    "quantlab",
+                    "narrate",
+                    h.hypothesis,
+                    "--output",
+                    f"reports/{h.hypothesis}-log.md",
+                ],
             )
         )
     return [*checks, *_universe_steps(state), *training, *holdouts, *commits, *logs]
