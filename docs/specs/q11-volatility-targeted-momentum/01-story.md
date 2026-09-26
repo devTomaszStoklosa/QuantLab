@@ -56,7 +56,7 @@ Jako badacz chcę zamrozić momentum, którego pozycje są skalowane do docelowe
 
 ## Priority
 
-Should have — następny epik po `q1`–`q10`, rozpoczęty 2026-09-26. Kod (estymatory, opakowanie strategii, sizer, definicja, raport) powstaje na danych syntetycznych. Definicja zostanie zamrożona po odpowiedziach na pytania poniżej, a przebiegi czekają na lokalny dostęp do Binance.
+Should have — następny epik po `q1`–`q10`, rozpoczęty 2026-09-26. Kod (estymatory, opakowanie strategii, sizer, definicja, raport) powstaje na danych syntetycznych. Definicja zamrożona po decyzjach 1–6 poniżej (V4, 2026-09-26); przebiegi czekają na lokalny dostęp do Binance.
 
 ## Dependencies and risks
 
@@ -66,15 +66,19 @@ Should have — następny epik po `q1`–`q10`, rozpoczęty 2026-09-26. Kod (est
 - **Ryzyko: wielokrotne testowanie.** Kolejna próba na `mvp-crypto` 2018–2023 (razem 6 prób, 11 konfiguracji) obniża opisowy DSR pozostałych hipotez przy ich następnym przebiegu, zgodnie z prawdą. `quantlab plan` pokaże je jako nieaktualne.
 - **Ryzyko: skalowanie tylko w dół.** Przy limicie 1 i zmienności kryptowalut zwykle powyżej 40% rocznie wersja skalowana najczęściej zmniejsza ekspozycję względem `momentum_v1`. Pytanie badawcze to więc „czy zmniejszanie pozycji w okresach wysokiej zmienności pomaga", a nie pełne celowanie w zmienność z dźwignią. Opisane w dzienniku.
 
+## Decisions
+
+Odpowiedzi na pytania 1–6, przyjęte przez Tomasza 2026-09-26 (wszystkie propozycje); zamrożone w `config/holdout/momentum_voltarget_v1.yaml` (V4):
+
+| # | Question | Decision |
+|---|---|---|
+| 1 | Docelowa zmienność roczna na instrument | 40% (Moskowitz, Ooi, Pedersen 2012) |
+| 2 | Estymator zmienności ex-ante | EWMA, środek masy 60 dni, okno 365 zwrotów do dnia decyzji włącznie |
+| 3 | Limit skali na instrument | 1.0 — bez dźwigni |
+| 4 | Sygnał | znak zwrotu 365-dniowego, rebalans dzienny, jak w `momentum_v1` |
+| 5 | Okresy | trening 2018-01-01 → 2023-12-31; holdout 2026-01-01 → 2026-08-31 |
+| 6 | Kryterium sukcesu | bramka walk-forward; holdout: Sharpe netto (model realistyczny) > 0 i p < 0.1 z testu permutacyjnego |
+
 ## Open questions
 
-Pytania pre-rejestracji — do rozstrzygnięcia przed zamrożeniem `momentum_voltarget_v1`:
-
-| # | Question | Proposal | Owner |
-|---|---|---|---|
-| 1 | Docelowa zmienność roczna na instrument | 40% (Moskowitz, Ooi, Pedersen 2012) | Tomasz |
-| 2 | Estymator zmienności ex-ante | wykładniczo ważony, środek masy 60 dni, w oknie 365 dni (jak w artykule, z oknem skończonym, żeby estymata nie zależała od okna pobierania) | Tomasz |
-| 3 | Limit skali na instrument | 1.0 — bez dźwigni (silniki nie modelują kosztu finansowania) | Tomasz |
-| 4 | Sygnał | znak zwrotu 365-dniowego, jak w `momentum_v1`: jedyna różnica to skalowanie | Tomasz |
-| 5 | Okresy | trening 2018–2023; holdout 2026-01-01 → 2026-08-31 (2024–2025 zużyty) | Tomasz |
-| 6 | Kryterium sukcesu | jak w pozostałych: bramka walk-forward; holdout — Sharpe netto > 0 i p < 0.1 z testu permutacyjnego | Tomasz |
+Brak — pytania pre-rejestracji rozstrzygnięte (tabela powyżej).
