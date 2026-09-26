@@ -826,5 +826,75 @@
   "tradeInstruments": [
     "btc-usdt",
     "eth-usdt"
+  ],
+  "narrative": [
+    {
+      "section": "Hipoteza",
+      "text": "Strategia time_series_momentum_selected z parametrami history_start = 2019-07-01, lookback_grid = [30, 90, 180], min_history_days = 180 na uniwersum mvp-crypto."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Dane: \u017Ar\u00F3d\u0142o synthetic, uniwersum mvp-crypto; pierwsza pozycja 2020-01-02."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Koszty: trzy modele na tych samych sygna\u0142ach: zero-cost, naive-10bps, realistic-10bps-k0.05-vol30d. G\u0142\u00F3wny, na kt\u00F3rym liczone s\u0105 walidacja, re\u017Cimy i rejestr transakcji: realistic-10bps-k0.05-vol30d."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Okres treningowy: 2020-01-01 \u2192 2022-12-31."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Holdout: 2023-01-01 \u2192 2023-06-30, zamro\u017Cony w config/holdout/demo_select.yaml (commit 0c7cc70) przed pierwszym przebiegiem; otwarty 2026-09-24 12:00 UTC (commit 5e7f1c0)."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Walidacja: bramka in-sample: CPCV (mediana Sharpe \u015Bcie\u017Cek); test permutacyjny (tasowanie dni wzgl\u0119dem trzymanych pozycji), 500 losowa\u0144, seed 0, statystyka: annualized Sharpe of gross daily returns, \u03B1 = 0.1; kryterium holdoutu: Synthetic demo. Median Sharpe of the CPCV paths \u003E 0 in training; holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Wielokrotne testowanie: 5 pr\u00F3b na tym uniwersum i nak\u0142adaj\u0105cym si\u0119 okresie treningowym (demo_momentum, demo_reversal, demo_pairs, demo_select, demo_portfolio), 7 konfiguracji w progu deflated Sharpe."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Koszty: werdykt wra\u017Cliwo\u015Bci na koszty: cost-dependent; r\u00F3\u017Cnica Sharpe mi\u0119dzy modelem naiwnym a realistycznym 0.12."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "CPCV (mediana Sharpe \u015Bcie\u017Cek): niezaliczony; 9 \u015Bcie\u017Cek, mediana Sharpe \u22120.77, najni\u017Cszy \u22120.77, najwy\u017Cszy \u22120.29, dodatnie 0.0% \u015Bcie\u017Cek. Regu\u0142a: median Sharpe of the CPCV paths \u003E 0; inconclusive if fewer than half the paths have a defined Sharpe."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Test istotno\u015Bci: statystyka 0.01 wobec \u015Bredniej losowa\u0144 0.25 (odch. std. 0.56); wy\u017Csza ni\u017C 33.2% losowa\u0144; p = 0.669, nieistotny przy \u03B1 = 0.1."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Wielokrotne testowanie: Sharpe roczny \u22120.17, PSR 0.38, pr\u00F3g deflated Sharpe 0.80, DSR 0.05."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Re\u017Cimy: niski: CAGR \u221280.07%, Sharpe \u22121.78 (373 dni); \u015Bredni: CAGR 97.19%, Sharpe 1.28 (332 dni); wysoki: CAGR \u221224.24%, Sharpe \u22120.04 (360 dni); nieokre\u015Blony: CAGR 306.16%, Sharpe 2.12 (30 dni). Re\u017Cim rynku: tercyl zmienno\u015Bci btc-usdt z 30 sesji wzgl\u0119dem jej warto\u015Bci z ostatnich 365 sesji, na sesj\u0119 przed ka\u017Cdym zwrotem."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Sk\u0105d wynik: P\u0026L netto transakcji w jednostkach kapita\u0142u startowego 1.00: krypto \u22120.6956 (90 transakcji, koszty 0.2827). Opisowo, bez testu istotno\u015Bci per klasa."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Transakcje: 90 transakcji (2 otwarte na ko\u0144cu), 17 z dodatnim P\u0026L netto."
+    },
+    {
+      "section": "Wynik \u2014 holdout 2023-01-01 \u2192 2023-06-30",
+      "text": "Jednorazowe otwarcie, model realistic-10bps-k0.05-vol30d: CAGR \u221213.23%, Sharpe netto 0.19, max drawdown \u221252.95%, p = 0.573."
+    },
+    {
+      "section": "Wynik \u2014 holdout 2023-01-01 \u2192 2023-06-30",
+      "text": "Werdykt holdoutu: inconclusive (kryterium: Synthetic demo. Median Sharpe of the CPCV paths \u003E 0 in training; holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1.)"
+    },
+    {
+      "section": "Wniosek",
+      "text": "Status ko\u0144cowy: rejected. Wynika z regu\u0142 zapisanych przed wynikami: CPCV (mediana Sharpe \u015Bcie\u017Cek) niezaliczony, holdout inconclusive \u2192 rejected."
+    }
   ]
 }

@@ -22,6 +22,8 @@ from quantlab.reporting.grid_report import GridReport, grid_report
 from quantlab.reporting.metrics import drawdown_series
 from quantlab.reporting.multiple_testing import MultipleTesting
 from quantlab.reporting.results_store import (
+    NARRATIVE_FILE,
+    NARRATIVE_SCHEMA,
     REGISTRY_FILE,
     REGISTRY_SCHEMA,
     RUN_FILE,
@@ -377,6 +379,28 @@ def test_an_opened_holdout_concludes_the_status_with_the_stored_walk_forward(
     assert stored["holdout_verdict"] == verdict
     assert stored["holdout_sharpe"] == 0.37
     assert stored["has_run"] is True
+
+
+def test_the_registry_refresh_writes_a_narrative_that_follows_the_opening(tmp_path) -> None:
+    repo = _definitions(tmp_path / "definitions")
+    store = tmp_path / "results"
+    write_run(store, _evidence(walk_forward=_walk_forward(True)))
+
+    write_registry(store, repo)
+    sealed = _read(store / "momentum_v1" / NARRATIVE_FILE)
+    write_holdout_record(repo / "momentum_v1.opened.json", _opened("inconclusive"))
+    write_registry(store, repo)
+    opened = _read(store / "momentum_v1" / NARRATIVE_FILE)
+
+    schema = pq.read_schema(store / "momentum_v1" / NARRATIVE_FILE).remove_metadata()
+    assert schema == NARRATIVE_SCHEMA
+    assert [row["position"] for row in opened] == list(range(len(opened)))
+    assert any(row["text"].startswith("Holdout nieotwarty.") for row in sealed)
+    assert "Werdykt holdoutu: inconclusive (kryterium: Holdout net Sharpe > 0 and p < 0.1)" in {
+        row["text"] for row in opened
+    }
+    # Only hypotheses with a stored run get one.
+    assert not (store / "reversal_v1" / NARRATIVE_FILE).exists()
 
 
 def test_a_stored_run_before_the_opening_means_testing(tmp_path) -> None:

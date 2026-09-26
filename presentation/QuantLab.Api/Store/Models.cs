@@ -168,6 +168,9 @@ public sealed record PnlGroup(
 
 public sealed record Diagnostic(string Title, string Label, double? Value);
 
+/// <summary>One paragraph of the result's narrative, in Polish, composed in Python from the stored numbers (q13).</summary>
+public sealed record NarrativeParagraph(string Section, string Text);
+
 /// <summary>One grid value's Sharpe in one year's choice; <c>Chosen</c> marks the value traded that year.</summary>
 public sealed record SelectionCell(long Year, long Days, string Value, double? Sharpe, bool Chosen);
 
@@ -189,7 +192,8 @@ public sealed record HypothesisDetail(
     IReadOnlyList<SelectionCell> Selection,
     IReadOnlyList<CpcvPath> CpcvPaths,
     IReadOnlyList<CpcvChoice> CpcvChoices,
-    IReadOnlyList<string> TradeInstruments);
+    IReadOnlyList<string> TradeInstruments,
+    IReadOnlyList<NarrativeParagraph> Narrative);
 
 public sealed record EquityPoint(DateOnly Ts, double Equity, double Drawdown);
 

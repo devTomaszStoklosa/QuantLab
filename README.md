@@ -10,7 +10,7 @@ Cel nie jest jedna działająca strategia — cel jest pokazanie procesu badawcz
 
 MVP zamknięte (`lab-foundation` + `q1-momentum-research-mvp`): pierwsza hipoteza — time-series momentum na BTC-USDT i ETH-USDT — przeszła pełny pipeline (sygnał, silnik wektorowy z testem golden-master, trzy modele kosztów, walk-forward, zamrożony holdout otwarty raz, test permutacyjny, reżimy, stress test, rejestr transakcji, tear-sheet). Wynik: `inconclusive`, opisany w [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md).
 
-Rozszerzenia (`q2`–`q12`) mają gotowy kod; osiem kolejnych hipotez jest zamrożonych przed pierwszym przebiegiem i czekają na lokalne przebiegi (środowisko, w którym powstaje kod, nie ma dostępu do źródeł danych):
+Rozszerzenia (`q2`–`q13`) mają gotowy kod; osiem kolejnych hipotez jest zamrożonych przed pierwszym przebiegiem i czekają na lokalne przebiegi (środowisko, w którym powstaje kod, nie ma dostępu do źródeł danych):
 
 - `mean_reversion_v1` (`q3`) — krótkoterminowe odwrócenie na BTC i ETH;
 - `pairs_v1` (`q4`) — pairs trading na kointegracji ETH/BTC;
@@ -20,7 +20,7 @@ Rozszerzenia (`q2`–`q12`) mają gotowy kod; osiem kolejnych hipotez jest zamro
 - `momentum_voltarget_v1` (`q11`) — sygnał `momentum_v1` z pozycjami skalowanymi do docelowej zmienności 40% rocznie (EWMA ze środkiem masy 60 dni), bez dźwigni: jedyną różnicą wobec `momentum_v1` jest wielkość pozycji, a raport porównuje obie wersje na tym samym oknie;
 - `momentum_multiasset_v1` i `momentum_voltarget_multiasset_v1` (`q12`) — reguła `momentum_v1` (z 252 sesji), odpowiednio bez skalowania i ze skalowaniem do 10% rocznie, na koszyku ETF z pięciu klas aktywów (akcje, obligacje, surowce, dolar, nieruchomości; Tiingo). Zwroty liczone są ponad gotówkę (ETF na bony BIL), a P&L rozbity na klasy aktywów i instrumenty. Sprawdzają, czy efekt jest ogólny, czy krypto-specyficzny.
 
-Gotowe są też: drugi silnik z egzekucją zleceń i parytetem z wektorowym (`q2`), PSR, deflated Sharpe i PBO z rejestrem prób liczonym z historii gita (`q6`), dobór parametru z siatki z CPCV (`q8`), portfel strategii z regułami alokacji ryzyka (`q9`), plan przebiegów lokalnych `quantlab plan` (`q10`), skalowanie pozycji do docelowej zmienności (`q11`), rozgrzewka liczona w sesjach rynku i zwroty ponad gotówkę (`q12`) oraz warstwa prezentacji (`q7`): API ASP.NET Core i aplikacja React nad magazynem wyników. Szczegóły w [docs/ROADMAP.md](docs/ROADMAP.md).
+Gotowe są też: drugi silnik z egzekucją zleceń i parytetem z wektorowym (`q2`), PSR, deflated Sharpe i PBO z rejestrem prób liczonym z historii gita (`q6`), dobór parametru z siatki z CPCV (`q8`), portfel strategii z regułami alokacji ryzyka (`q9`), plan przebiegów lokalnych `quantlab plan` (`q10`), skalowanie pozycji do docelowej zmienności (`q11`), rozgrzewka liczona w sesjach rynku i zwroty ponad gotówkę (`q12`), opis wyniku składany z szablonów z policzonych liczb i szkic wpisu do dziennika `quantlab narrate` (`q13`) oraz warstwa prezentacji (`q7`): API ASP.NET Core i aplikacja React nad magazynem wyników. Szczegóły w [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Uruchomienie
 
@@ -48,6 +48,7 @@ uv run quantlab open-holdout                                 # holdout już otwa
 uv run quantlab compare-engines                              # silnik wektorowy vs event-driven, okres treningowy
 uv run quantlab trials                                       # wszystkie próby na tych samych danych: PSR, DSR, PBO
 uv run quantlab registry                                     # rejestr hipotez w magazynie wyników, bez pobierania danych
+uv run quantlab narrate momentum_v1                          # szkic wpisu do dziennika z liczb w magazynie wyników
 uv run quantlab run momentum_select_v1                       # trening 2018-2023: historia wyborów, PBO siatki, CPCV (bramka)
 uv run quantlab open-holdout momentum_select_v1             # jednorazowe otwarcie holdoutu 2026-01..08
 uv run quantlab run portfolio_v1                             # trening 2018-2023: korelacje i wagi rękawów, Sharpe reguł

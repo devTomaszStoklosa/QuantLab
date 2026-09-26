@@ -242,3 +242,31 @@ def test_the_cross_asset_hypotheses_freeze_the_story_s_answers() -> None:
         "momentum_multiasset_v1",
         "momentum_voltarget_multiasset_v1",
     }
+
+
+def test_narrate_drafts_the_log_entry_from_the_stored_run(tmp_path, monkeypatch) -> None:
+    _committed(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "_today", lambda: date(2026, 9, 27))
+    runner = CliRunner()
+    assert runner.invoke(cli.app, ["run", "etf_mom_v1"]).exit_code == 0
+
+    printed = runner.invoke(cli.app, ["narrate", "etf_mom_v1"])
+    output = tmp_path / "reports" / "etf_mom_v1-log.md"
+    written = runner.invoke(cli.app, ["narrate", "etf_mom_v1", "--output", str(output)])
+    again = runner.invoke(cli.app, ["narrate", "etf_mom_v1", "--output", str(output)])
+    unrun = runner.invoke(cli.app, ["narrate", "etf_vt_v1"])
+
+    assert printed.exit_code == 0, printed.output
+    draft = printed.output
+    assert draft.startswith("## 2026-09-27 — etf_mom_v1: time_series_momentum na multiasset-etf")
+    # P&L by asset class, named in Polish, from the ledger the run stored.
+    skad = next(line for line in draft.splitlines() if line.startswith("- **Skąd wynik:**"))
+    for name in ("akcje", "obligacje", "surowce", "waluty", "nieruchomości"):
+        assert f" {name} " in skad
+    assert "open-holdout etf_mom_v1; do tego czasu hipoteza nie ma werdyktu." in draft
+    assert written.exit_code == 0
+    assert output.read_text(encoding="utf-8") + "\n" == draft  # echo adds a newline
+    assert again.exit_code == 1
+    assert "never overwrites" in again.output
+    assert unrun.exit_code == 1
+    assert "uv run quantlab run etf_vt_v1" in unrun.output

@@ -32,6 +32,38 @@ public class DetailTests
     }
 
     [Fact]
+    public async Task TheNarrativeIsTheStoredParagraphsInTheirOrder()
+    {
+        var detail = await Http.Ok("/api/hypotheses/demo_momentum");
+
+        var stored = Fixture.Query($"SELECT section, text FROM {Table("demo_momentum", "narrative")} ORDER BY position");
+        var narrative = detail.GetProperty("narrative").EnumerateArray().ToList();
+        Assert.NotEmpty(stored);
+        Assert.Equal(
+            stored.Select(row => ((string)row["section"]!, (string)row["text"]!)),
+            narrative.Select(p => (p.GetProperty("section").GetString()!, p.GetProperty("text").GetString()!)));
+    }
+
+    [Fact]
+    public async Task AStoreWrittenBeforeTheNarrativeGivesAnEmptyOne()
+    {
+        var store = Directory.CreateTempSubdirectory("quantlab-store-").FullName;
+        foreach (var file in Directory.EnumerateFiles(Fixture.Store, "*.parquet", SearchOption.AllDirectories))
+        {
+            var target = Path.Combine(store, Path.GetRelativePath(Fixture.Store, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target);
+        }
+        File.Delete(Path.Combine(store, "demo_momentum", "narrative.parquet"));
+
+        var (status, _, detail) = await Http.Get(store, "/api/hypotheses/demo_momentum");
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Empty(detail.GetProperty("narrative").EnumerateArray());
+        Assert.NotEmpty(detail.GetProperty("metrics").EnumerateArray());
+    }
+
+    [Fact]
     public async Task ARunNamesTheSignificanceTestItsCriterionChose()
     {
         var momentum = await Http.Ok("/api/hypotheses/demo_momentum");

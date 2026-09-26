@@ -80,7 +80,7 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
         summary = WithRunHeadline(db, summary);
         if (!summary.HasRun)
         {
-            return new HypothesisDetail(summary, null, [], [], [], [], [], [], [], [], [], [], []);
+            return new HypothesisDetail(summary, null, [], [], [], [], [], [], [], [], [], [], [], []);
         }
         var runPath = TablePath(summary.Hypothesis, "run");
         EnsureCompatible(db, runPath);
@@ -101,7 +101,8 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
                 db,
                 TablePath(summary.Hypothesis, "trades"),
                 "SELECT DISTINCT instrument_id FROM read_parquet($path) ORDER BY instrument_id",
-                row => row.Text("instrument_id")));
+                row => row.Text("instrument_id")),
+            OptionalTable(db, summary.Hypothesis, "narrative", "position", Rows.Narrative));
     }
 
     public IReadOnlyList<EquityPoint> Equity(string hypothesis)
@@ -214,6 +215,11 @@ public sealed class DuckDbResultsStore(IOptions<ResultsOptions> options, IHostEn
             TablePath(hypothesis, table),
             orderBy is null ? "SELECT * FROM read_parquet($path)" : $"SELECT * FROM read_parquet($path) ORDER BY {orderBy}",
             map);
+
+    /// <summary>A table added after the store's first schema: a store written before it has none (q13, REQ-1332).</summary>
+    private List<T> OptionalTable<T>(
+        DuckDBConnection db, string hypothesis, string table, string orderBy, Func<DbDataReader, T> map) =>
+        File.Exists(TablePath(hypothesis, table)) ? Table(db, hypothesis, table, orderBy, map) : [];
 
     private static long? Version(DuckDBConnection db, string path) =>
         Query(db, path, "SELECT schema_version FROM read_parquet($path) LIMIT 1", row => row.Integer("schema_version"))

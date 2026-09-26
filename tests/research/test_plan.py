@@ -116,6 +116,16 @@ def test_an_opening_record_is_committed_then_logged() -> None:
     assert steps["commit:rev_v1"].command == ["git", "add", "config/holdout/rev_v1.opened.json"]
     assert [steps[f"log:{name}"].state for name in _CRYPTO] == ["done", "pending", "blocked"]
     assert all(steps[f"log:{name}"].kind == "manual" for name in _CRYPTO)
+    # A draft from the stored numbers while the entry is due (q13, REQ-1340).
+    assert steps["log:rev_v1"].command == [
+        "quantlab",
+        "narrate",
+        "rev_v1",
+        "--output",
+        "reports/rev_v1-log.md",
+    ]
+    assert steps["log:mom_v1"].command is None
+    assert steps["log:port_v1"].command is None
 
 
 def _equities(**changes) -> HypothesisState:

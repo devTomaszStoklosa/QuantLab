@@ -643,5 +643,71 @@
   "tradeInstruments": [
     "btc-usdt",
     "eth-usdt"
+  ],
+  "narrative": [
+    {
+      "section": "Hipoteza",
+      "text": "Strategia pairs_spread z parametrami dependent = eth-usdt, entry_z = 2.0, exit_z = 0.0, explanatory = btc-usdt, formation_days = 120, max_coint_p_value = 0.05 na uniwersum mvp-crypto."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Dane: \u017Ar\u00F3d\u0142o synthetic, uniwersum mvp-crypto; pierwsza pozycja 2021-07-16."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Koszty: trzy modele na tych samych sygna\u0142ach: zero-cost, naive-10bps, realistic-10bps-k0.05-vol30d. G\u0142\u00F3wny, na kt\u00F3rym liczone s\u0105 walidacja, re\u017Cimy i rejestr transakcji: realistic-10bps-k0.05-vol30d."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Okres treningowy: 2020-01-01 \u2192 2022-12-31."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Holdout: 2023-01-01 \u2192 2023-06-30, zamro\u017Cony w config/holdout/demo_pairs.yaml (commit 5091405) przed pierwszym przebiegiem; jeszcze nieotwarty."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Walidacja: bramka in-sample: walk-forward; test permutacyjny (tasowanie dni wzgl\u0119dem trzymanych pozycji), 500 losowa\u0144, seed 0, statystyka: annualized Sharpe of gross daily returns, \u03B1 = 0.1; kryterium holdoutu: Synthetic demo. Holdout net Sharpe under the realistic cost model \u003E 0 and permutation-test p-value \u003C 0.1."
+    },
+    {
+      "section": "Metodologia",
+      "text": "Wielokrotne testowanie: 5 pr\u00F3b na tym uniwersum i nak\u0142adaj\u0105cym si\u0119 okresie treningowym (demo_momentum, demo_reversal, demo_pairs, demo_select, demo_portfolio), 7 konfiguracji w progu deflated Sharpe."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Koszty: werdykt wra\u017Cliwo\u015Bci na koszty: robust; r\u00F3\u017Cnica Sharpe mi\u0119dzy modelem naiwnym a realistycznym 0.09."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Walk-forward: nierozstrzygni\u0119ty, 2 z 2 okien ze Sharpe \u003E 0. Regu\u0142a: Sharpe \u003E 0 in at least 2/3 of windows with a defined Sharpe, and aggregate Sharpe \u003E 0; inconclusive if fewer than 3 windows have a defined Sharpe. Okna: 2021-07-16 \u2192 2021-12-31 (niepe\u0142ny): CAGR 19.93%, Sharpe 1.45; 2022-01-01 \u2192 2022-12-31: CAGR 13.04%, Sharpe 1.42."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Test istotno\u015Bci: statystyka 1.11 wobec \u015Bredniej losowa\u0144 0.01 (odch. std. 0.58); wy\u017Csza ni\u017C 97.4% losowa\u0144; p = 0.028, istotny przy \u03B1 = 0.1; niska wiarygodno\u015B\u0107: tylko 59 dni z pozycj\u0105."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Wielokrotne testowanie: Sharpe roczny 1.41, PSR 0.96, pr\u00F3g deflated Sharpe 1.15, DSR 0.63."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Re\u017Cimy: niski: CAGR 26.55%, Sharpe 2.11 (215 dni); \u015Bredni: CAGR 17.41%, Sharpe 1.52 (175 dni); wysoki: CAGR \u22122.23%, Sharpe \u22120.25 (144 dni). Re\u017Cim rynku: tercyl zmienno\u015Bci btc-usdt z 30 sesji wzgl\u0119dem jej warto\u015Bci z ostatnich 365 sesji, na sesj\u0119 przed ka\u017Cdym zwrotem."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Sk\u0105d wynik: P\u0026L netto transakcji w jednostkach kapita\u0142u startowego 1.00: krypto \u002B0.2297 (8 transakcji, koszty 0.0325). Opisowo, bez testu istotno\u015Bci per klasa."
+    },
+    {
+      "section": "Wynik \u2014 okres treningowy 2020-01-01 \u2192 2022-12-31",
+      "text": "Transakcje: 8 transakcji (0 otwartych na ko\u0144cu), 4 z dodatnim P\u0026L netto."
+    },
+    {
+      "section": "Wynik \u2014 holdout 2023-01-01 \u2192 2023-06-30",
+      "text": "Holdout nieotwarty. Otwiera go jednorazowo komenda uv run quantlab open-holdout demo_pairs; do tego czasu hipoteza nie ma werdyktu."
+    },
+    {
+      "section": "Wniosek",
+      "text": "Status ko\u0144cowy: brak werdyktu \u2014 holdout nieotwarty, status testing."
+    }
   ]
 }

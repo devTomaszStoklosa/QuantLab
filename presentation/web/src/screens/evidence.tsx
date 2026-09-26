@@ -8,6 +8,7 @@ import type {
   EquityPoint,
   HypothesisDetail,
   HypothesisSummary,
+  NarrativeParagraph,
   PnlGroup,
   RegimeMetrics,
   InSampleValidation,
@@ -400,6 +401,36 @@ export function DiagnosticsPanel({ diagnostics, hypothesis }: { diagnostics: Dia
         </QF.Panel>
       ))}
     </>
+  );
+}
+
+export function NarrativePanel({ narrative }: { narrative: NarrativeParagraph[] }) {
+  if (narrative.length === 0) return null;
+  const sections = [...new Set(narrative.map((p) => p.section))];
+  return (
+    <QF.Panel
+      title="Narrative"
+      icon="report"
+      subtitle="The stored numbers in words, in Polish like the lab's reports"
+      footer={<span className="qf-muted">Composed by quantlab from templates over the computed numbers; no advice.</span>}
+    >
+      <div className="qf-stack" lang="pl">
+        {sections.map((section) => (
+          <div key={section}>
+            <div className="qf-eyebrow" style={{ marginBottom: 8 }}>
+              {section}
+            </div>
+            {narrative
+              .filter((p) => p.section === section)
+              .map((p, i) => (
+                <p key={i} style={{ margin: '0 0 8px' }}>
+                  {p.text}
+                </p>
+              ))}
+          </div>
+        ))}
+      </div>
+    </QF.Panel>
   );
 }
 

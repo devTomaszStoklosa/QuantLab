@@ -204,6 +204,12 @@ export interface Diagnostic {
   value: number | null;
 }
 
+/** One paragraph of the result's narrative, composed in Python from the stored numbers (q13). */
+export interface NarrativeParagraph {
+  section: string;
+  text: string;
+}
+
 export interface HypothesisDetail {
   hypothesis: HypothesisSummary;
   run: RunSummary | null;
@@ -218,6 +224,7 @@ export interface HypothesisDetail {
   cpcvPaths: CpcvPath[];
   cpcvChoices: CpcvChoice[];
   tradeInstruments: string[];
+  narrative: NarrativeParagraph[];
 }
 
 export interface EquityPoint {

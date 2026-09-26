@@ -166,6 +166,9 @@ internal static class Rows
     public static Diagnostic Diagnostic(DbDataReader row) =>
         new(row.Text("title"), row.Text("label"), row.OptionalNumber("value"));
 
+    public static NarrativeParagraph Narrative(DbDataReader row) =>
+        new(row.Text("section"), row.Text("text"));
+
     public static SelectionCell Selection(DbDataReader row) => new(
         row.Integer("year"),
         row.Integer("days"),

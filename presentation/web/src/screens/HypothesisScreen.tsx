@@ -15,6 +15,7 @@ import {
   HoldoutPanel,
   MonthlyPanel,
   MultipleTestingPanel,
+  NarrativePanel,
   PermutationPanel,
   PnlPanel,
   RegimesPanel,
@@ -41,6 +42,7 @@ function Evidence({ detail }: { detail: HypothesisDetail }) {
       ) : (
         <Loading />
       )}
+      <NarrativePanel narrative={detail.narrative} />
       <CostsPanel metrics={detail.metrics} run={run} />
       <WalkForwardPanel windows={detail.walkForward} run={run} />
       <SelectionPanel selection={detail.selection} run={run} />
