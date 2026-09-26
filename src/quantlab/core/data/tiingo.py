@@ -29,11 +29,15 @@ _BASE_URL = "https://api.tiingo.com/tiingo/daily"
 _SOURCE = "tiingo"
 API_KEY_VARIABLE = "TIINGO_API_KEY"
 INTERVAL_VARIABLE = "TIINGO_REQUEST_INTERVAL_SECONDS"
-# Spacing between requests on our side (DATA-SOURCES rule 2). 90 s keeps within
-# both limits of the free tier as known when this was written (about 50 requests
-# an hour and 1,000 a day; to verify on tiingo.com). A paid tier can set a
-# shorter interval through TIINGO_REQUEST_INTERVAL_SECONDS.
+MONTHLY_SYMBOLS_VARIABLE = "TIINGO_MONTHLY_SYMBOLS"
+# The free Starter plan ($0) as described on 2026-09-26: 50 requests an hour, 1,000
+# a day and 500 different tickers a calendar month (DATA-SOURCES). Spacing requests
+# by 90 s keeps within the first two; counting the tickers asked about stops a run
+# before the third, so a download never hits a limit midway and resumes from the
+# cache next month. Both environment variables exist only to follow a change of
+# the plan's limits.
 DEFAULT_INTERVAL_SECONDS = 90.0
+DEFAULT_MONTHLY_SYMBOLS = 500
 _TIMEOUT_SECONDS = 30
 # A last price date seen this long after a range's end is final for that range:
 # the ticker stopped trading within it.
@@ -44,6 +48,12 @@ _last_request_at: float | None = None
 
 def _today() -> date:
     return datetime.now(tz=UTC).date()
+
+
+def _month() -> str:
+    """The month Tiingo's monthly limit counts in. It resets on the 1st at midnight
+    Eastern time; UTC-5 never turns the month before Tiingo does."""
+    return (datetime.now(tz=UTC) - timedelta(hours=5)).strftime("%Y-%m")
 
 
 def _day(stamp: str) -> date:
@@ -69,6 +79,25 @@ class TiingoProvider:
             )
         self._key = key
         self._interval = float(os.environ.get(INTERVAL_VARIABLE, DEFAULT_INTERVAL_SECONDS))
+        self._monthly_symbols = int(
+            os.environ.get(MONTHLY_SYMBOLS_VARIABLE, DEFAULT_MONTHLY_SYMBOLS)
+        )
+
+    def _count(self, symbol: str) -> None:
+        """Record `symbol` among the tickers asked about this month, or stop before a
+        request would exceed the plan's monthly number of different tickers. Cached
+        responses ask nothing, so they never count."""
+        month = _month()
+        used = read_cached_json(_SOURCE, "symbols", month) or []
+        if symbol in used:
+            return
+        if len(used) >= self._monthly_symbols:
+            raise DataSourceUnavailableError(
+                f"Tiingo's free plan serves {self._monthly_symbols} different tickers a "
+                f"month and {len(used)} were asked about in {month}; what was downloaded is "
+                "cached, so rerun next month to continue"
+            )
+        write_cached_json(_SOURCE, [*used, symbol], "symbols", month)
 
     def _throttle(self) -> None:
         global _last_request_at
@@ -78,8 +107,9 @@ class TiingoProvider:
                 time.sleep(remaining)
         _last_request_at = time.monotonic()
 
-    def _get(self, url: str, params: dict | None = None) -> object | None:
-        """The JSON body, or None when Tiingo does not know the ticker."""
+    def _get(self, symbol: str, url: str, params: dict | None = None) -> object | None:
+        """The JSON body about `symbol`, or None when Tiingo does not know the ticker."""
+        self._count(symbol)
         self._throttle()
         response = requests.get(
             url,
@@ -104,6 +134,7 @@ class TiingoProvider:
         if cached is not None:
             return cached
         rows = self._get(
+            instrument.symbol,
             f"{_BASE_URL}/{instrument.symbol}/prices",
             {
                 "startDate": start.isoformat(),
@@ -129,7 +160,7 @@ class TiingoProvider:
             settled = _day(cached["fetchedOn"]) > end + timedelta(days=_SETTLED_DAYS)
             if settled or (last is not None and last >= end):
                 return last
-        meta = self._get(f"{_BASE_URL}/{instrument.symbol}") or {}
+        meta = self._get(instrument.symbol, f"{_BASE_URL}/{instrument.symbol}") or {}
         cached = {"endDate": meta.get("endDate"), "fetchedOn": _today().isoformat()}
         write_cached_json(_SOURCE, cached, "meta", instrument.symbol)
         return None if cached["endDate"] is None else _day(cached["endDate"])

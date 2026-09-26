@@ -2,7 +2,7 @@
 
 ## Zasady
 
-1. **Repo publiczne od początku** — inaczej niż lokalne `data/private/` w projektach z prawdziwymi eksportami brokerów: żadne surowe dane cenowe nie trafiają do repozytorium bez sprawdzonej licencji na redystrybucję, nawet do celów edukacyjnych.
+1. **Tylko darmowe źródła, repozytorium prywatne** (decyzja 2026-09-26, [ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)). Żadnych płatnych planów. Licencje darmowych planów (Tiingo Starter) pozwalają tylko na użytek własny, więc surowe dane nie trafiają do repozytorium, a wyniki z cenami rynkowymi (rejestr transakcji, tear-sheet, aplikacja) nie są publikowane.
 2. **Throttling po naszej stronie**, nie przez odpowiedzi z kodem błędu. Każdy klient w `core.data` ma minimalny odstęp między żądaniami.
 3. **Cache na dysku** (`data/cache/`, gitignored) — tych samych danych nie pobieramy dwa razy.
 4. **Atrybucja** idzie razem z danymi (źródło + URL w metadanych zapisu).
@@ -20,18 +20,21 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
 
 | Źródło | Co daje | Klucz | Ograniczenia | Uwagi |
 |---|---|---|---|---|
-| Tiingo (`api.tiingo.com`) | ceny dzienne surowe i skorygowane, dywidendy (`divCash`) i splity (`splitFactor`) w dniu ex-date, metadane z ostatnim dniem notowań (także spółki zdjęte z obrotu); bez zwrotu z delistingu i bez jego przyczyny | tak (darmowy), zmienna `TIINGO_API_KEY` | darmowy tier: limit unikalnych symboli miesięcznie oraz zapytań na godzinę i dzień — przy ok. 1 050 tickerach S&P 500 z lat 2004–2025 pobieranie rozłożone na kilka dni albo miesiąc płatnego tieru | **wybrane**; bez redystrybucji surowych danych (cache i magazyn wyników poza repo); warunki niezweryfikowane |
-| Alpha Vantage | lista spółek zdjętych z obrotu; skorygowane dane dzienne w tierze płatnym | tak | 25 zapytań dziennie w darmowym tierze | za wolne na setki spółek |
-| Nasdaq Data Link (Sharadar) | pełne delistingi, akcje korporacyjne, point-in-time | tak (płatne) | koszt | poza budżetem projektu portfolio |
+| Tiingo (`api.tiingo.com`) | ceny dzienne surowe i skorygowane, dywidendy (`divCash`) i splity (`splitFactor`) w dniu ex-date, metadane z ostatnim dniem notowań (także spółki zdjęte z obrotu); bez zwrotu z delistingu i bez jego przyczyny | tak: darmowe konto, plan Starter ($0), zmienna `TIINGO_API_KEY` | plan Starter według opisów z 2026-09-26: 500 różnych tickerów miesięcznie, 50 zapytań na godzinę, 1 000 dziennie, ponad 30 lat historii. Ok. 1 050 tickerów S&P 500 z lat 2004–2025 to pobieranie w trzech miesiącach kalendarzowych | **wybrane** ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)); licencja tylko na użytek własny, więc repozytorium prywatne, bez redystrybucji danych i bez publikacji wyników z cenami; warunki do potwierdzenia przy zakładaniu konta |
+| Alpha Vantage | lista spółek zdjętych z obrotu; skorygowane dane dzienne opisane jako premium | tak | 25 zapytań dziennie w darmowym planie | za wolne na setki spółek |
+| Nasdaq Data Link (Sharadar) | pełne delistingi, akcje korporacyjne, point-in-time | tak (płatne) | koszt | odrzucone: tylko darmowe źródła |
+| EODHD | ceny dzienne, spółki zdjęte z obrotu w planach płatnych | tak | 20 zapytań dziennie w darmowym planie | odrzucone: za mało zapytań, delistingi płatne |
+| Polygon (Massive) | ceny dzienne | tak | darmowy plan: ok. 1–2 lat historii | odrzucone: za krótka historia |
 | Wikipedia — *List of S&P 500 companies* | bieżący skład i tabela zmian składu, z których odtwarzamy skład wstecz | nie (API MediaWiki, nagłówek `User-Agent`) | CC BY-SA 4.0: plik uniwersum w repo z atrybucją i numerem rewizji; kompletność przed ok. 2000 r. niepewna | **wybrane**; tylko członkostwo, bez cen |
 | Yahoo Finance | ceny | nie | warunki użycia zabraniają dostępu programistycznego; brak spółek zdjętych z obrotu | odrzucone |
 
 #### Tiingo lokalnie (`core.data.tiingo.TiingoProvider`, `q5`-X7c)
 
 - Klucz: zmienna środowiskowa `TIINGO_API_KEY`. Bez niej `quantlab run` kończy się przed pobraniem danych.
-- Odstęp żądań: domyślnie 90 s (mieści się w limitach darmowego tieru znanych przy pisaniu: ok. 50 zapytań na godzinę i 1 000 dziennie); płatny tier może go skrócić zmienną `TIINGO_REQUEST_INTERVAL_SECONDS`.
+- Odstęp żądań: domyślnie 90 s, co mieści się w limitach planu Starter: 50 zapytań na godzinę i 1 000 dziennie. Zmienna `TIINGO_REQUEST_INTERVAL_SECONDS` jest tylko na wypadek zmiany limitów planu.
+- Limit miesięczny: adapter liczy tickery, o które pytał w danym miesiącu (według czasu Eastern, jak Tiingo). Przed 501. zatrzymuje przebieg komunikatem `rerun next month`, zamiast trafić na błąd Tiingo w połowie pobierania. Odpowiedzi z cache się nie liczą. Zmienna `TIINGO_MONTHLY_SYMBOLS` (domyślnie 500) jest tylko na wypadek zmiany limitów planu.
 - Każdy ticker to dwa zapytania (ceny w zakresie przebiegu, metadane z ostatnim dniem notowań); odpowiedzi trafiają do `data/cache/`, więc przerwane pobieranie wznawia się od miejsca przerwania, a limit zapytań kończy komendę jednym komunikatem, nie wyjątkiem.
-- Skala dla `xsmom_v1` (szacunek): trening ok. 875 tickerów członków S&P 500 z lat 2005–2019 plus SPY — ok. 1 750 zapytań, przy 90 s ok. 44 h; holdout ok. 650 tickerów — same ceny, ok. 16 h. Łącznie ok. 1 050 unikalnych tickerów, ponad limit ok. 500 unikalnych symboli miesięcznie w darmowym tierze: pobieranie rozłożone na 2–3 miesiące albo jeden miesiąc płatnego tieru.
+- Skala dla `xsmom_v1` (szacunek): trening ok. 875 tickerów członków S&P 500 z lat 2005–2019 plus SPY — ok. 1 750 zapytań, przy 90 s ok. 44 h; holdout ok. 650 tickerów — same ceny, ok. 16 h. Łącznie ok. 1 050 unikalnych tickerów, ponad limit 500 różnych tickerów miesięcznie w planie Starter: pobieranie w trzech miesiącach kalendarzowych. Adapter sam zatrzymuje się na limicie, a kolejny miesiąc wznawia z cache.
 - Skala dla ETF-ów (`q12`, uniwersum `multiasset-etf`): 10 ETF-ów i gotówka BIL, każdy po dwa zapytania na okno pobierania, czyli ok. 22 zapytania i ok. 35 min przy 90 s na trening i tyle samo na holdout. Dwie hipotezy na tym samym oknie czytają ten sam cache. ETF-y są w danych dziennych Tiingo na tych samych warunkach co akcje (bez redystrybucji surowych danych).
 - Test bez sieci: odpowiedź w udokumentowanym formacie Tiingo z syntetycznymi liczbami (`tests/core/data/test_tiingo.py`) — środowisko chmurowe nie ma dostępu do API, więc to nie jest nagranie na żywo. Przy pierwszym lokalnym pobraniu warto porównać format z prawdziwą odpowiedzią (pola `date`, `open`, `high`, `low`, `close`, `volume`, `adjClose`, `divCash`, `splitFactor`; metadane `endDate`).
 
@@ -54,7 +57,7 @@ Przed pierwszym użyciem źródła: sprawdzić aktualne warunki na stronie dosta
 
 ## Wykluczone
 
-Źródła wymagające płatnej licencji na dane rynkowe (np. bezpośrednie feedy giełdowe) — poza zakresem projektu portfolio.
+Źródła wymagające płatnej licencji na dane rynkowe (np. bezpośrednie feedy giełdowe) i płatne plany dostawców są poza zakresem: tylko darmowe źródła ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)).
 
 | Źródło | Powód |
 |---|---|
