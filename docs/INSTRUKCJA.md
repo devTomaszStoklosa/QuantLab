@@ -19,7 +19,7 @@ git add config/holdout/<id>.opened.json   # potem git commit i git push
 
 ## 1. Co jest gotowe
 
-Kod wszystkich epików (`lab-foundation`, `q1`–`q11`) jest gotowy i przechodzi testy w CI na Linuksie i Windowsie. Zostały przebiegi na prawdziwych danych: środowisko, w którym powstawał kod, nie ma dostępu do Binance, Tiingo ani Wikipedii, więc te kroki wykonuje się lokalnie.
+Kod wszystkich epików (`lab-foundation`, `q1`–`q12`) jest gotowy i przechodzi testy w CI na Linuksie i Windowsie. Zostały przebiegi na prawdziwych danych: środowisko, w którym powstawał kod, nie ma dostępu do Binance, Tiingo ani Wikipedii, więc te kroki wykonuje się lokalnie.
 
 Hipotezy zamrożone w `config/holdout/`, czyli z parametrami, zakresami dat i kryterium sukcesu zacommitowanymi przed pierwszym przebiegiem:
 
@@ -32,6 +32,8 @@ Hipotezy zamrożone w `config/holdout/`, czyli z parametrami, zakresami dat i kr
 | `portfolio_v1` | portfel czterech hipotez krypto ważonych odwrotnością zmienności | BTC, ETH | 2018–2023 | 01–08.2026 | czeka na trening; holdout dopiero po składnikach |
 | `momentum_voltarget_v1` | sygnał `momentum_v1` z pozycjami skalowanymi do docelowej zmienności 40% rocznie, bez dźwigni | BTC, ETH | 2018–2023 | 01–08.2026 | czeka na trening |
 | `xsmom_v1` | momentum przekrojowe 12-1 | S&P 500 point-in-time (Tiingo, Wikipedia) | 2005–2019 | 2020–2025 | czeka na budowę uniwersum i pobranie cen z Tiingo |
+| `momentum_multiasset_v1` | reguła `momentum_v1` (252 sesje, równe wagi po znaku) na zwrotach ponad gotówkę | 10 ETF-ów z pięciu klas aktywów, gotówka BIL (Tiingo) | 07.2008–2017 | 2018–08.2026 | czeka na trening (klucz Tiingo) |
+| `momentum_voltarget_multiasset_v1` | ten sam sygnał ze skalowaniem do 10% rocznie na instrument, bez dźwigni | jak wyżej | 07.2008–2017 | 2018–08.2026 | czeka na trening (klucz Tiingo) |
 
 Z czego się korzysta:
 
@@ -71,9 +73,9 @@ uv sync
 uv run pytest -q
 ```
 
-Potrzebny jest pełny klon, bez `--depth`, bo rejestr prób czyta całą historię definicji. Ostatnia komenda uruchamia ok. 600 testów na syntetycznych danych, bez sieci; wszystkie powinny przejść. Jeśli repozytorium już jest na dysku, wystarczą `git pull` i `uv sync`.
+Potrzebny jest pełny klon, bez `--depth`, bo rejestr prób czyta całą historię definicji. Ostatnia komenda uruchamia ok. 700 testów na syntetycznych danych, bez sieci; wszystkie powinny przejść. Jeśli repozytorium już jest na dysku, wystarczą `git pull` i `uv sync`.
 
-### 2.3 Klucz Tiingo (tylko dla `xsmom_v1`)
+### 2.3 Klucz Tiingo (`xsmom_v1` i hipotezy na ETF-ach)
 
 Darmowy klucz daje konto na tiingo.com. Ustawienie:
 
@@ -192,7 +194,7 @@ Jeśli budowa uniwersum `sp500` (Wikipedia) się nie powiedzie, `--run` zatrzyma
 3. Dla jednej hipotezy naraz: otwarcie holdoutu, commit zapisu, wpis w dzienniku (rozdziały 6 i 7).
 4. `uv run quantlab plan`: co dalej. Powtarzaj, aż wszystkie kroki będą w stanie `done`.
 
-Dla obecnych hipotez krypto kroki ręczne idą w tej kolejności: najpierw holdouty `mean_reversion_v1`, `pairs_v1` i `momentum_select_v1` (między sobą w dowolnej kolejności), a dopiero potem `portfolio_v1`. Holdout `momentum_voltarget_v1` nie jest składnikiem portfela i nie czeka na żaden inny. Portfel ma ten sam zakres holdoutu co składniki. Otwarty wcześniej zdradziłby coś o wynikach nieotwartych holdoutów składników. `open-holdout portfolio_v1` odmówi, dopóki składniki nie są otwarte, a plan poda, na które czeka.
+Dla obecnych hipotez krypto kroki ręczne idą w tej kolejności: najpierw holdouty `mean_reversion_v1`, `pairs_v1` i `momentum_select_v1` (między sobą w dowolnej kolejności), a dopiero potem `portfolio_v1`. Holdout `momentum_voltarget_v1` nie jest składnikiem portfela i nie czeka na żaden inny; tak samo oba holdouty na ETF-ach. Portfel ma ten sam zakres holdoutu co składniki. Otwarty wcześniej zdradziłby coś o wynikach nieotwartych holdoutów składników. `open-holdout portfolio_v1` odmówi, dopóki składniki nie są otwarte, a plan poda, na które czeka.
 
 ## 5. Wyniki treningu: co dostajesz i jak je czytać
 
@@ -216,7 +218,9 @@ Co jest w wynikach:
   - `pairs_v1`: kointegracja;
   - `momentum_select_v1`: historia wyboru parametru i PBO siatki;
   - `portfolio_v1`: korelacje i wagi rękawów oraz porównanie reguł alokacji (sekcja „Diagnostyka treningu");
-  - `momentum_voltarget_v1`: skala pozycji każdego instrumentu (średnia, najniższa, najwyższa, udział dni na limicie) i porównanie z tym samym momentum bez skalowania: Sharpe netto, zmienność i max drawdown na tym samym oknie.
+  - `momentum_voltarget_v1` i `momentum_voltarget_multiasset_v1`: skala pozycji każdego instrumentu (średnia, najniższa, najwyższa, udział dni na limicie) i porównanie z tym samym momentum bez skalowania: Sharpe netto, zmienność i max drawdown na tym samym oknie.
+- **P&L per klasa aktywów i per instrument** w rejestrze transakcji: skąd pochodzi wynik. Na ETF-ach odpowiada na pytanie, czy efekt działa w każdej klasie, czy tylko w części. Opisowo, bez testu istotności per klasa.
+- **Zwroty ponad gotówkę** na uniwersum z instrumentem gotówkowym (`multiasset-etf`, gotówka BIL). Nagłówek przebiegu mówi to wprost (`Returns: above cash (BIL)`). Ceny w rejestrze transakcji są wtedy w jednostkach gotówki, nie notowaniami.
 
 **Na co patrzeć przed otwarciem holdoutu.** Przegląd służy zrozumieniu wyniku i zanotowaniu obserwacji, a nie poprawianiu hipotezy. Definicja jest zamrożona: każda zmiana parametrów po obejrzeniu wyników to nowa hipoteza (rozdział 10). Pytania pomocnicze:
 
@@ -364,6 +368,8 @@ Gdy zechcesz sprawdzić nowy pomysł, także wariant istniejącej hipotezy wymy�
    - kryterium sukcesu.
 
    Dostępne strategie: `time_series_momentum`, `short_term_reversal`, `pairs_spread`, `cross_sectional_momentum`, `time_series_momentum_selected`, `strategy_portfolio`, `time_series_momentum_vol_target`.
+
+   Dostępne uniwersa: `mvp-crypto`, `multiasset-etf` (ETF-y, zwroty ponad gotówkę BIL), a po budowie także `sp500`. Okna definicji (`lookback_days`, `window_days` itp.) liczą sesje rynku: 365 w roku na krypto, 252 na ETF-ach i akcjach.
 3. Zakres holdoutu wybierz z danych, których w tej sprawie jeszcze nie oglądałeś. Na przykład holdout 2024–2025 na BTC i ETH jest już zużyty przez `momentum_v1`.
 4. **Zacommituj definicję przed pierwszym przebiegiem.** `quantlab run` odrzuca definicję niezacommitowaną albo zmienioną po commicie, zanim pobierze jakiekolwiek dane.
 5. Uruchom `uv run quantlab plan`: nowa hipoteza pojawi się w planie. Hipotezy na tych samych danych wrócą do stanu `pending` (`new trials on its data: …`), bo nowa próba zmienia ich deflated Sharpe. `plan --run` je przeliczy.

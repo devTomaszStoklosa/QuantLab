@@ -59,7 +59,7 @@ Jako badacz chcę przetestować regułę `momentum_v1` na koszyku ETF z różnyc
 
 ## Priority
 
-Should have. Następny epik po `q11`, rozpoczęty 2026-09-26 z pytania Tomasza o przenośność wyniku krypto. Kod powstaje na danych syntetycznych: rozgrzewka w sesjach, gotówka, klasy aktywów i podział P&L. Zamrożenie następuje po odpowiedziach na pytania 1–7 poniżej. Przebiegi są lokalne: Tiingo, klucz `TIINGO_API_KEY`.
+Should have. Następny epik po `q11`, rozpoczęty 2026-09-26 z pytania Tomasza o przenośność wyniku krypto. Kod powstał na danych syntetycznych: rozgrzewka w sesjach, gotówka, klasy aktywów i podział P&L. Uniwersum i dwie hipotezy są zamrożone po decyzjach 1–7 poniżej (C5, 2026-09-26). Przebiegi są lokalne: Tiingo, klucz `TIINGO_API_KEY`.
 
 ## Dependencies and risks
 
@@ -78,11 +78,11 @@ Should have. Następny epik po `q11`, rozpoczęty 2026-09-26 z pytania Tomasza o
 - **Ryzyko: limity darmowego Tiingo.** 11 tickerów (z gotówką) to ceny i metadane: ok. 22 zapytania na każde nowe okno pobierania, przy odstępie 90 s ok. 35 minut. Cache na dysku, więc przerwane pobieranie wznawia się od miejsca przerwania.
 - **Ryzyko: kolejne próby.** Nowe uniwersum zaczyna rejestr prób od zera; każda zamrożona tu hipoteza to jedna próba w DSR pozostałych na tych samych danych.
 
-## Open questions
+## Decisions
 
-Pytania pre-rejestracji do rozstrzygnięcia przed zamrożeniem (C5); każde z propozycją:
+Odpowiedzi na pytania 1–7, przyjęte przez Tomasza 2026-09-26 (wszystkie propozycje). Są zamrożone w `src/quantlab/config/universes/multiasset-etf.yaml`, `config/holdout/momentum_multiasset_v1.yaml` i `config/holdout/momentum_voltarget_multiasset_v1.yaml` (C5):
 
-| # | Question | Proposal |
+| # | Question | Decision |
 |---|---|---|
 | 1 | Koszyk | 10 ETF-ów: akcje SPY, EFA, EEM; obligacje IEF, TLT, LQD; surowce GLD, DBC; dolar UUP; nieruchomości VNQ. Gotówka BIL, nie handlowana. Proxy rynku SPY |
 | 2 | Hipotezy | dwie próby: `momentum_multiasset_v1` (reguła `momentum_v1`: znak nadwyżki 12-miesięcznej, równe wagi po znaku) i `momentum_voltarget_multiasset_v1` (ten sam sygnał ze skalowaniem `q11`) |
@@ -91,3 +91,7 @@ Pytania pre-rejestracji do rozstrzygnięcia przed zamrożeniem (C5); każde z pr
 | 5 | Koszty | realistyczny: opłata 3 bps (prowizja i połowa spreadu płynnych ETF-ów z zapasem na 2008), k 0.05, zmienność z 21 sesji |
 | 6 | Okresy | trening 2008-07-01 → 2017-12-31; holdout 2018-01-01 → 2026-08-31 |
 | 7 | Kryterium sukcesu | bramka walk-forward; holdout: Sharpe netto (model realistyczny) > 0 i p < 0.1 z testu permutacyjnego |
+
+## Open questions
+
+Brak — pytania pre-rejestracji rozstrzygnięte (tabela powyżej).

@@ -145,6 +145,13 @@ Pełna specyfikacja: [specs/q12-cross-asset-momentum/](specs/q12-cross-asset-mom
 
 Slice'y: C1 dokumentacja · C2 rozgrzewka w sesjach i klasy aktywów · C3 gotówka i zwroty ponad nią · C4 podział P&L per klasa aktywów i instrument · C5 plik uniwersum i zamrożenie hipotez · przebiegi lokalne i dziennik.
 
+**Po zamrożeniu (2026-09-26):** uniwersum `multiasset-etf` to SPY, EFA, EEM, IEF, TLT, LQD, GLD, DBC, UUP i VNQ z Tiingo, z gotówką BIL i proxy rynku SPY. Na nim zamrożone są dwie hipotezy:
+
+- `momentum_multiasset_v1`: reguła `momentum_v1`, czyli znak nadwyżki ponad gotówkę z 252 sesji, równe wagi po znaku;
+- `momentum_voltarget_multiasset_v1`: ten sam sygnał ze skalowaniem do 10% rocznie na instrument (EWMA 60 w oknie 252 sesji, limit 1).
+
+Obie mają koszty 3 bps, k 0.05 i okno 21 sesji. Trening obejmuje 2008-07-01 → 2017-12-31 z bramką walk-forward, a holdout 2018-01-01 → 2026-08-31 (Sharpe netto > 0, p < 0.1). To dwie pierwsze próby na nowym uniwersum; próby krypto się nie zmieniają. Lokalnie: klucz `TIINGO_API_KEY`, `uv run quantlab plan --run`, potem jednorazowo `open-holdout` obu, wpis w dzienniku z porównaniem z `momentum_v1` i P&L per klasa aktywów.
+
 ## Zakres MVP
 
 Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
@@ -175,4 +182,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q9-strategy-portfolio | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, reguły alokacji, strategia portfelowa z pozycjami netto, definicja ze składnikami i strażą holdoutu, raport w diagnostyce i tear-sheecie, `demo_portfolio`, przyspieszenie strategii par bez zmiany wyników; decyzje 1–6 przyjęte 2026-09-25, `portfolio_v1` zamrożona); przebiegi lokalnie na Binance, holdout po holdoutach składników |
 | q10-local-runbook | Ready for dev | Ready for dev | Ready for dev | R1–R4 gotowe (dokumentacja, `quantlab plan`, `plan --run`, `check-source`, README „Przebiegi lokalne"); na maszynie deweloperskiej: `uv run quantlab plan --run` |
 | q11-volatility-targeted-momentum | Ready for dev | Ready for dev | Ready for dev | V1–V3 gotowe (dokumentacja, estymatory zmienności EWMA i kroczący, opakowanie `VolatilityTargeted`, sizer `ScaledEqualWeight`, definicja `time_series_momentum_vol_target`, diagnostyka skali i porównanie z wersją bez skalowania; zrzut regresji bez zmian); V4 gotowe: decyzje 1–6 przyjęte 2026-09-26, `momentum_voltarget_v1` zamrożona; przebiegi (trening, holdout, dziennik) lokalnie na Binance |
-| q12-cross-asset-momentum | Ready for dev | Ready for dev | Ready for dev | C1–C4 gotowe (dokumentacja; rozgrzewka w sesjach rynku przez `Universe.calendar_days`, tożsamość dla krypto; instrument gotówkowy i zwroty ponad gotówkę w warstwie danych; klasy aktywów i P&L per klasa aktywów i instrument w terminalu, magazynie i aplikacji; zrzut regresji bez zmian); C5 (koszyk, zamrożenie) po pytaniach 1–7; przebiegi lokalnie (Tiingo) |
+| q12-cross-asset-momentum | Ready for dev | Ready for dev | Ready for dev | C1–C4 gotowe (dokumentacja; rozgrzewka w sesjach rynku przez `Universe.calendar_days`, tożsamość dla krypto; instrument gotówkowy i zwroty ponad gotówkę w warstwie danych; klasy aktywów i P&L per klasa aktywów i instrument w terminalu, magazynie i aplikacji; zrzut regresji bez zmian); C5 gotowe: decyzje 1–7 przyjęte 2026-09-26, uniwersum `multiasset-etf`, `momentum_multiasset_v1` i `momentum_voltarget_multiasset_v1` zamrożone; przebiegi (trening, holdout, dziennik) lokalnie na Tiingo |
