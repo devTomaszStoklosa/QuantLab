@@ -16,12 +16,20 @@ import numpy as np
 from pydantic import BaseModel, Field, PrivateAttr, model_validator
 
 from quantlab.backtest.rebalance import Daily, OnSignalChange, RebalancePolicy
-from quantlab.backtest.sizing import CarriedWeights, EqualWeightBySign, PairWeights, Sizer
+from quantlab.backtest.sizing import (
+    CarriedWeights,
+    EqualWeightBySign,
+    PairWeights,
+    ScaledEqualWeight,
+    Sizer,
+)
 from quantlab.core.data.provider import PriceBar
 from quantlab.core.universe import Universe
 from quantlab.costs.realistic import RealisticCostModel
 from quantlab.portfolio.allocation import ALLOCATION_RULES
 from quantlab.portfolio.report import portfolio_report
+from quantlab.reporting.volatility_scaling import scaling_report
+from quantlab.risk.volatility import EwmaVolatility, RollingVolatility, VolatilityEstimator
 from quantlab.strategy.base import Strategy
 from quantlab.strategy.cointegration import engle_granger
 from quantlab.strategy.cross_sectional_momentum import CrossSectionalMomentum
@@ -35,6 +43,7 @@ from quantlab.strategy.selected_parameter import (
 )
 from quantlab.strategy.short_term_reversal import ShortTermReversal
 from quantlab.strategy.time_series_momentum import TimeSeriesMomentum
+from quantlab.strategy.volatility_target import VolatilityTargeted
 
 
 class CostModelParameters(BaseModel):
@@ -506,6 +515,93 @@ class StrategyPortfolioParameters(StudyParametersBase):
         ]
 
 
+class RollingVolatilityParameters(BaseModel):
+    """Realized volatility: the sample standard deviation of the window's returns."""
+
+    estimator: Literal["rolling"]
+    window_days: int = Field(ge=2)
+
+    def build(self) -> VolatilityEstimator:
+        return RollingVolatility(window_days=self.window_days)
+
+
+class EwmaVolatilityParameters(BaseModel):
+    """Exponentially weighted volatility over the window (Moskowitz, Ooi, Pedersen 2012)."""
+
+    estimator: Literal["ewma"]
+    window_days: int = Field(ge=2)
+    center_of_mass_days: float = Field(gt=0)
+
+    def build(self) -> VolatilityEstimator:
+        return EwmaVolatility(
+            center_of_mass_days=self.center_of_mass_days, window_days=self.window_days
+        )
+
+
+# The `estimator` field picks the model, and each builds its own estimator (REQ-1103).
+VolatilityParameters = Annotated[
+    RollingVolatilityParameters | EwmaVolatilityParameters, Field(discriminator="estimator")
+]
+
+
+class VolatilityTargetedMomentumParameters(StudyParametersBase):
+    """Time-series momentum with positions scaled to a target volatility (q11, REQ-1120).
+
+    The signal is momentum_v1's; only the position size differs: each instrument's
+    equal-weight share times min(max_scale, target / annualized ex-ante volatility),
+    with max_scale at most 1, so there is no borrowing the engines would not cost.
+    """
+
+    strategy: Literal["time_series_momentum_vol_target"]
+    lookback_days: int = Field(ge=1)
+    target_volatility: float = Field(gt=0)
+    max_scale: float = Field(gt=0, le=1)
+    volatility: VolatilityParameters
+
+    @property
+    def warm_up_days(self) -> int:
+        # The estimator reads its whole window inside the warm-up, so a holdout's
+        # first estimate is the one a longer history would give (REQ-1121).
+        return max(self.lookback_days, self.volatility.window_days)
+
+    def strategy_params(self) -> dict:
+        return {
+            "lookback_days": self.lookback_days,
+            "target_volatility": self.target_volatility,
+            "max_scale": self.max_scale,
+            "volatility": self.volatility.model_dump(),
+        }
+
+    def build_strategy(self) -> VolatilityTargeted:
+        return VolatilityTargeted(
+            inner=TimeSeriesMomentum(lookback_days=self.lookback_days),
+            estimator=self.volatility.build(),
+            target_volatility=self.target_volatility,
+            max_scale=self.max_scale,
+            periods_per_year=Universe.load(self.universe).periods_per_year,
+        )
+
+    def build_sizer(self) -> Sizer:
+        return ScaledEqualWeight()
+
+    def training_diagnostics(
+        self, bars: dict[str, list[PriceBar]], start: date, end: date
+    ) -> list[TrainingDiagnostic]:
+        """The scales per instrument, and the same momentum unscaled over the same
+        window and cost model (REQ-1130)."""
+        report = scaling_report(
+            scaled=self.build_strategy(),
+            sizer=self.build_sizer(),
+            unscaled=TimeSeriesMomentum(lookback_days=self.lookback_days),
+            cost_model=self.cost_model.build(),
+            bars=bars,
+            start=common_start(bars, self.warm_up_days, start),
+            end=end,
+            periods_per_year=Universe.load(self.universe).periods_per_year,
+        )
+        return [TrainingDiagnostic(title=title, values=values) for title, values in report.items()]
+
+
 # A definition's `strategy` field picks the variant; a new strategy is a new
 # variant here, never a branch in the runner.
 StudyParameters = Annotated[
@@ -514,6 +610,7 @@ StudyParameters = Annotated[
     | PairsSpreadParameters
     | CrossSectionalMomentumParameters
     | TimeSeriesMomentumSelectedParameters
-    | StrategyPortfolioParameters,
+    | StrategyPortfolioParameters
+    | VolatilityTargetedMomentumParameters,
     Field(discriminator="strategy"),
 ]

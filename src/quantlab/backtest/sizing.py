@@ -38,6 +38,28 @@ class EqualWeightBySign:
         return equal_weight_by_sign(signals)
 
 
+class ScaledEqualWeight:
+    """Equal weight by sign, each scaled by the weight its signal carries (q11, REQ-1111).
+
+    For signals whose weight is a scale of the equal-weight share, such as
+    positions scaled to a target volatility: each of the N tradable non-flat
+    signals gets ±weight / N. A scale of 1 is exactly equal_weight_by_sign.
+    """
+
+    def weights(self, signals: list[Signal]) -> dict[str, float]:
+        active = [signal for signal in signals if signal.direction != "flat"]
+        if not active:
+            return {}
+        if any(signal.weight is None for signal in active):
+            raise ValueError("Signals sized by ScaledEqualWeight must carry a weight")
+        count = len(active)
+        return {
+            signal.instrument_id: (signal.weight if signal.direction == "long" else -signal.weight)
+            / count
+            for signal in active
+        }
+
+
 class CarriedWeights:
     """The signed weights the signals carry, whatever their number (q9, REQ-911).
 

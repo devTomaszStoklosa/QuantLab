@@ -2,7 +2,12 @@ from datetime import date
 
 import pytest
 
-from quantlab.backtest.sizing import EqualWeightBySign, PairWeights, equal_weight_by_sign
+from quantlab.backtest.sizing import (
+    EqualWeightBySign,
+    PairWeights,
+    ScaledEqualWeight,
+    equal_weight_by_sign,
+)
 from quantlab.strategy.signal import Signal
 
 _DAY = date(2026, 1, 1)
@@ -73,3 +78,29 @@ def test_pair_signals_without_a_weight_are_an_error() -> None:
 def test_a_signal_weight_must_be_positive() -> None:
     with pytest.raises(ValueError):
         _leg("eth", "long", 0.0)
+
+
+def _scaled(instrument_id: str, direction: str, weight: float | None) -> Signal:
+    return Signal(
+        instrument_id=instrument_id, ts=_DAY, direction=direction, strength=0.0, weight=weight
+    )
+
+
+def test_scaled_equal_weight_splits_each_scale_among_the_tradable_signals() -> None:
+    weights = ScaledEqualWeight().weights(
+        [_scaled("a", "long", 0.5), _scaled("b", "short", 0.8), _scaled("c", "flat", None)]
+    )
+
+    assert weights == {"a": 0.25, "b": -0.4}
+
+
+def test_a_scale_of_one_is_equal_weight_by_sign() -> None:
+    signals = [_scaled("a", "long", 1.0), _scaled("b", "short", 1.0), _scaled("c", "long", 1.0)]
+
+    assert ScaledEqualWeight().weights(signals) == equal_weight_by_sign(signals)
+
+
+def test_scaled_equal_weight_needs_a_scale_on_every_active_signal() -> None:
+    assert ScaledEqualWeight().weights([_scaled("a", "flat", None)]) == {}
+    with pytest.raises(ValueError, match="must carry a weight"):
+        ScaledEqualWeight().weights([_scaled("a", "long", None)])

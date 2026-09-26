@@ -16,6 +16,7 @@ lab-foundation
        -> q8-parameter-selection-cpcv   (po q1–q7; korzysta z q2, q6, q7)
        -> q9-strategy-portfolio         (po q8; korzysta z q2, q4, q6, q7, q8)
        -> q10-local-runbook             (po q9; plan przebiegów lokalnych)
+       -> q11-volatility-targeted-momentum (po q10; skalowanie pozycji zmiennością)
 ```
 
 q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się po zamknięciu q1, na podstawie tego, co wymaga pogłębienia. Przykład: jeśli momentum nie przejdzie walidacji, `q3` (mean-reversion) zyskuje priorytet jako kontrast; jeśli silnik wektorowy okaże się za wolny do walidacji wymagającej wielu powtórzeń, `q6` (CPCV) wyprzedza `q2`.
@@ -41,6 +42,8 @@ q2–q7 nie mają ustalonej kolejności między sobą — priorytet ustala się 
 **Po `q8`-P7 (2026-09-25):** `momentum_select_v1` zamrożona; wszystkie epiki `q1`–`q8` mają kod, otwarte są tylko przebiegi lokalne. Tomasz wybrał jako następny epik **`q9-strategy-portfolio`**: portfel zamrożonych hipotez krypto łączonych regułą alokacji ryzyka (odwrotność zmienności, risk parity, równe wagi) z wagami z historii sprzed rebalansu, handlujący pozycjami netto (kompensacja przeciwnych pozycji rękawów). Holdout portfela nachodzi na nieotwarte holdouty trzech składników, więc otwiera się dopiero po nich. Kod na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q9-strategy-portfolio/01-story.md), przebiegi lokalnie (Binance).
 
 **Po `q9`-P7 (2026-09-25):** `portfolio_v1` zamrożony; wszystkie epiki `q1`–`q9` mają kod, a otwarte są przebiegi lokalne: sześć hipotez bez treningu, holdouty w kolejności chroniącej `portfolio_v1`, budowa `sp500.yaml` i pobranie z Tiingo dla `xsmom_v1`, sprawdzenie DuckDB bez AVX2. Tomasz wybrał jako następny epik **`q10-local-runbook`**: `quantlab plan` — stan każdego pozostałego kroku z powodem i komendą — oraz `quantlab plan --run`, który wykonuje kroki automatyczne w poprawnej kolejności, a otwarcia holdoutów, commity i wpisy w dzienniku zostawia badaczowi.
+
+**Po `q10` (2026-09-26):** wszystkie epiki `q1`–`q10` mają kod, a instrukcja obsługi ([INSTRUKCJA.md](INSTRUKCJA.md)) opisuje przebiegi lokalne. Następny z listy kandydatów jest **`q11-volatility-targeted-momentum`**: momentum z pozycjami skalowanymi do docelowej zmienności ex-ante (Moskowitz, Ooi, Pedersen 2012), bez dźwigni, jako nowa hipoteza i kontrast do `momentum_v1` — jedyną różnicą jest wielkość pozycji. Wariant powstaje po obejrzeniu wyniku `momentum_v1`, więc to kolejna próba na `mvp-crypto` 2018–2023 z holdoutem na danych jeszcze nieoglądanych. Kod na danych syntetycznych, zamrożenie po odpowiedziach na pytania z [01-story](specs/q11-volatility-targeted-momentum/01-story.md), przebiegi lokalnie (Binance).
 
 ## Epiki
 
@@ -114,6 +117,12 @@ Plan przebiegów lokalnych liczony ze stanu repozytorium i magazynu wyników: dl
 
 Slice'y: R1 dokumentacja · R2 stan i `quantlab plan` · R3 `quantlab plan --run` · R4 README „Przebiegi lokalne".
 
+### q11-volatility-targeted-momentum (rozszerzenie, w toku)
+
+Momentum szeregów czasowych z pozycjami skalowanymi do docelowej zmienności ex-ante per instrument: opakowanie dowolnej strategii (`VolatilityTargeted`) nadaje sygnałom skalę min(limit, docelowa / roczna zmienność ex-ante) z estymatora z rejestru (EWMA albo kroczący, stałe okno w rozgrzewce), sizer dzieli ją równo między handlowalne instrumenty; limit ≤ 1, bez dźwigni. Diagnostyka treningu porównuje wersję skalowaną z tym samym momentum bez skalowania. Pełna specyfikacja: [specs/q11-volatility-targeted-momentum/](specs/q11-volatility-targeted-momentum/).
+
+Slice'y: V1 dokumentacja · V2 estymatory zmienności, opakowanie strategii, sizer · V3 definicja i diagnostyka treningu · V4 zamrożenie `momentum_voltarget_v1` · przebiegi lokalne i dziennik.
+
 ## Zakres MVP
 
 Kończy się na `q1-momentum-research-mvp`. Kryteria ukończenia:
@@ -143,3 +152,4 @@ Orientacyjny czas, solo po godzinach: `lab-foundation` 1–2 tygodnie, `q1-momen
 | q8-parameter-selection-cpcv | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, CPCV, strategia z doborem, konfiguracje w DSR, PBO siatki i raport, bramka CPCV w kryterium, magazyn v3, API, aplikacja i tear-sheet, `demo_select`; decyzje 1–6 przyjęte 2026-09-25, `momentum_select_v1` zamrożona); przebiegi (trening, holdout, dziennik) lokalnie na Binance |
 | q9-strategy-portfolio | Ready for dev | Ready for dev | Ready for dev | P1–P7 gotowe (dokumentacja, reguły alokacji, strategia portfelowa z pozycjami netto, definicja ze składnikami i strażą holdoutu, raport w diagnostyce i tear-sheecie, `demo_portfolio`, przyspieszenie strategii par bez zmiany wyników; decyzje 1–6 przyjęte 2026-09-25, `portfolio_v1` zamrożona); przebiegi lokalnie na Binance, holdout po holdoutach składników |
 | q10-local-runbook | Ready for dev | Ready for dev | Ready for dev | R1–R4 gotowe (dokumentacja, `quantlab plan`, `plan --run`, `check-source`, README „Przebiegi lokalne"); na maszynie deweloperskiej: `uv run quantlab plan --run` |
+| q11-volatility-targeted-momentum | Ready for dev | Ready for dev | Ready for dev | V1–V3 gotowe (dokumentacja, estymatory zmienności EWMA i kroczący, opakowanie `VolatilityTargeted`, sizer `ScaledEqualWeight`, definicja `time_series_momentum_vol_target`, diagnostyka skali i porównanie z wersją bez skalowania; zrzut regresji bez zmian); V4 czeka na pytania pre-rejestracji 1–6 |
