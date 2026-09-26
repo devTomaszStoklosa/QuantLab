@@ -78,6 +78,17 @@ describe('HypothesisScreen', () => {
     expect(pnl.getByText('eth-usdt')).toBeInTheDocument();
   });
 
+  it('tells the result in words, as quantlab composed it from the stored numbers', async () => {
+    renderWith('demo_momentum');
+    await screen.findByRole('heading', { name: 'Narrative' });
+    const narrative = within(panel('Narrative'));
+
+    const first = captured.momentum.narrative[0];
+    expect(narrative.getByText(first.section)).toBeInTheDocument();
+    expect(narrative.getByText(first.text)).toBeInTheDocument();
+    expect(narrative.getAllByText(/^Status końcowy: rejected\./)).toHaveLength(1);
+  });
+
   it('names the significance test the criterion chose', async () => {
     const detail = structuredClone(captured.momentum);
     detail.run!.permutation.test = 'random_portfolio';
