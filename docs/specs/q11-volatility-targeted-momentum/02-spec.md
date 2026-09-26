@@ -116,4 +116,4 @@ Definicja (`config/holdout/<id>.yaml`, sekcja `parameters`):
 
 | # | Question | Owner |
 |---|---|---|
-| 1–6 | Pytania pre-rejestracji z [01-story](01-story.md) | Tomasz |
+| — | Brak — pytania pre-rejestracji rozstrzygnięte 2026-09-26 ([01-story](01-story.md), Decisions) | — |

@@ -12,6 +12,9 @@ from quantlab import cli
 from quantlab.core.data.provider import PriceBar, WithoutEvents
 from quantlab.core.universe import Instrument
 from quantlab.reporting.volatility_scaling import CONTRAST_TITLE, SCALE_TITLE
+from quantlab.research.definition import VolatilityTargetedMomentumParameters
+from quantlab.research.trials import registered_trials, trials_on_same_data
+from quantlab.validation.holdout import parse_holdout_config
 
 _FIRST, _LAST = date(2017, 1, 1), date(2022, 12, 31)
 _DEFINITION = """hypothesis: {hypothesis}
@@ -119,3 +122,35 @@ def test_both_engines_trade_the_scaled_positions_alike(tmp_path, monkeypatch) ->
     assert result.exit_code == 0, result.output
     parity = next(line for line in result.output.splitlines() if line.startswith("Parity"))
     assert "numerical noise only" in parity
+
+
+def test_momentum_voltarget_v1_freezes_the_answers_to_the_story_s_questions() -> None:
+    definitions = Path(__file__).parents[1] / "config" / "holdout"
+
+    config = parse_holdout_config(definitions / "momentum_voltarget_v1.yaml")
+    parameters = config.parameters
+    momentum = parse_holdout_config(definitions / "momentum_v1.yaml").parameters
+
+    assert isinstance(parameters, VolatilityTargetedMomentumParameters)
+    assert (parameters.target_volatility, parameters.max_scale) == (0.40, 1.0)
+    assert parameters.volatility.model_dump() == {
+        "estimator": "ewma",
+        "window_days": 365,
+        "center_of_mass_days": 60.0,
+    }
+    # The only difference from momentum_v1 is the position size.
+    assert parameters.lookback_days == momentum.lookback_days == 365
+    assert parameters.cost_model == momentum.cost_model
+    assert parameters.universe == momentum.universe
+    assert parameters.warm_up_days == 365
+    assert config.success_criterion.in_sample_validation == "walk_forward"
+    assert (config.success_criterion.min_sharpe, config.success_criterion.max_p_value) == (
+        0.0,
+        0.1,
+    )
+    assert (config.training_start, config.training_end) == (date(2018, 1, 1), date(2023, 12, 31))
+    assert (config.start, config.end) == (date(2026, 1, 1), date(2026, 8, 31))
+    # A new trial on the other crypto hypotheses' data, with one configuration.
+    trials = trials_on_same_data("momentum_voltarget_v1", registered_trials(definitions))
+    assert {"momentum_v1", "momentum_voltarget_v1"} <= {trial.hypothesis for trial in trials}
+    assert parameters.configurations == 1
