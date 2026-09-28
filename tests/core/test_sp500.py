@@ -176,7 +176,7 @@ def test_a_date_added_inside_an_earlier_period_leaves_the_table_s_start() -> Non
     assert result.started_at_date_added == []
 
 
-def test_a_ticker_change_recorded_as_an_addition_and_a_removal_is_one_membership() -> None:
+def test_a_ticker_change_recorded_as_an_addition_and_a_removal_is_continuous() -> None:
     page = Page(
         [Constituent("WTW", date(2016, 1, 5))],
         [Change(date(2022, 1, 10), "WTW", "WLTW"), Change(date(2016, 1, 5), "WLTW", None)],
@@ -185,8 +185,30 @@ def test_a_ticker_change_recorded_as_an_addition_and_a_removal_is_one_membership
 
     result = sp500.reconstruct(page, Renames((Rename("WLTW", "WTW"),)), _SINCE, _AS_OF)
 
-    assert _periods(result.memberships) == {("WTW", date(2016, 1, 5), None)}
-    assert (result.several_periods, result.date_added_mismatches) == ([], [])
+    assert _periods(result.memberships) == {
+        ("WTW", date(2016, 1, 5), date(2022, 1, 9)),
+        ("WTW", date(2022, 1, 10), None),
+    }
+    # The list dates the start of the periods that touch: consistent, nothing to check.
+    assert (result.date_added_mismatches, result.started_at_date_added) == ([], [])
+
+
+def test_a_ticker_two_companies_swapped_on_one_day_keeps_the_first_company() -> None:
+    # 21st Century Fox left on 2019-03-19 and Fox Corp took FOXA the same day.
+    page = Page(
+        [Constituent("FOXA", date(2019, 3, 19))],
+        [Change(date(2019, 3, 19), "FOXA", "FOXA")],
+        [],
+    )
+
+    result = sp500.reconstruct(page, Renames(), _SINCE, _AS_OF)
+
+    assert _periods(result.memberships) == {
+        ("FOXA", date(2000, 1, 1), date(2019, 3, 18)),
+        ("FOXA", date(2019, 3, 19), None),
+    }
+    assert result.started_at_date_added == []
+    assert result.several_periods == ["FOXA"]
 
 
 def test_a_dated_rename_maps_a_reused_ticker_only_inside_its_window() -> None:
@@ -339,6 +361,33 @@ def test_the_committed_renames_cover_plain_and_dated_ticker_changes() -> None:
     assert renames.ticker("IR", date(2020, 3, 2)) == "IR"
     assert renames.ticker("Q", date(2009, 1, 1)) == "Q"
     assert renames.ticker("Q", date(2017, 11, 15)) == "IQV"
+    assert renames.ticker("Q", date(2025, 11, 3)) == "Q"  # Qnity Electronics
+
+
+def test_three_companies_that_traded_as_q_keep_their_own_periods() -> None:
+    # Qwest until 2011, QuintilesIMS in 2017 (IQV today), Qnity Electronics since 2025.
+    text = (Path(str(cli._UNIVERSES_DIR)) / "sp500-renames.yaml").read_text(encoding="utf-8")
+    page = Page(
+        [Constituent("Q", date(2025, 11, 3)), Constituent("IQV", date(2017, 8, 29))],
+        [
+            Change(date(2025, 11, 3), "Q", None, "Qnity Electronics"),
+            Change(date(2017, 11, 15), "IQV", "Q", "IQVIA", "Quintiles IMS"),
+            Change(date(2017, 8, 29), "Q", None, "Quintiles IMS"),
+            Change(date(2011, 4, 1), None, "Q", "", "Qwest Communications"),
+        ],
+        [],
+    )
+
+    result = sp500.reconstruct(page, sp500.load_renames(text), _SINCE, _AS_OF)
+
+    assert _periods(result.memberships) == {
+        ("Q", date(2000, 1, 1), date(2011, 3, 31)),
+        ("Q", date(2025, 11, 3), None),
+        ("IQV", date(2017, 8, 29), date(2017, 11, 14)),
+        ("IQV", date(2017, 11, 15), None),
+    }
+    assert result.added_but_not_in_index == result.removed_but_still_in_index == []
+    assert result.date_added_mismatches == result.started_at_date_added == []
 
 
 def test_a_dated_rename_without_a_window_is_refused() -> None:

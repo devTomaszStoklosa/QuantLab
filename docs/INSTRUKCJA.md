@@ -334,7 +334,7 @@ Ta ścieżka trwa najdłużej, dni albo tygodnie, przez limity darmowego Tiingo.
    - **Usunięcia tickera, który nadal jest w indeksie.** Zwykle ticker przejęła inna spółka (np. `T`, `AGN`); zostaje opisany w dzienniku.
    - **Obecny okres od daty dodania z listy spółek**, bo tabela zmian nie ma ich dodania albo datuje je inaczej. Przejrzyj daty, które wyglądają podejrzanie.
    - **Daty z listy sprzeczne z wcześniejszym okresem** tego samego tickera; zostaje data z tabeli.
-   - **Tickery z kilkoma okresami:** ponowne wejście do indeksu albo dwie różne spółki pod jednym tickerem.
+   - **Tickery z kilkoma okresami:** ponowne wejście do indeksu, zmiana tickera zapisana jako dodanie i usunięcie albo dwie różne spółki pod jednym tickerem.
 
    Po każdej zmianie pliku zbuduj uniwersum ponownie. Poprawiaj **tylko** to, co wskazuje raport budowy. Nie dobieraj spółek pod wynik: skład jest częścią pre-rejestracji.
 
