@@ -42,7 +42,12 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
 #### Skład S&P 500 lokalnie (`core.sp500`, `quantlab build-universe`, `q5`-X7d)
 
 - Komenda czyta dwie strony, każdą w ostatniej rewizji sprzed 2026-09-24T00:00Z (API MediaWiki, bez klucza): *List of S&P 500 companies* (bieżący skład) i *Historical components of the S&P 500* (tabela zmian). Tabela zmian była częścią listy do 2026-08-11, kiedy przeniesiono ją na osobną stronę bez zmiany formatu. Komenda odtwarza skład wstecz do 2000-01-01 i zapisuje `src/quantlab/config/universes/sp500.yaml` z numerami obu rewizji i atrybucją CC BY-SA 4.0 w nagłówku (plik jest adaptacją treści Wikipedii i dzieli jej licencję).
-- Raport budowy wymienia sprzeczności tabeli zmian; zmiany tickerów (np. `FB` → `META`) trafiają do `sp500-renames.yaml`, po czym budowę się powtarza. Ticker użyty ponownie przez inną spółkę nie jest mapowany — raport pokazuje go jako ticker z kilkoma okresami.
+- Raport budowy wymienia sprzeczności tabeli zmian z nazwami spółek. Zmiany tickerów (np. `FB` → `META`) trafiają do `renames` w `sp500-renames.yaml`. Ticker, którego używała też inna spółka, trafia do `dated_renames` z zakresem dat, np. `UA` → `UAA` do 2016-04-07 (Under Armour kl. A, zanim `UA` przejęła klasa C). Potem budowę się powtarza.
+- Zasady odtwarzania, ustalone przy przeglądzie pierwszej budowy (2026-09-28):
+  - Tabela zmian nie ma wiersza dodania części spółek; w pierwszej budowie dotyczyło to 99 obecnych członków. Obecny okres członkostwa zaczyna się więc w dniu „date added” z listy spółek, chyba że ta data wypada we wcześniejszym okresie tego samego tickera. Członkostwo sprzed wejścia do indeksu zawyżałoby momentum, bo spółki trafiają do indeksu po silnych wzrostach. Raport wymienia każdą tak ustaloną datę.
+  - Kilka dat na liście wygląda na błędne (np. D 2016, SRE 2017, TROW 2019). Te spółki wypadają z uniwersum na część lat, co jest mniej szkodliwe dla testu momentum niż członkostwo przed wejściem do indeksu; wpis w dzienniku to opisuje.
+  - Przylegające okresy jednego tickera łączą się w jeden: tak wygląda zmiana tickera zapisana w tabeli jako dodanie i usunięcie.
+- Znane ograniczenia po pierwszej budowie: stare AT&T Corp (`T` do 2005) i Allergan Inc (`AGN` do 2015) mają tickery przejęte przez inne spółki, więc nie mają własnego okresu. Starsze spółki tickerów z kilkoma okresami (np. `Q`: Qwest do 2011) mogą nie mieć cen w Tiingo; pokaże to raport pokrycia w `run` (REQ-554).
 - Oba pliki commitowane przed zamrożeniem `xsmom_v1` (X8): skład jest częścią pre-rejestracji.
 - `quantlab run` na uniwersum point-in-time drukuje pokrycie cenami: udział dni członkostwa z ceną i członków bez żadnej ceny w źródle (REQ-554).
 

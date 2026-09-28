@@ -190,7 +190,7 @@ Rollback: `git revert` per slice; żaden slice nie zmienia plików w `config/hol
 | Wolna strategia przekrojowa (ranking co dzień) | wysoka | średni | ranking raz na miesiąc formacji, zapamiętany |
 | Limity darmowego tieru Tiingo przy ok. 1 050 tickerach S&P 500 z lat 2004–2025 | wysoka | średni | cache odpowiedzi, wznawianie pobierania, odstęp żądań w limicie godzinowym, licznik tickerów w limicie miesięcznym; pobieranie w trzech miesiącach darmowego planu ([ADR-0009](../../adr/0009-private-repo-free-tiingo-plan.md)) |
 | Ponownie użyte i zmienione tickery (Wikipedia pisze ticker z dnia zmiany, Tiingo — dzisiejszy) | wysoka | wysoki | mapa zmian tickerów w repo, raport niespójności budowy, raport pokrycia cenami w `run` |
-| Niekompletna tabela zmian w Wikipedii | średnia | średni | raport niespójności (m.in. data dodania bieżących członków vs odtworzona); wynik opisany z tym ograniczeniem |
+| Niekompletna tabela zmian w Wikipedii | wysoka (99 obecnych członków bez wiersza dodania w pierwszej budowie) | średni | raport niespójności z nazwami spółek; obecny okres od daty dodania z listy spółek, zmiany tickerów z zakresem dat (przegląd 2026-09-28); wynik opisany z tym ograniczeniem |
 
 ## Handoff notes
 

@@ -329,7 +329,14 @@ Ta ścieżka trwa najdłużej, dni albo tygodnie, przez limity darmowego Tiingo.
    - zapisuje `src/quantlab/config/universes/sp500.yaml`;
    - drukuje raport sprzeczności w tabeli zmian składu.
 
-2. **Przegląd raportu** (`review:sp500`, krok ręczny). Zmiany tickerów, np. `FB` → `META`, dopisz do `src/quantlab/config/universes/sp500-renames.yaml` i zbuduj uniwersum ponownie. Poprawiaj **tylko** to, co wskazuje raport budowy. Nie dobieraj spółek pod wynik: skład jest częścią pre-rejestracji.
+2. **Przegląd raportu** (`review:sp500`, krok ręczny). Raport ma pięć list:
+   - **Dodania tickera, którego później nie ma w indeksie** (z nazwą spółki). Zwykle to brakująca zmiana tickera: dopisz ją do `renames` w `src/quantlab/config/universes/sp500-renames.yaml`, np. `PCLN: BKNG`. Jeśli ten sam ticker nosiła wcześniej albo później inna spółka, wpis trafia do `dated_renames` z zakresem dat, np. `{ticker: UA, to: UAA, until: 2016-04-07}`.
+   - **Usunięcia tickera, który nadal jest w indeksie.** Zwykle ticker przejęła inna spółka (np. `T`, `AGN`); zostaje opisany w dzienniku.
+   - **Obecny okres od daty dodania z listy spółek**, bo tabela zmian nie ma ich dodania albo datuje je inaczej. Przejrzyj daty, które wyglądają podejrzanie.
+   - **Daty z listy sprzeczne z wcześniejszym okresem** tego samego tickera; zostaje data z tabeli.
+   - **Tickery z kilkoma okresami:** ponowne wejście do indeksu albo dwie różne spółki pod jednym tickerem.
+
+   Po każdej zmianie pliku zbuduj uniwersum ponownie. Poprawiaj **tylko** to, co wskazuje raport budowy. Nie dobieraj spółek pod wynik: skład jest częścią pre-rejestracji.
 
 3. **Commit obu plików**, gdy masz czas na długie pobieranie:
 

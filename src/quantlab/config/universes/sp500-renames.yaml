@@ -4,7 +4,33 @@
 #
 # `uv run quantlab build-universe` lists every addition of a ticker that is not
 # in the index afterwards; most are renames missing here. Add them, rebuild, and
-# commit this file with sp500.yaml. A ticker reused by another company must not
-# be mapped: the two are different instruments.
+# commit this file with sp500.yaml. A ticker another company used before or after
+# goes to dated_renames with the window of changes it covers, never to renames.
+#
+# Entries below come from the build report of 2026-09-28 (revisions 1375923233 and
+# 1376064088); each one is an addition the report listed, or a ticker change the
+# table records as an addition and a removal.
 renames:
   FB: META  # Facebook -> Meta Platforms, 2022-06-09
+  LUK: JEF  # Leucadia National -> Jefferies Financial Group, 2018
+  TSO: ANDV  # Tesoro -> Andeavor, 2017 (acquired by Marathon Petroleum, 2018)
+  JEC: J  # Jacobs Engineering, ticker J since 2019
+  COG: CTRA  # Cabot Oil & Gas -> Coterra Energy, 2021
+  HRS: LHX  # Harris -> L3Harris Technologies, 2019
+  PCLN: BKNG  # Priceline Group -> Booking Holdings, 2018
+  JOYG: JOY  # Joy Global, NYSE ticker JOY from 2011
+  DLPH: APTV  # Delphi Automotive -> Aptiv, 2017
+  KORS: CPRI  # Michael Kors Holdings -> Capri Holdings, 2019
+  RE: EG  # Everest Re Group -> Everest Group, 2023
+  FLT: CPAY  # FleetCor Technologies -> Corpay, 2024
+  SATS: ECHO  # EchoStar, ticker ECHO since 2026 (the list dates ECHO to SATS's addition)
+  WLTW: WTW  # Willis Towers Watson, ticker WTW since 2022-01-10
+
+dated_renames:
+  # Under Armour class A traded as UA until the class C shares took UA in April 2016.
+  - {ticker: UA, to: UAA, until: 2016-04-07}
+  # Ingersoll-Rand plc became Trane Technologies (TT) in March 2020; IR is Gardner
+  # Denver's (Ingersoll Rand Inc.) since.
+  - {ticker: IR, to: TT, until: 2020-02-29}
+  # QuintilesIMS traded as Q in 2017 before IQV; Q was Qwest's until 2011.
+  - {ticker: Q, to: IQV, from: 2017-01-01}
