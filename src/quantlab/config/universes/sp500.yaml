@@ -4437,8 +4437,14 @@ memberships:
   start: '2012-04-03'
   end: '2016-01-04'
 - instrument_id: fox
+  start: '2015-09-18'
+  end: '2019-03-18'
+- instrument_id: fox
   start: '2019-03-19'
   end: null
+- instrument_id: foxa
+  start: '2000-01-01'
+  end: '2019-03-18'
 - instrument_id: foxa
   start: '2019-03-19'
   end: null
@@ -4474,6 +4480,9 @@ memberships:
   end: null
 - instrument_id: gas
   start: '2000-01-01'
+  end: '2011-12-11'
+- instrument_id: gas
+  start: '2011-12-12'
   end: '2016-06-30'
 - instrument_id: gd
   start: '2000-01-01'
@@ -4716,7 +4725,7 @@ memberships:
   start: '2017-08-29'
   end: '2017-11-14'
 - instrument_id: iqv
-  start: '2025-11-03'
+  start: '2017-11-15'
   end: null
 - instrument_id: ir
   start: '2020-03-03'
@@ -5409,6 +5418,9 @@ memberships:
   start: '2015-07-20'
   end: null
 - instrument_id: q
+  start: '2000-01-01'
+  end: '2011-03-30'
+- instrument_id: q
   start: '2025-11-03'
   end: null
 - instrument_id: qcom
@@ -5989,6 +6001,9 @@ memberships:
   end: null
 - instrument_id: wtw
   start: '2016-01-05'
+  end: '2022-01-09'
+- instrument_id: wtw
+  start: '2022-01-10'
   end: null
 - instrument_id: wu
   start: '2000-01-01'
