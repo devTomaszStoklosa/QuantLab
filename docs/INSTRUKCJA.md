@@ -186,6 +186,8 @@ uv run quantlab plan --run
 
 Czas: przebieg treningowy hipotezy krypto to według szacunku od około minuty do kilku minut na tej maszynie. Test istotności liczy 10 000 permutacji, a `portfolio_v1` liczy dodatkowo przebiegi składników, więc trwa najdłużej. Pierwszy przebieg pobiera świece dzienne z Binance, kolejne czytają je z `data/cache/`.
 
+Pierwszy przebieg na ETF-ach (`momentum_multiasset_v1`) trwa ok. 35 minut. Pobiera z Tiingo 11 tickerów (10 ETF-ów i gotówkę BIL), po dwa zapytania na ticker, a darmowy plan wymaga 90 s odstępu między zapytaniami. Przed każdym zapytaniem przebieg wypisuje linię z godziną, np. `14:05:31 Tiingo: SPY prices …, ticker 1 of 500 this month (90 s between requests)`, więc widać, że pracuje. Druga hipoteza na ETF-ach czyta te same dane z cache i trwa minuty. Holdout każdej z nich pobiera swój zakres dat, znów ok. 35 minut przy pierwszym otwarciu.
+
 Jeśli budowa uniwersum `sp500` (Wikipedia) się nie powiedzie, `--run` zatrzyma się przed przebiegami krypto. Uruchom je wtedy bezpośrednio komendami z planu (`uv run quantlab run <id> --tear-sheet reports/<id>.html`), a do uniwersum wróć później.
 
 ### 4.3 Rytm pracy
@@ -339,7 +341,7 @@ Ta ścieżka trwa najdłużej, dni albo tygodnie, przez limity darmowego Tiingo.
    Od tej chwili trening `xsmom_v1` jest w stanie `pending`, a plan dodaje sprawdzenie `check:tiingo` (klucz i dostęp).
 
 4. **Trening z kluczem Tiingo:** przez `plan --run` albo bezpośrednio `uv run quantlab run xsmom_v1 --tear-sheet reports/xsmom_v1.html`.
-   - **Czas pobierania.** Domyślny odstęp między zapytaniami to 90 s, a każdy ticker to dwa zapytania. Około 875 tickerów w treningu daje ok. 44 godzin, holdout dokłada ok. 16 godzin.
+   - **Czas pobierania.** Domyślny odstęp między zapytaniami to 90 s, a każdy ticker to dwa zapytania. Około 875 tickerów w treningu daje ok. 44 godzin, holdout dokłada ok. 16 godzin. Przed każdym zapytaniem przebieg wypisuje linię z godziną, tickerem i jego numerem w miesiącu (`ticker 312 of 500 this month`), więc widać postęp i miejsce do limitu.
    - **Limit darmowego planu.** Plan Starter Tiingo pozwala na 500 różnych tickerów miesięcznie, więc całość zajmie trzy miesiące kalendarzowe. Adapter liczy tickery i przed przekroczeniem limitu zatrzymuje przebieg komunikatem `rerun next month`. Po 1. dniu następnego miesiąca uruchamiasz `plan --run` ponownie, a pobieranie wznawia się z cache. Płatny plan nie jest potrzebny ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)).
    - **Wznawianie.** Przerwane pobieranie (limit, zamknięte okno, restart komputera) wznawia się od miejsca przerwania, bo odpowiedzi są w `data/cache/`. Wyczerpany limit kończy komendę jednym komunikatem; wystarczy uruchomić ją ponownie później.
    - **Pokrycie cenami.** Przebieg drukuje udział dni członkostwa z ceną i członków bez żadnej ceny w źródle.

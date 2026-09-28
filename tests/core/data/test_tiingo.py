@@ -1,3 +1,4 @@
+import re
 from datetime import date, timedelta
 from itertools import pairwise
 from unittest.mock import Mock, patch
@@ -274,6 +275,36 @@ def test_a_run_stops_before_the_month_s_ticker_limit_and_resumes_next_month(
 
         monkeypatch.setattr(tiingo, "_month", lambda: "2026-10")
         assert len(provider.fetch(_etf("CCC"), _START, _END)) == len(_PRICES)
+
+
+def test_each_request_is_announced_and_cached_answers_say_nothing() -> None:
+    lines = []
+    with patch("quantlab.core.data.tiingo.requests.get", _tiingo()):
+        provider = TiingoProvider(progress=lines.append)
+        provider.fetch(_SYN, _START, _END)
+        provider.events(_SYN, _START, _END)  # prices from the cache, then the metadata
+        provider.fetch(_etf("BBB"), _START, _END)
+        TiingoProvider(progress=lines.append).fetch(_SYN, _START, _END)
+
+    spacing = "(0 s between requests)"
+    assert lines == [
+        f"Tiingo: SYN prices 2020-08-27..2020-09-30, ticker 1 of 500 this month {spacing}",
+        f"Tiingo: SYN last price date, ticker 1 of 500 this month {spacing}",
+        f"Tiingo: BBB prices 2020-08-27..2020-09-30, ticker 2 of 500 this month {spacing}",
+    ]
+
+
+def test_the_lab_s_tiingo_announces_each_request_on_stderr_with_the_time(capsys) -> None:
+    with patch("quantlab.core.data.tiingo.requests.get", _tiingo()):
+        cli._PROVIDERS["tiingo"]().fetch(_SYN, _START, _END)
+
+    captured = capsys.readouterr()
+    assert re.fullmatch(
+        r"\d\d:\d\d:\d\d Tiingo: SYN prices 2020-08-27\.\.2020-09-30, ticker 1 of 500 "
+        r"this month \(0 s between requests\)\n",
+        captured.err,
+    )
+    assert captured.out == ""
 
 
 def test_the_default_budget_is_the_free_plan_s_monthly_tickers() -> None:
