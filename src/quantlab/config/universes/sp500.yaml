@@ -1693,8 +1693,8 @@ instruments:
   symbol: IT
   asset_class: equity
   quote_asset: USD
-- id: itt|
-  symbol: ITT|
+- id: itt
+  symbol: ITT
   asset_class: equity
   quote_asset: USD
 - id: itw
@@ -1721,8 +1721,8 @@ instruments:
   symbol: JCI
   asset_class: equity
   quote_asset: USD
-- id: jcp|
-  symbol: JCP|
+- id: jcp
+  symbol: JCP
   asset_class: equity
   quote_asset: USD
 - id: jdsu
@@ -3313,10 +3313,6 @@ instruments:
   symbol: WIN
   asset_class: equity
   quote_asset: USD
-- id: wltw
-  symbol: WLTW
-  asset_class: equity
-  quote_asset: USD
 - id: wm
   symbol: WM
   asset_class: equity
@@ -3439,7 +3435,7 @@ instruments:
   quote_asset: USD
 memberships:
 - instrument_id: a
-  start: '2000-01-01'
+  start: '2000-06-05'
   end: null
 - instrument_id: aa
   start: '2000-01-01'
@@ -3454,7 +3450,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: abbv
-  start: '2013-01-02'
+  start: '2012-12-31'
   end: null
 - instrument_id: abk
   start: '2000-12-05'
@@ -3481,7 +3477,7 @@ memberships:
   start: '2022-11-01'
   end: null
 - instrument_id: acn
-  start: '2011-07-05'
+  start: '2011-07-06'
   end: null
 - instrument_id: adbe
   start: '2000-01-01'
@@ -3532,13 +3528,13 @@ memberships:
   start: '2000-01-01'
   end: '2020-12-20'
 - instrument_id: aiz
-  start: '2000-01-01'
+  start: '2007-04-10'
   end: null
 - instrument_id: ajg
   start: '2016-05-31'
   end: null
 - instrument_id: akam
-  start: '2000-01-01'
+  start: '2007-07-12'
   end: null
 - instrument_id: aks
   start: '2008-07-01'
@@ -3556,7 +3552,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: alle
-  start: '2000-01-01'
+  start: '2013-12-02'
   end: null
 - instrument_id: altr
   start: '2000-01-01'
@@ -3568,7 +3564,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: amcr
-  start: '2019-06-11'
+  start: '2019-06-07'
   end: null
 - instrument_id: amd
   start: '2000-01-01'
@@ -3577,7 +3573,7 @@ memberships:
   start: '2017-03-20'
   end: null
 - instrument_id: ame
-  start: '2013-09-20'
+  start: '2013-09-23'
   end: null
 - instrument_id: amg
   start: '2014-07-01'
@@ -3586,10 +3582,10 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: amp
-  start: '2000-01-01'
+  start: '2005-10-03'
   end: null
 - instrument_id: amt
-  start: '2000-01-01'
+  start: '2007-11-19'
   end: null
 - instrument_id: amtm
   start: '2024-09-30'
@@ -3601,7 +3597,7 @@ memberships:
   start: '2000-01-01'
   end: '2017-08-07'
 - instrument_id: andv
-  start: '2000-01-01'
+  start: '2007-09-27'
   end: '2018-09-30'
 - instrument_id: anet
   start: '2018-08-28'
@@ -3631,7 +3627,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: aph
-  start: '2000-01-01'
+  start: '2008-09-30'
   end: null
 - instrument_id: apo
   start: '2024-12-23'
@@ -3643,7 +3639,7 @@ memberships:
   start: '2025-09-22'
   end: null
 - instrument_id: aptv
-  start: '2000-01-01'
+  start: '2012-12-24'
   end: null
 - instrument_id: are
   start: '2017-03-20'
@@ -3754,7 +3750,7 @@ memberships:
   start: '2000-01-01'
   end: '2013-02-14'
 - instrument_id: biib
-  start: '2000-01-01'
+  start: '2003-11-13'
   end: null
 - instrument_id: bio
   start: '2020-06-22'
@@ -3763,7 +3759,7 @@ memberships:
   start: '2000-01-01'
   end: '2010-04-28'
 - instrument_id: bkng
-  start: '2000-01-01'
+  start: '2009-11-06'
   end: null
 - instrument_id: bkr
   start: '2017-07-07'
@@ -3772,7 +3768,7 @@ memberships:
   start: '2023-12-18'
   end: '2026-09-20'
 - instrument_id: blk
-  start: '2011-04-01'
+  start: '2011-04-04'
   end: null
 - instrument_id: bmc
   start: '2000-01-01'
@@ -3796,7 +3792,7 @@ memberships:
   start: '2000-01-01'
   end: '2016-01-31'
 - instrument_id: brk-b
-  start: '2000-01-01'
+  start: '2010-02-16'
   end: null
 - instrument_id: bro
   start: '2021-09-20'
@@ -3820,7 +3816,7 @@ memberships:
   start: '2015-07-01'
   end: '2016-06-02'
 - instrument_id: bxp
-  start: '2000-01-01'
+  start: '2006-04-03'
   end: null
 - instrument_id: c
   start: '2000-01-01'
@@ -3847,7 +3843,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: cb
-  start: '2010-07-14'
+  start: '2010-07-15'
   end: null
 - instrument_id: cbe
   start: '2000-01-01'
@@ -3859,13 +3855,13 @@ memberships:
   start: '2017-03-01'
   end: null
 - instrument_id: cbre
-  start: '2000-01-01'
+  start: '2006-11-10'
   end: null
 - instrument_id: cce
   start: '2000-01-01'
   end: '2016-05-30'
 - instrument_id: cci
-  start: '2012-03-13'
+  start: '2012-03-14'
   end: null
 - instrument_id: cck
   start: '2000-01-01'
@@ -3901,13 +3897,13 @@ memberships:
   start: '2010-04-29'
   end: '2022-06-07'
 - instrument_id: cf
-  start: '2000-01-01'
+  start: '2008-08-27'
   end: null
 - instrument_id: cfc
   start: '2000-01-01'
   end: '2008-06-30'
 - instrument_id: cfg
-  start: '2016-02-01'
+  start: '2016-01-29'
   end: null
 - instrument_id: cfn
   start: '2000-01-01'
@@ -3919,7 +3915,7 @@ memberships:
   start: '2000-01-01'
   end: '2018-03-18'
 - instrument_id: chrw
-  start: '2000-01-01'
+  start: '2007-03-02'
   end: null
 - instrument_id: chtr
   start: '2016-09-08'
@@ -3949,16 +3945,16 @@ memberships:
   start: '2000-01-01'
   end: '2024-06-23'
 - instrument_id: cmcsa
-  start: '2000-01-01'
+  start: '2002-11-19'
   end: null
 - instrument_id: cmcsk
   start: '2015-09-18'
   end: '2015-12-14'
 - instrument_id: cme
-  start: '2000-01-01'
+  start: '2006-08-11'
   end: null
 - instrument_id: cmg
-  start: '2011-04-27'
+  start: '2011-04-28'
   end: null
 - instrument_id: cmi
   start: '2000-01-01'
@@ -3988,13 +3984,13 @@ memberships:
   start: '2000-01-01'
   end: '2018-12-02'
 - instrument_id: coo
-  start: '2016-09-22'
+  start: '2016-09-23'
   end: null
 - instrument_id: cop
   start: '2000-01-01'
   end: null
 - instrument_id: cor
-  start: '2000-01-01'
+  start: '2001-08-30'
   end: null
 - instrument_id: cost
   start: '2000-01-01'
@@ -4009,7 +4005,7 @@ memberships:
   start: '2011-02-28'
   end: '2015-01-26'
 - instrument_id: cpay
-  start: '2000-01-01'
+  start: '2018-06-20'
   end: null
 - instrument_id: cpb
   start: '2000-01-01'
@@ -4018,7 +4014,7 @@ memberships:
   start: '2015-07-02'
   end: '2016-07-04'
 - instrument_id: cpri
-  start: '2000-01-01'
+  start: '2013-11-13'
   end: '2020-05-11'
 - instrument_id: cprt
   start: '2018-07-02'
@@ -4036,7 +4032,7 @@ memberships:
   start: '2021-05-14'
   end: null
 - instrument_id: crm
-  start: '2008-09-12'
+  start: '2008-09-15'
   end: null
 - instrument_id: crwd
   start: '2024-06-24'
@@ -4057,16 +4053,16 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: ctas
-  start: '2000-01-01'
+  start: '2001-03-01'
   end: null
 - instrument_id: ctlt
   start: '2020-09-21'
   end: '2024-12-22'
 - instrument_id: ctra
-  start: '2000-01-01'
+  start: '2008-06-23'
   end: '2026-05-06'
 - instrument_id: ctsh
-  start: '2000-01-01'
+  start: '2006-11-17'
   end: null
 - instrument_id: ctva
   start: '2019-06-03'
@@ -4102,10 +4098,10 @@ memberships:
   start: '2021-03-22'
   end: '2025-09-21'
 - instrument_id: d
-  start: '2000-01-01'
+  start: '2016-11-30'
   end: null
 - instrument_id: dal
-  start: '2013-09-10'
+  start: '2013-09-11'
   end: null
 - instrument_id: dash
   start: '2025-03-24'
@@ -4144,10 +4140,10 @@ memberships:
   start: '2012-12-03'
   end: null
 - instrument_id: dgx
-  start: '2000-01-01'
+  start: '2002-12-12'
   end: null
 - instrument_id: dhi
-  start: '2000-01-01'
+  start: '2005-06-22'
   end: null
 - instrument_id: dhr
   start: '2000-01-01'
@@ -4171,7 +4167,7 @@ memberships:
   start: '2016-05-18'
   end: null
 - instrument_id: dltr
-  start: '2011-12-16'
+  start: '2011-12-19'
   end: null
 - instrument_id: dnb
   start: '2000-01-01'
@@ -4183,7 +4179,7 @@ memberships:
   start: '2000-01-01'
   end: '2016-09-29'
 - instrument_id: doc
-  start: '2000-01-01'
+  start: '2008-03-31'
   end: null
 - instrument_id: dov
   start: '2000-01-01'
@@ -4192,7 +4188,7 @@ memberships:
   start: '2000-01-01'
   end: '2017-08-31'
 - instrument_id: dow
-  start: '2019-04-02'
+  start: '2019-04-01'
   end: null
 - instrument_id: dps
   start: '2000-01-01'
@@ -4219,10 +4215,10 @@ memberships:
   start: '2000-01-01'
   end: '2012-09-30'
 - instrument_id: dva
-  start: '2000-01-01'
+  start: '2008-07-31'
   end: null
 - instrument_id: dvn
-  start: '2000-01-01'
+  start: '2000-08-30'
   end: null
 - instrument_id: dwdp
   start: '2017-09-01'
@@ -4240,10 +4236,10 @@ memberships:
   start: '2000-01-01'
   end: '2026-08-04'
 - instrument_id: ebay
-  start: '2000-01-01'
+  start: '2002-07-22'
   end: null
 - instrument_id: echo
-  start: '2000-01-01'
+  start: '2026-03-23'
   end: null
 - instrument_id: ecl
   start: '2000-01-01'
@@ -4255,7 +4251,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: eg
-  start: '2000-01-01'
+  start: '2017-06-19'
   end: null
 - instrument_id: eix
   start: '2000-01-01'
@@ -4264,10 +4260,10 @@ memberships:
   start: '2000-01-01'
   end: '2010-12-16'
 - instrument_id: el
-  start: '2000-01-01'
+  start: '2006-01-05'
   end: null
 - instrument_id: elv
-  start: '2000-01-01'
+  start: '2002-07-25'
   end: null
 - instrument_id: emc
   start: '2000-01-01'
@@ -4288,7 +4284,7 @@ memberships:
   start: '2021-01-07'
   end: '2025-09-21'
 - instrument_id: eog
-  start: '2000-01-01'
+  start: '2000-11-02'
   end: null
 - instrument_id: ep
   start: '2000-01-01'
@@ -4297,7 +4293,7 @@ memberships:
   start: '2021-12-14'
   end: '2026-06-01'
 - instrument_id: eqix
-  start: '2015-03-23'
+  start: '2015-03-20'
   end: null
 - instrument_id: eqt
   start: '2000-01-01'
@@ -4309,7 +4305,7 @@ memberships:
   start: '2024-09-23'
   end: null
 - instrument_id: es
-  start: '2000-01-01'
+  start: '2009-07-24'
   end: null
 - instrument_id: esrx
   start: '2003-09-25'
@@ -4339,7 +4335,7 @@ memberships:
   start: '2018-06-05'
   end: null
 - instrument_id: ew
-  start: '2011-03-31'
+  start: '2011-04-01'
   end: null
 - instrument_id: exc
   start: '2000-01-01'
@@ -4348,7 +4344,7 @@ memberships:
   start: '2025-03-24'
   end: null
 - instrument_id: expd
-  start: '2000-01-01'
+  start: '2007-10-10'
   end: null
 - instrument_id: expe
   start: '2007-10-02'
@@ -4363,13 +4359,13 @@ memberships:
   start: '2018-12-03'
   end: null
 - instrument_id: fast
-  start: '2008-09-12'
+  start: '2008-09-15'
   end: null
 - instrument_id: fbhs
   start: '2016-06-22'
   end: '2022-12-18'
 - instrument_id: fcx
-  start: '2000-01-01'
+  start: '2011-07-01'
   end: null
 - instrument_id: fdc
   start: '2000-01-01'
@@ -4393,7 +4389,7 @@ memberships:
   start: '2026-08-05'
   end: null
 - instrument_id: ffiv
-  start: '2010-12-17'
+  start: '2010-12-20'
   end: null
 - instrument_id: fhn
   start: '2000-01-01'
@@ -4405,10 +4401,10 @@ memberships:
   start: '2000-01-01'
   end: '2013-01-01'
 - instrument_id: fis
-  start: '2000-01-01'
+  start: '2006-11-10'
   end: null
 - instrument_id: fisv
-  start: '2000-01-01'
+  start: '2001-04-02'
   end: null
 - instrument_id: fitb
   start: '2000-01-01'
@@ -4441,14 +4437,8 @@ memberships:
   start: '2012-04-03'
   end: '2016-01-04'
 - instrument_id: fox
-  start: '2015-09-18'
-  end: '2019-03-18'
-- instrument_id: fox
   start: '2019-03-19'
   end: null
-- instrument_id: foxa
-  start: '2000-01-01'
-  end: '2019-03-18'
 - instrument_id: foxa
   start: '2019-03-19'
   end: null
@@ -4480,13 +4470,10 @@ memberships:
   start: '2000-01-01'
   end: '2017-03-19'
 - instrument_id: ftv
-  start: '2016-07-05'
+  start: '2016-07-01'
   end: null
 - instrument_id: gas
   start: '2000-01-01'
-  end: '2011-12-11'
-- instrument_id: gas
-  start: '2011-12-12'
   end: '2016-06-30'
 - instrument_id: gd
   start: '2000-01-01'
@@ -4501,7 +4488,7 @@ memberships:
   start: '2023-01-04'
   end: null
 - instrument_id: gen
-  start: '2000-01-01'
+  start: '2003-03-25'
   end: null
 - instrument_id: genz
   start: '2000-01-01'
@@ -4516,7 +4503,7 @@ memberships:
   start: '2000-01-01'
   end: '2014-09-19'
 - instrument_id: gild
-  start: '2000-01-01'
+  start: '2004-07-01'
   end: null
 - instrument_id: gis
   start: '2000-01-01'
@@ -4546,10 +4533,10 @@ memberships:
   start: '2000-01-01'
   end: '2015-11-17'
 - instrument_id: goog
-  start: '2000-01-01'
+  start: '2014-04-03'
   end: null
 - instrument_id: googl
-  start: '2014-04-03'
+  start: '2006-04-03'
   end: null
 - instrument_id: gpc
   start: '2000-01-01'
@@ -4567,10 +4554,10 @@ memberships:
   start: '2000-01-01'
   end: '2000-12-04'
 - instrument_id: grmn
-  start: '2012-12-11'
+  start: '2012-12-12'
   end: null
 - instrument_id: gs
-  start: '2000-01-01'
+  start: '2002-07-22'
   end: null
 - instrument_id: gt
   start: '2000-01-01'
@@ -4651,16 +4638,16 @@ memberships:
   start: '2000-01-01'
   end: '2020-09-20'
 - instrument_id: hrl
-  start: '2009-03-03'
+  start: '2009-03-04'
   end: null
 - instrument_id: hsic
-  start: '2015-03-18'
+  start: '2015-03-17'
   end: null
 - instrument_id: hsp
   start: '2000-01-01'
   end: '2015-09-01'
 - instrument_id: hst
-  start: '2000-01-01'
+  start: '2007-03-20'
   end: null
 - instrument_id: hsy
   start: '2000-01-01'
@@ -4669,10 +4656,10 @@ memberships:
   start: '2023-10-18'
   end: null
 - instrument_id: hum
-  start: '2000-01-01'
+  start: '2012-12-10'
   end: null
 - instrument_id: hwm
-  start: '2020-04-01'
+  start: '2016-10-21'
   end: null
 - instrument_id: ibkr
   start: '2025-08-28'
@@ -4726,31 +4713,34 @@ memberships:
   start: '2018-03-07'
   end: '2022-06-20'
 - instrument_id: iqv
-  start: '2017-11-15'
+  start: '2017-08-29'
+  end: '2017-11-14'
+- instrument_id: iqv
+  start: '2025-11-03'
   end: null
 - instrument_id: ir
-  start: '2020-03-02'
+  start: '2020-03-03'
   end: null
 - instrument_id: irm
-  start: '2000-01-01'
+  start: '2009-01-06'
   end: null
 - instrument_id: isrg
-  start: '2000-01-01'
+  start: '2008-06-02'
   end: null
 - instrument_id: it
   start: '2017-04-05'
   end: null
-- instrument_id: itt|
+- instrument_id: itt
   start: '2000-01-01'
   end: '2011-10-30'
 - instrument_id: itw
   start: '2000-01-01'
   end: null
 - instrument_id: ivz
-  start: '2000-01-01'
+  start: '2008-08-21'
   end: null
 - instrument_id: j
-  start: '2000-01-01'
+  start: '2007-10-26'
   end: null
 - instrument_id: jbht
   start: '2015-07-01'
@@ -4762,16 +4752,16 @@ memberships:
   start: '2023-12-18'
   end: null
 - instrument_id: jci
-  start: '2000-01-01'
+  start: '2010-08-27'
   end: null
-- instrument_id: jcp|
+- instrument_id: jcp
   start: '2000-01-01'
   end: '2013-12-01'
 - instrument_id: jdsu
   start: '2000-07-27'
   end: '2013-12-22'
 - instrument_id: jef
-  start: '2000-01-01'
+  start: '2007-08-24'
   end: '2019-09-25'
 - instrument_id: jkhy
   start: '2018-11-13'
@@ -4789,7 +4779,7 @@ memberships:
   start: '2000-01-01'
   end: '2009-03-02'
 - instrument_id: joy
-  start: '2000-01-01'
+  start: '2011-02-25'
   end: '2015-10-06'
 - instrument_id: jpm
   start: '2000-01-01'
@@ -4822,7 +4812,7 @@ memberships:
   start: '2015-07-06'
   end: null
 - instrument_id: kim
-  start: '2000-01-01'
+  start: '2006-04-04'
   end: null
 - instrument_id: kkr
   start: '2024-06-24'
@@ -4834,7 +4824,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: kmi
-  start: '2012-05-17'
+  start: '2012-05-25'
   end: null
 - instrument_id: kmx
   start: '2010-06-28'
@@ -4873,13 +4863,13 @@ memberships:
   start: '2000-01-01'
   end: '2008-09-15'
 - instrument_id: len
-  start: '2000-01-01'
+  start: '2005-10-04'
   end: null
 - instrument_id: lh
-  start: '2000-01-01'
+  start: '2004-11-01'
   end: null
 - instrument_id: lhx
-  start: '2000-01-01'
+  start: '2008-09-22'
   end: null
 - instrument_id: life
   start: '2000-01-01'
@@ -4924,7 +4914,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: lrcx
-  start: '2012-06-05'
+  start: '2012-06-29'
   end: null
 - instrument_id: lsi
   start: '2000-01-01'
@@ -4960,7 +4950,7 @@ memberships:
   start: '2000-01-01'
   end: '2020-04-05'
 - instrument_id: ma
-  start: '2000-01-01'
+  start: '2008-07-18'
   end: null
 - instrument_id: maa
   start: '2016-12-02'
@@ -4987,7 +4977,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: mchp
-  start: '2000-01-01'
+  start: '2007-09-07'
   end: null
 - instrument_id: mck
   start: '2000-01-01'
@@ -5008,7 +4998,7 @@ memberships:
   start: '2008-06-23'
   end: '2011-05-31'
 - instrument_id: met
-  start: '2000-01-01'
+  start: '2000-12-11'
   end: null
 - instrument_id: meta
   start: '2013-12-23'
@@ -5035,7 +5025,7 @@ memberships:
   start: '2009-12-18'
   end: '2017-06-18'
 - instrument_id: mkc
-  start: '2000-01-01'
+  start: '2003-03-20'
   end: null
 - instrument_id: mktx
   start: '2019-07-01'
@@ -5053,7 +5043,7 @@ memberships:
   start: '2014-08-18'
   end: '2017-07-25'
 - instrument_id: mnst
-  start: '2012-06-29'
+  start: '2012-06-28'
   end: null
 - instrument_id: mo
   start: '2000-01-01'
@@ -5068,10 +5058,10 @@ memberships:
   start: '2000-01-01'
   end: '2018-06-06'
 - instrument_id: mos
-  start: '2011-09-23'
+  start: '2011-09-26'
   end: null
 - instrument_id: mpc
-  start: '2011-06-30'
+  start: '2011-07-01'
   end: null
 - instrument_id: mpwr
   start: '2021-02-12'
@@ -5104,7 +5094,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: mtb
-  start: '2000-01-01'
+  start: '2004-02-23'
   end: null
 - instrument_id: mtch
   start: '2021-09-20'
@@ -5143,7 +5133,7 @@ memberships:
   start: '2000-01-01'
   end: '2007-09-30'
 - instrument_id: ndaq
-  start: '2000-01-01'
+  start: '2008-10-22'
   end: null
 - instrument_id: ndsn
   start: '2022-02-15'
@@ -5158,13 +5148,13 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: nflx
-  start: '2010-12-17'
+  start: '2010-12-20'
   end: null
 - instrument_id: nfx
   start: '2010-12-17'
   end: '2019-02-14'
 - instrument_id: ni
-  start: '2000-01-01'
+  start: '2000-11-02'
   end: null
 - instrument_id: nke
   start: '2000-01-01'
@@ -5188,7 +5178,7 @@ memberships:
   start: '2019-11-21'
   end: null
 - instrument_id: nrg
-  start: '2000-01-01'
+  start: '2010-01-29'
   end: null
 - instrument_id: nsc
   start: '2000-01-01'
@@ -5206,7 +5196,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: nvda
-  start: '2000-01-01'
+  start: '2001-11-30'
   end: null
 - instrument_id: nvls
   start: '2000-01-01'
@@ -5221,7 +5211,7 @@ memberships:
   start: '2015-09-18'
   end: null
 - instrument_id: nwsa
-  start: '2013-07-01'
+  start: '2013-08-01'
   end: null
 - instrument_id: nxpi
   start: '2021-03-22'
@@ -5251,7 +5241,7 @@ memberships:
   start: '2008-12-31'
   end: '2016-12-01'
 - instrument_id: oke
-  start: '2000-01-01'
+  start: '2010-03-15'
   end: null
 - instrument_id: omc
   start: '2000-01-01'
@@ -5266,7 +5256,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: orly
-  start: '2000-01-01'
+  start: '2009-03-27'
   end: null
 - instrument_id: otis
   start: '2020-04-03'
@@ -5329,7 +5319,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: pfg
-  start: '2000-01-01'
+  start: '2002-07-22'
   end: null
 - instrument_id: pg
   start: '2000-01-01'
@@ -5350,7 +5340,7 @@ memberships:
   start: '2017-07-26'
   end: null
 - instrument_id: pld
-  start: '2000-01-01'
+  start: '2003-07-17'
   end: null
 - instrument_id: pll
   start: '2000-01-01'
@@ -5359,7 +5349,7 @@ memberships:
   start: '2024-09-23'
   end: null
 - instrument_id: pm
-  start: '2000-01-01'
+  start: '2008-03-31'
   end: null
 - instrument_id: pnc
   start: '2000-01-01'
@@ -5383,22 +5373,22 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: ppl
-  start: '2000-01-01'
+  start: '2001-10-01'
   end: null
 - instrument_id: prgo
   start: '2011-12-16'
   end: '2021-09-19'
 - instrument_id: pru
-  start: '2000-01-01'
+  start: '2002-07-22'
   end: null
 - instrument_id: psa
-  start: '2000-01-01'
+  start: '2005-08-19'
   end: null
 - instrument_id: psky
   start: '2000-01-01'
   end: null
 - instrument_id: psx
-  start: '2012-04-23'
+  start: '2012-05-01'
   end: null
 - instrument_id: ptc
   start: '2021-04-20'
@@ -5410,7 +5400,7 @@ memberships:
   start: '2013-02-15'
   end: '2022-09-18'
 - instrument_id: pwr
-  start: '2000-01-01'
+  start: '2009-07-01'
   end: null
 - instrument_id: pxd
   start: '2000-01-01'
@@ -5418,12 +5408,6 @@ memberships:
 - instrument_id: pypl
   start: '2015-07-20'
   end: null
-- instrument_id: q
-  start: '2000-01-01'
-  end: '2011-03-30'
-- instrument_id: q
-  start: '2017-08-29'
-  end: '2017-11-14'
 - instrument_id: q
   start: '2025-11-03'
   end: null
@@ -5461,7 +5445,7 @@ memberships:
   start: '2017-03-02'
   end: null
 - instrument_id: regn
-  start: '2013-04-30'
+  start: '2013-05-01'
   end: null
 - instrument_id: rf
   start: '2000-01-01'
@@ -5479,22 +5463,22 @@ memberships:
   start: '2017-03-20'
   end: null
 - instrument_id: rl
-  start: '2000-01-01'
+  start: '2007-02-02'
   end: null
 - instrument_id: rmd
   start: '2017-07-26'
   end: null
 - instrument_id: rok
-  start: '2000-01-01'
+  start: '2000-03-12'
   end: null
 - instrument_id: rol
   start: '2018-10-01'
   end: null
 - instrument_id: rop
-  start: '2000-01-01'
+  start: '2009-12-23'
   end: null
 - instrument_id: rost
-  start: '2009-12-18'
+  start: '2009-12-21'
   end: null
 - instrument_id: rrc
   start: '2007-12-20'
@@ -5503,7 +5487,7 @@ memberships:
   start: '2000-01-01'
   end: '2012-12-10'
 - instrument_id: rsg
-  start: '2000-01-01'
+  start: '2008-12-05'
   end: null
 - instrument_id: rsh
   start: '2000-01-01'
@@ -5575,7 +5559,7 @@ memberships:
   start: '2018-03-19'
   end: '2023-03-14'
 - instrument_id: sjm
-  start: '2000-01-01'
+  start: '2008-11-06'
   end: null
 - instrument_id: slb
   start: '2000-01-01'
@@ -5623,7 +5607,7 @@ memberships:
   start: '2024-04-01'
   end: null
 - instrument_id: spg
-  start: '2000-01-01'
+  start: '2002-06-26'
   end: null
 - instrument_id: spgi
   start: '2000-01-01'
@@ -5635,7 +5619,7 @@ memberships:
   start: '2000-01-01'
   end: '2018-12-02'
 - instrument_id: sre
-  start: '2000-01-01'
+  start: '2017-03-17'
   end: null
 - instrument_id: ste
   start: '2019-12-23'
@@ -5653,7 +5637,7 @@ memberships:
   start: '2000-01-01'
   end: '2010-06-29'
 - instrument_id: stt
-  start: '2000-01-01'
+  start: '2003-03-14'
   end: null
 - instrument_id: stx
   start: '2012-07-02'
@@ -5668,7 +5652,7 @@ memberships:
   start: '2000-01-01'
   end: '2012-04-22'
 - instrument_id: sw
-  start: '2000-01-01'
+  start: '2024-07-08'
   end: null
 - instrument_id: swk
   start: '2000-01-01'
@@ -5686,7 +5670,7 @@ memberships:
   start: '2015-11-18'
   end: null
 - instrument_id: syk
-  start: '2000-01-01'
+  start: '2000-12-12'
   end: null
 - instrument_id: syy
   start: '2000-01-01'
@@ -5719,7 +5703,7 @@ memberships:
   start: '2000-01-01'
   end: '2009-06-24'
 - instrument_id: tel
-  start: '2011-10-14'
+  start: '2011-10-17'
   end: null
 - instrument_id: ter
   start: '2000-01-01'
@@ -5761,7 +5745,7 @@ memberships:
   start: '2000-01-01'
   end: '2000-06-11'
 - instrument_id: tmo
-  start: '2000-01-01'
+  start: '2004-08-03'
   end: null
 - instrument_id: tmus
   start: '2019-07-15'
@@ -5770,7 +5754,7 @@ memberships:
   start: '2024-11-26'
   end: null
 - instrument_id: tpr
-  start: '2000-01-01'
+  start: '2004-09-01'
   end: null
 - instrument_id: trb
   start: '2000-01-01'
@@ -5785,10 +5769,10 @@ memberships:
   start: '2021-01-21'
   end: null
 - instrument_id: trow
-  start: '2000-01-01'
+  start: '2019-07-29'
   end: null
 - instrument_id: trv
-  start: '2000-01-01'
+  start: '2002-08-21'
   end: null
 - instrument_id: tsco
   start: '2014-01-24'
@@ -5800,13 +5784,13 @@ memberships:
   start: '2020-12-21'
   end: null
 - instrument_id: tsn
-  start: '2000-01-01'
+  start: '2005-08-10'
   end: null
 - instrument_id: tss
   start: '2000-01-01'
   end: '2019-09-22'
 - instrument_id: tt
-  start: '2000-01-01'
+  start: '2010-11-17'
   end: null
 - instrument_id: ttd
   start: '2025-07-18'
@@ -5824,7 +5808,7 @@ memberships:
   start: '2000-01-01'
   end: '2018-06-19'
 - instrument_id: txn
-  start: '2000-01-01'
+  start: '2001-03-12'
   end: null
 - instrument_id: txt
   start: '2000-01-01'
@@ -5839,10 +5823,10 @@ memberships:
   start: '2016-04-08'
   end: '2022-06-20'
 - instrument_id: uaa
-  start: '2000-01-01'
+  start: '2014-05-01'
   end: '2022-06-20'
 - instrument_id: ual
-  start: '2015-09-02'
+  start: '2015-09-03'
   end: null
 - instrument_id: uber
   start: '2023-12-18'
@@ -5866,7 +5850,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: ups
-  start: '2000-01-01'
+  start: '2002-07-22'
   end: null
 - instrument_id: urbn
   start: '2000-01-01'
@@ -5878,7 +5862,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: v
-  start: '2009-12-18'
+  start: '2009-12-21'
   end: null
 - instrument_id: var
   start: '2000-01-01'
@@ -5896,7 +5880,7 @@ memberships:
   start: '2022-06-08'
   end: null
 - instrument_id: vlo
-  start: '2000-01-01'
+  start: '2002-12-20'
   end: null
 - instrument_id: vlto
   start: '2023-10-02'
@@ -5905,7 +5889,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: vmrk
-  start: '2000-01-01'
+  start: '2001-12-03'
   end: null
 - instrument_id: vno
   start: '2000-01-01'
@@ -5914,25 +5898,25 @@ memberships:
   start: '2020-10-09'
   end: '2021-03-21'
 - instrument_id: vrsk
-  start: '2015-10-07'
+  start: '2015-10-08'
   end: null
 - instrument_id: vrsn
-  start: '2000-01-01'
+  start: '2006-02-01'
   end: null
 - instrument_id: vrt
   start: '2026-03-23'
   end: null
 - instrument_id: vrtx
-  start: '2013-09-20'
+  start: '2013-09-23'
   end: null
 - instrument_id: vst
   start: '2024-05-08'
   end: null
 - instrument_id: vtr
-  start: '2009-03-03'
+  start: '2009-03-04'
   end: null
 - instrument_id: vtrs
-  start: '2000-01-01'
+  start: '2004-04-23'
   end: null
 - instrument_id: vz
   start: '2000-01-01'
@@ -5941,7 +5925,7 @@ memberships:
   start: '2019-02-27'
   end: null
 - instrument_id: wat
-  start: '2000-01-01'
+  start: '2002-01-02'
   end: null
 - instrument_id: wb
   start: '2000-01-01'
@@ -5959,13 +5943,13 @@ memberships:
   start: '2024-12-23'
   end: null
 - instrument_id: wdc
-  start: '2000-01-01'
+  start: '2009-07-01'
   end: null
 - instrument_id: wec
-  start: '2000-01-01'
+  start: '2008-10-31'
   end: null
 - instrument_id: well
-  start: '2000-01-01'
+  start: '2009-01-30'
   end: null
 - instrument_id: wfc
   start: '2000-01-01'
@@ -5982,9 +5966,6 @@ memberships:
 - instrument_id: win
   start: '2000-01-01'
   end: '2015-04-06'
-- instrument_id: wltw
-  start: '2016-01-05'
-  end: '2022-01-09'
 - instrument_id: wm
   start: '2000-01-01'
   end: null
@@ -6007,7 +5988,7 @@ memberships:
   start: '2020-05-22'
   end: null
 - instrument_id: wtw
-  start: '2022-01-10'
+  start: '2016-01-05'
   end: null
 - instrument_id: wu
   start: '2000-01-01'
@@ -6019,7 +6000,7 @@ memberships:
   start: '2000-01-01'
   end: '2018-05-30'
 - instrument_id: wynn
-  start: '2000-01-01'
+  start: '2008-11-14'
   end: null
 - instrument_id: x
   start: '2000-01-01'
@@ -6049,7 +6030,7 @@ memberships:
   start: '2000-01-01'
   end: '2010-06-27'
 - instrument_id: xyl
-  start: '2011-10-31'
+  start: '2011-11-01'
   end: null
 - instrument_id: xyz
   start: '2025-07-23'
@@ -6061,7 +6042,7 @@ memberships:
   start: '2000-01-01'
   end: null
 - instrument_id: zbh
-  start: '2000-01-01'
+  start: '2001-08-07'
   end: null
 - instrument_id: zbra
   start: '2019-12-23'
