@@ -1466,6 +1466,11 @@ def _listed(entries: list, show) -> str:
     return "; ".join(show(entry) for entry in entries) if entries else "none"
 
 
+def _dated_ticker(entry: tuple[date, str, str]) -> str:
+    day, ticker, name = entry
+    return f"{day} {ticker} ({name})" if name else f"{day} {ticker}"
+
+
 @app.command("build-universe")
 def build_universe_command() -> None:
     """Rebuild the S&P 500 point-in-time universe from pinned Wikipedia revisions.
@@ -1507,15 +1512,22 @@ def build_universe_command() -> None:
     typer.echo("To check (renames go to sp500-renames.yaml; then rebuild):")
     typer.echo(
         f"Added but not in the index afterwards ({len(reconstruction.added_but_not_in_index)}): "
-        + _listed(reconstruction.added_but_not_in_index, lambda e: f"{e[0]} {e[1]}")
+        + _listed(reconstruction.added_but_not_in_index, _dated_ticker)
     )
     typer.echo(
         "Removed but still in the index afterwards "
         f"({len(reconstruction.removed_but_still_in_index)}): "
-        + _listed(reconstruction.removed_but_still_in_index, lambda e: f"{e[0]} {e[1]}")
+        + _listed(reconstruction.removed_but_still_in_index, _dated_ticker)
     )
     typer.echo(
-        "Date added on the page differs from the reconstruction "
+        "Present period starts at the page's date added, not the table's "
+        f"({len(reconstruction.started_at_date_added)}): "
+        + _listed(
+            reconstruction.started_at_date_added, lambda e: f"{e[0]} page {e[1]}, table {e[2]}"
+        )
+    )
+    typer.echo(
+        "Date added on the page reaches into an earlier period; the table's start stays "
         f"({len(reconstruction.date_added_mismatches)}): "
         + _listed(
             reconstruction.date_added_mismatches, lambda e: f"{e[0]} page {e[1]}, rebuilt {e[2]}"

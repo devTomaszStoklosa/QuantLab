@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 
 from quantlab import cli
 from quantlab.core import sp500
-from quantlab.core.sp500 import Change, Constituent, Page, Revision
+from quantlab.core.sp500 import Change, Constituent, Page, Rename, Renames, Revision
 from quantlab.core.universe import Membership, Universe
 
 # Shaped like Wikipedia's two pages (a date spanning two rows, headers over two rows,
@@ -70,6 +70,7 @@ _HISTORY_HTML = """
 </div>
 """
 _SINCE, _AS_OF = date(2000, 1, 1), date(2026, 9, 24)
+_FB = Renames((Rename("FB", "META"),))
 
 
 def _periods(memberships: list[Membership]) -> set[tuple[str, date, date | None]]:
@@ -86,11 +87,11 @@ def test_the_pages_give_constituents_and_changes_as_tiingo_spells_tickers() -> N
         Constituent("NEW", date(2020, 6, 22)),  # the footnote marker is left out
     ]
     assert page.changes == [
-        Change(date(2020, 6, 22), "NEW", "OLD"),
-        Change(date(2013, 12, 23), "FB", "GONE"),
-        Change(date(2013, 12, 23), None, "DEAD"),  # the date spans two rows
-        Change(date(2010, 2, 16), "BRK-B", "BNI"),
-        Change(date(1999, 3, 3), "XXX", "YYY"),
+        Change(date(2020, 6, 22), "NEW", "OLD", "New Co", "Old Co"),
+        Change(date(2013, 12, 23), "FB", "GONE", "Facebook", "Gone Co"),
+        Change(date(2013, 12, 23), None, "DEAD", "", "Dead Co"),  # the date spans two rows
+        Change(date(2010, 2, 16), "BRK-B", "BNI", "Berkshire", "Burlington"),
+        Change(date(1999, 3, 3), "XXX", "YYY", "Early", "Earlier"),
     ]
     assert page.unreadable_rows == ["n/a | ZZZ | Undated | ?"]
 
@@ -101,9 +102,7 @@ def test_a_page_without_the_table_names_the_tables_it_has() -> None:
 
 
 def test_walking_back_through_the_changes_gives_every_membership() -> None:
-    result = sp500.reconstruct(
-        sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), {"FB": "META"}, _SINCE, _AS_OF
-    )
+    result = sp500.reconstruct(sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), _FB, _SINCE, _AS_OF)
 
     assert _periods(result.memberships) == {
         ("AAA", date(2000, 1, 1), None),  # a member before the table starts
@@ -117,26 +116,104 @@ def test_walking_back_through_the_changes_gives_every_membership() -> None:
     }
     assert result.added_but_not_in_index == []
     assert result.removed_but_still_in_index == []
+    assert result.started_at_date_added == []  # the list and the table agree
     assert result.date_added_mismatches == []
     assert result.several_periods == []
 
 
-def test_a_rename_missing_from_the_map_is_reported_twice_over() -> None:
-    result = sp500.reconstruct(sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), {}, _SINCE, _AS_OF)
+def test_a_rename_missing_from_the_map_is_reported_with_the_security() -> None:
+    result = sp500.reconstruct(
+        sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), Renames(), _SINCE, _AS_OF
+    )
 
-    assert result.added_but_not_in_index == [(date(2013, 12, 23), "FB")]
-    # META then looks like a member since before the table, unlike the page's date added.
-    assert ("META", date(2000, 1, 1), None) in _periods(result.memberships)
-    assert result.date_added_mismatches == [("META", date(2013, 12, 23), date(2000, 1, 1))]
+    assert result.added_but_not_in_index == [(date(2013, 12, 23), "FB", "Facebook")]
+    # The list's date added still starts META's period, not the table's start.
+    assert ("META", date(2013, 12, 23), None) in _periods(result.memberships)
+    assert result.started_at_date_added == [("META", date(2013, 12, 23), date(2000, 1, 1))]
 
 
 def test_a_removal_of_a_ticker_still_in_the_index_is_reported() -> None:
-    page = Page([Constituent("AAA", None)], [Change(date(2015, 5, 1), None, "AAA")], [])
+    page = Page(
+        [Constituent("AAA", None)], [Change(date(2015, 5, 1), None, "AAA", "", "Alpha")], []
+    )
 
-    result = sp500.reconstruct(page, {}, _SINCE, _AS_OF)
+    result = sp500.reconstruct(page, Renames(), _SINCE, _AS_OF)
 
-    assert result.removed_but_still_in_index == [(date(2015, 5, 1), "AAA")]
+    assert result.removed_but_still_in_index == [(date(2015, 5, 1), "AAA", "Alpha")]
     assert _periods(result.memberships) == {("AAA", date(2000, 1, 1), None)}
+
+
+def test_a_constituent_without_its_addition_in_the_table_starts_at_its_date_added() -> None:
+    page = Page([Constituent("MMM", date(2008, 7, 18))], [], [])
+
+    result = sp500.reconstruct(page, Renames(), _SINCE, _AS_OF)
+
+    # Not a member before it joined the index, which would favour momentum.
+    assert _periods(result.memberships) == {("MMM", date(2008, 7, 18), None)}
+    assert result.started_at_date_added == [("MMM", date(2008, 7, 18), date(2000, 1, 1))]
+
+
+def test_a_date_added_before_the_table_s_start_extends_the_present_period() -> None:
+    # A share class change the table records as an addition, the first one missing.
+    page = Page([Constituent("GGG", date(2006, 4, 3))], [Change(date(2014, 4, 3), "GGG", None)], [])
+
+    result = sp500.reconstruct(page, Renames(), _SINCE, _AS_OF)
+
+    assert _periods(result.memberships) == {("GGG", date(2006, 4, 3), None)}
+
+
+def test_a_date_added_inside_an_earlier_period_leaves_the_table_s_start() -> None:
+    page = Page(
+        [Constituent("AAA", date(2011, 1, 3))],
+        [Change(date(2018, 1, 2), "AAA", None), Change(date(2012, 7, 1), None, "AAA")],
+        [],
+    )
+
+    result = sp500.reconstruct(page, Renames(), _SINCE, _AS_OF)
+
+    assert ("AAA", date(2018, 1, 2), None) in _periods(result.memberships)
+    assert result.date_added_mismatches == [("AAA", date(2011, 1, 3), date(2018, 1, 2))]
+    assert result.started_at_date_added == []
+
+
+def test_a_ticker_change_recorded_as_an_addition_and_a_removal_is_one_membership() -> None:
+    page = Page(
+        [Constituent("WTW", date(2016, 1, 5))],
+        [Change(date(2022, 1, 10), "WTW", "WLTW"), Change(date(2016, 1, 5), "WLTW", None)],
+        [],
+    )
+
+    result = sp500.reconstruct(page, Renames((Rename("WLTW", "WTW"),)), _SINCE, _AS_OF)
+
+    assert _periods(result.memberships) == {("WTW", date(2016, 1, 5), None)}
+    assert (result.several_periods, result.date_added_mismatches) == ([], [])
+
+
+def test_a_dated_rename_maps_a_reused_ticker_only_inside_its_window() -> None:
+    # UA was Under Armour's class A (UAA today) until the class C shares took it in 2016.
+    page = Page(
+        [],
+        [
+            Change(date(2021, 6, 1), None, "UA"),
+            Change(date(2021, 6, 1), None, "UAA"),
+            Change(date(2016, 4, 8), "UA", None),
+            Change(date(2014, 5, 1), "UA", None),
+        ],
+        [],
+    )
+    dated = Renames((Rename("UA", "UAA", end=date(2016, 4, 7)),))
+
+    renamed = sp500.reconstruct(page, dated, _SINCE, _AS_OF)
+    plain = sp500.reconstruct(page, Renames(), _SINCE, _AS_OF)
+
+    assert _periods(renamed.memberships) == {
+        ("UA", date(2016, 4, 8), date(2021, 5, 31)),
+        ("UAA", date(2014, 5, 1), date(2021, 5, 31)),
+    }
+    assert renamed.added_but_not_in_index == []
+    # Without the window, UAA looks like a member long before it joined the index.
+    assert ("UAA", date(2000, 1, 1), date(2021, 5, 31)) in _periods(plain.memberships)
+    assert plain.added_but_not_in_index == [(date(2014, 5, 1), "UA", "")]
 
 
 def test_a_ticker_that_left_and_came_back_has_two_periods() -> None:
@@ -146,7 +223,7 @@ def test_a_ticker_that_left_and_came_back_has_two_periods() -> None:
         [],
     )
 
-    result = sp500.reconstruct(page, {}, _SINCE, _AS_OF)
+    result = sp500.reconstruct(page, Renames(), _SINCE, _AS_OF)
 
     assert _periods(result.memberships) == {
         ("AAA", date(2000, 1, 1), date(2012, 6, 30)),
@@ -157,9 +234,7 @@ def test_a_ticker_that_left_and_came_back_has_two_periods() -> None:
 
 
 def test_the_universe_trades_through_tiingo_with_spy_as_a_benchmark() -> None:
-    result = sp500.reconstruct(
-        sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), {"FB": "META"}, _SINCE, _AS_OF
-    )
+    result = sp500.reconstruct(sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), _FB, _SINCE, _AS_OF)
 
     universe = sp500.universe_from(result, _AS_OF)
 
@@ -176,9 +251,7 @@ def test_the_file_carries_its_revisions_and_attribution_and_loads_back() -> None
         Revision(sp500.CONSTITUENTS_PAGE, 123456789, "2026-09-20T22:18:13Z", _LIST_HTML),
         Revision(sp500.CHANGES_PAGE, 123456790, "2026-09-21T20:49:21Z", _HISTORY_HTML),
     ]
-    result = sp500.reconstruct(
-        sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), {"FB": "META"}, _SINCE, _AS_OF
-    )
+    result = sp500.reconstruct(sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), _FB, _SINCE, _AS_OF)
     universe = sp500.universe_from(result, _AS_OF)
 
     text = sp500.universe_yaml(universe, revisions, _SINCE)
@@ -246,10 +319,33 @@ def test_build_universe_writes_the_file_and_lists_what_to_check(tmp_path, monkey
     )
     assert "oldid=7" in (tmp_path / "sp500.yaml").read_text(encoding="utf-8")
     assert "Added but not in the index afterwards (0): none" in result.output
+    assert "Present period starts at the page's date added, not the table's (0): none" in (
+        result.output
+    )
     assert "Rows of the table of changes without a readable date (1): n/a | ZZZ" in result.output
 
 
-def test_the_committed_renames_map_the_facebook_ticker_to_meta() -> None:
-    renames = (Path(str(cli._UNIVERSES_DIR)) / "sp500-renames.yaml").read_text(encoding="utf-8")
+def test_the_committed_renames_cover_plain_and_dated_ticker_changes() -> None:
+    text = (Path(str(cli._UNIVERSES_DIR)) / "sp500-renames.yaml").read_text(encoding="utf-8")
 
-    assert sp500.load_renames(renames) == {"FB": "META"}
+    renames = sp500.load_renames(text)
+
+    assert renames.ticker("FB", date(2013, 12, 23)) == "META"
+    assert renames.ticker("PCLN", date(2009, 11, 3)) == "BKNG"
+    assert renames.ticker("AAPL", date(2009, 11, 3)) == "AAPL"
+    assert renames.ticker("UA", date(2014, 5, 1)) == "UAA"
+    assert renames.ticker("UA", date(2016, 4, 8)) == "UA"
+    assert renames.ticker("IR", date(2010, 11, 17)) == "TT"
+    assert renames.ticker("IR", date(2020, 3, 2)) == "IR"
+    assert renames.ticker("Q", date(2009, 1, 1)) == "Q"
+    assert renames.ticker("Q", date(2017, 11, 15)) == "IQV"
+
+
+def test_a_dated_rename_without_a_window_is_refused() -> None:
+    with pytest.raises(ValueError, match="needs ticker, to and from or until"):
+        sp500.load_renames("dated_renames:\n  - {ticker: UA, to: UAA}\n")
+
+
+def test_a_stray_character_next_to_a_ticker_is_dropped() -> None:
+    assert sp500.normalize_ticker("ALLE|") == "ALLE"
+    assert sp500.normalize_ticker(" brk.b ") == "BRK-B"

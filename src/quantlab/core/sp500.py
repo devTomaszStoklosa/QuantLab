@@ -13,6 +13,7 @@ Content from Wikipedia is licensed CC BY-SA 4.0; the universe file carries the
 attribution and the revision it was built from.
 """
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
@@ -157,11 +158,17 @@ def _headers(grid: list[list[_Cell]]) -> tuple[list[str], list[list[_Cell]]]:
     return names, grid
 
 
+def _optional_column(names: list[str], *words: str) -> int | None:
+    return next(
+        (index for index, name in enumerate(names) if all(word in name for word in words)), None
+    )
+
+
 def _column(names: list[str], *words: str) -> int:
-    for index, name in enumerate(names):
-        if all(word in name for word in words):
-            return index
-    raise ValueError(f"No column with {' and '.join(words)!r} among {names}")
+    index = _optional_column(names, *words)
+    if index is None:
+        raise ValueError(f"No column with {' and '.join(words)!r} among {names}")
+    return index
 
 
 def _find(tables: list[_Table], table_id: str, *words: str) -> _Table:
@@ -180,8 +187,9 @@ def _find(tables: list[_Table], table_id: str, *words: str) -> _Table:
 
 
 def normalize_ticker(text: str) -> str:
-    """A ticker as Tiingo spells it: upper case, a class suffix after a hyphen (BRK-B)."""
-    return _clean(text).upper().replace(".", "-").replace(" ", "")
+    """A ticker as Tiingo spells it: upper case, a class suffix after a hyphen (BRK-B).
+    Anything else a cell carries (a stray "|" typed next to a ticker) is dropped."""
+    return re.sub(r"[^A-Z0-9-]", "", _clean(text).upper().replace(".", "-"))
 
 
 def _parse_date(text: str) -> date | None:
@@ -208,6 +216,8 @@ class Change:
     effective: date
     added: str | None
     removed: str | None
+    added_name: str = ""  # the security, for the build report
+    removed_name: str = ""
 
 
 @dataclass
@@ -244,6 +254,14 @@ def parse_changes(html: str) -> tuple[list[Change], list[str]]:
         _column(names, "added", "ticker"),
         _column(names, "removed", "ticker"),
     )
+    added_name, removed_name = (
+        _optional_column(names, "added", "security"),
+        _optional_column(names, "removed", "security"),
+    )
+
+    def name(row: list[_Cell], column: int | None) -> str:
+        return _clean(row[column].text) if column is not None and column < len(row) else ""
+
     changes, unreadable = [], []
     for row in rows:
         if len(row) <= max(effective, added_ticker, removed_ticker):
@@ -257,6 +275,8 @@ def parse_changes(html: str) -> tuple[list[Change], list[str]]:
                 effective=day,
                 added=normalize_ticker(row[added_ticker].text) or None,
                 removed=normalize_ticker(row[removed_ticker].text) or None,
+                added_name=name(row, added_name),
+                removed_name=name(row, removed_name),
             )
         )
     return changes, unreadable
@@ -271,29 +291,72 @@ def parse_pages(constituents_html: str, changes_html: str) -> Page:
 # --- walking back through the changes ------------------------------------------------
 
 
+@dataclass(frozen=True)
+class Rename:
+    """A ticker the table used -> the one the company trades under today, for the
+    changes effective from `start` to `end` (either open when None). A window is
+    for a ticker another company used before or after."""
+
+    old: str
+    new: str
+    start: date | None = None
+    end: date | None = None
+
+    def covers(self, day: date) -> bool:
+        return (self.start is None or self.start <= day) and (self.end is None or day <= self.end)
+
+
+@dataclass(frozen=True)
+class Renames:
+    entries: tuple[Rename, ...] = ()
+
+    def ticker(self, ticker: str, day: date) -> str:
+        """The ticker the company named in a change effective on `day` trades under today."""
+        return next((r.new for r in self.entries if r.old == ticker and r.covers(day)), ticker)
+
+
 @dataclass
 class Reconstruction:
     memberships: list[Membership]
-    # What the table of changes contradicts; every entry is a date and a ticker to check.
-    added_but_not_in_index: list[tuple[date, str]]
-    removed_but_still_in_index: list[tuple[date, str]]
+    # What the table of changes contradicts; every entry is a date, a ticker and the
+    # security the table names, to check.
+    added_but_not_in_index: list[tuple[date, str, str]]
+    removed_but_still_in_index: list[tuple[date, str, str]]
+    # Current constituents whose present period starts at the list's date added instead
+    # of the table's start: ticker, the list's date, the table's.
+    started_at_date_added: list[tuple[str, date, date]]
+    # The list's date added reaches into an earlier period, so the table's start stays.
     date_added_mismatches: list[tuple[str, date, date]]  # ticker, page's date, reconstructed
     several_periods: list[str]
     unreadable_rows: list[str]
 
 
-def reconstruct(page: Page, renames: dict[str, str], since: date, as_of: date) -> Reconstruction:
+def _merged(spans: list[Membership]) -> list[Membership]:
+    """One ticker's periods, contiguous ones joined: a ticker change the table records
+    as an addition and a removal is one membership once the old ticker is renamed."""
+    merged: list[Membership] = []
+    for span in sorted(spans, key=lambda s: s.start):
+        last = merged[-1] if merged else None
+        if last is not None and last.end is not None and last.end + timedelta(days=1) == span.start:
+            merged[-1] = last.model_copy(update={"end": span.end})
+        else:
+            merged.append(span)
+    return merged
+
+
+def reconstruct(page: Page, renames: Renames, since: date, as_of: date) -> Reconstruction:
     """Membership periods from `since` to today by undoing the changes, newest first.
 
     A change effective on D makes the added ticker a member from D and the removed
     one a member until D - 1. `renames` maps a ticker the table used at the time to
     the one the company trades under today. Changes before `since` are not undone,
     so everyone in the index then is a member from `since`.
+
+    The table misses some additions, which would make a company a member before it
+    joined the index; the list's date added is when a constituent's present period
+    began, so it starts that period, unless it reaches into an earlier period of the
+    same ticker (q5 build review, 2026-09-28).
     """
-
-    def rename(ticker: str) -> str:
-        return renames.get(ticker, ticker)
-
     members: dict[str, date | None] = {c.ticker: None for c in page.constituents}  # -> end
     periods: dict[str, list[Membership]] = defaultdict(list)
     added_but_not_in_index, removed_but_still_in_index = [], []
@@ -305,44 +368,52 @@ def reconstruct(page: Page, renames: dict[str, str], since: date, as_of: date) -
     )
     for change in changes:
         if change.added is not None:
-            added = rename(change.added)
+            added = renames.ticker(change.added, change.effective)
             in_index = added in members
             end = members.get(added)
             if not in_index or (end is not None and end < change.effective):
                 # Not in the index after its addition (a rename missing from the map, or
                 # an unrecorded removal), or removed on the very day it was added.
-                added_but_not_in_index.append((change.effective, added))
+                added_but_not_in_index.append((change.effective, added, change.added_name))
             else:
                 del members[added]
                 periods[added].append(
                     Membership(instrument_id=added, start=change.effective, end=end)
                 )
         if change.removed is not None:
-            removed = rename(change.removed)
+            removed = renames.ticker(change.removed, change.effective)
             if removed in members:
-                removed_but_still_in_index.append((change.effective, removed))
+                removed_but_still_in_index.append((change.effective, removed, change.removed_name))
             else:
                 members[removed] = change.effective - timedelta(days=1)
     for ticker, end in members.items():
         periods[ticker].append(Membership(instrument_id=ticker, start=since, end=end))
+    periods = {ticker: _merged(spans) for ticker, spans in periods.items()}
+
+    started_at_date_added, date_added_mismatches = [], []
+    for constituent in page.constituents:
+        added = constituent.date_added
+        if added is None or not since < added <= as_of:
+            continue
+        spans = periods[constituent.ticker]
+        [present] = [span for span in spans if span.end is None]
+        if present.start == added:
+            continue
+        earlier_end = max((span.end for span in spans if span.end is not None), default=None)
+        if earlier_end is not None and added <= earlier_end:
+            date_added_mismatches.append((constituent.ticker, added, present.start))
+        else:
+            spans[spans.index(present)] = present.model_copy(update={"start": added})
+            started_at_date_added.append((constituent.ticker, added, present.start))
 
     memberships = []
     for ticker in sorted(periods):
         memberships.extend(sorted(periods[ticker], key=lambda span: span.start))
-    # The page's "date added" is when a constituent's current period began.
-    current_start = {span.instrument_id: span.start for span in memberships if span.end is None}
-    date_added_mismatches = [
-        (c.ticker, c.date_added, current_start[c.ticker])
-        for c in page.constituents
-        if c.date_added is not None
-        and c.date_added > since
-        and c.ticker in current_start
-        and current_start[c.ticker] != c.date_added
-    ]
     return Reconstruction(
         memberships=memberships,
         added_but_not_in_index=sorted(added_but_not_in_index),
         removed_but_still_in_index=sorted(removed_but_still_in_index),
+        started_at_date_added=sorted(started_at_date_added),
         date_added_mismatches=sorted(date_added_mismatches),
         several_periods=sorted(t for t, spans in periods.items() if len(spans) > 1),
         unreadable_rows=page.unreadable_rows,
@@ -443,9 +514,27 @@ def universe_yaml(universe: Universe, revisions: list[Revision], since: date) ->
     return header + yaml.safe_dump(content, sort_keys=False, allow_unicode=True)
 
 
-def load_renames(text: str) -> dict[str, str]:
+def _optional_date(value: object) -> date | None:
+    return None if value is None else date.fromisoformat(str(value))
+
+
+def load_renames(text: str) -> Renames:
+    """`renames` (old: new, for every change) and `dated_renames` (a list of ticker,
+    to and a `from` and/or `until` date, for a ticker another company used too)."""
     raw = yaml.safe_load(text) or {}
-    return {
-        normalize_ticker(old): normalize_ticker(new)
+    entries = [
+        Rename(normalize_ticker(old), normalize_ticker(new))
         for old, new in (raw.get("renames") or {}).items()
-    }
+    ]
+    for entry in raw.get("dated_renames") or []:
+        if not {"ticker", "to"} <= entry.keys() or not {"from", "until"} & entry.keys():
+            raise ValueError(f"A dated rename needs ticker, to and from or until: {entry}")
+        entries.append(
+            Rename(
+                normalize_ticker(entry["ticker"]),
+                normalize_ticker(entry["to"]),
+                start=_optional_date(entry.get("from")),
+                end=_optional_date(entry.get("until")),
+            )
+        )
+    return Renames(tuple(entries))
