@@ -331,17 +331,16 @@ class Reconstruction:
     unreadable_rows: list[str]
 
 
-def _merged(spans: list[Membership]) -> list[Membership]:
-    """One ticker's periods, contiguous ones joined: a ticker change the table records
-    as an addition and a removal is one membership once the old ticker is renamed."""
-    merged: list[Membership] = []
-    for span in sorted(spans, key=lambda s: s.start):
-        last = merged[-1] if merged else None
-        if last is not None and last.end is not None and last.end + timedelta(days=1) == span.start:
-            merged[-1] = last.model_copy(update={"end": span.end})
-        else:
-            merged.append(span)
-    return merged
+def _chain_start(spans: list[Membership], present: Membership) -> date:
+    """The start of the run of periods that touch, ending in the present one. A ticker
+    change the table records as an addition and a removal, once renamed, leaves two
+    periods that touch; they stay two, since a ticker two companies swapped on one
+    day (FOXA, 2019) looks the same."""
+    start = present.start
+    for span in sorted(spans, key=lambda s: s.start, reverse=True):
+        if span.end is not None and span.end + timedelta(days=1) == start:
+            start = span.start
+    return start
 
 
 def reconstruct(page: Page, renames: Renames, since: date, as_of: date) -> Reconstruction:
@@ -388,7 +387,6 @@ def reconstruct(page: Page, renames: Renames, since: date, as_of: date) -> Recon
                 members[removed] = change.effective - timedelta(days=1)
     for ticker, end in members.items():
         periods[ticker].append(Membership(instrument_id=ticker, start=since, end=end))
-    periods = {ticker: _merged(spans) for ticker, spans in periods.items()}
 
     started_at_date_added, date_added_mismatches = [], []
     for constituent in page.constituents:
@@ -397,7 +395,7 @@ def reconstruct(page: Page, renames: Renames, since: date, as_of: date) -> Recon
             continue
         spans = periods[constituent.ticker]
         [present] = [span for span in spans if span.end is None]
-        if present.start == added:
+        if added in (present.start, _chain_start(spans, present)):
             continue
         earlier_end = max((span.end for span in spans if span.end is not None), default=None)
         if earlier_end is not None and added <= earlier_end:

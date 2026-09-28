@@ -32,5 +32,6 @@ dated_renames:
   # Ingersoll-Rand plc became Trane Technologies (TT) in March 2020; IR is Gardner
   # Denver's (Ingersoll Rand Inc.) since.
   - {ticker: IR, to: TT, until: 2020-02-29}
-  # QuintilesIMS traded as Q in 2017 before IQV; Q was Qwest's until 2011.
-  - {ticker: Q, to: IQV, from: 2017-01-01}
+  # QuintilesIMS traded as Q in 2017 before IQV; Q was Qwest's until 2011 and is
+  # Qnity Electronics' since 2025 (the second build reported Qnity renamed to IQV).
+  - {ticker: Q, to: IQV, from: 2017-01-01, until: 2017-12-31}
