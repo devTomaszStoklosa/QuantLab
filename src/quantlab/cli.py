@@ -7,6 +7,7 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime
+from functools import partial
 from pathlib import Path
 from typing import Annotated, NamedTuple
 
@@ -157,11 +158,19 @@ _HOLDOUT_DIR = Path("config/holdout")
 _RESULTS_DIR = Path("results")
 # Where universe files live; build-universe writes the S&P 500 one here (q5, REQ-553).
 _UNIVERSES_DIR = Path(str(importlib.resources.files("quantlab.config"))) / "universes"
+
+
+def _download_progress(line: str) -> None:
+    """A slow source's line before each request, timed, so a long download shows it
+    is alive; on stderr, apart from the results."""
+    typer.echo(f"{datetime.now(tz=UTC).astimezone():%H:%M:%S} {line}", err=True)
+
+
 # Data providers by the source name a universe file gives (REQ-506): a new source
 # is a new entry here, never a branch on the asset class.
 _PROVIDERS: dict[str, Callable[[], DataProvider]] = {
     "binance": BinanceProvider,
-    "tiingo": TiingoProvider,
+    "tiingo": partial(TiingoProvider, progress=_download_progress),
 }
 
 

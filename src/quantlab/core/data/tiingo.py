@@ -16,6 +16,7 @@ frozen assumption.
 
 import os
 import time
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 
 import requests
@@ -66,12 +67,15 @@ class TiingoProvider:
 
     Raw responses are cached on disk (data/cache/), so an interrupted download
     resumes where it stopped and `events` reuses the prices `fetch` downloaded.
+    `progress` hears one line before each request, so a download that waits
+    between requests for hours is visibly alive; cached answers ask nothing and
+    say nothing.
     A ticker Tiingo does not know gives no bars rather than an error: a
     point-in-time universe has members a source may lack, and the run reports
     them (REQ-554).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, progress: Callable[[str], None] | None = None) -> None:
         key = os.environ.get(API_KEY_VARIABLE)
         if not key:
             raise DataSourceUnavailableError(
@@ -82,15 +86,16 @@ class TiingoProvider:
         self._monthly_symbols = int(
             os.environ.get(MONTHLY_SYMBOLS_VARIABLE, DEFAULT_MONTHLY_SYMBOLS)
         )
+        self._progress = progress or (lambda line: None)
 
-    def _count(self, symbol: str) -> None:
+    def _count(self, symbol: str) -> int:
         """Record `symbol` among the tickers asked about this month, or stop before a
         request would exceed the plan's monthly number of different tickers. Cached
-        responses ask nothing, so they never count."""
+        responses ask nothing, so they never count. The ticker's place this month."""
         month = _month()
         used = read_cached_json(_SOURCE, "symbols", month) or []
         if symbol in used:
-            return
+            return used.index(symbol) + 1
         if len(used) >= self._monthly_symbols:
             raise DataSourceUnavailableError(
                 f"Tiingo's free plan serves {self._monthly_symbols} different tickers a "
@@ -98,6 +103,7 @@ class TiingoProvider:
                 "cached, so rerun next month to continue"
             )
         write_cached_json(_SOURCE, [*used, symbol], "symbols", month)
+        return len(used) + 1
 
     def _throttle(self) -> None:
         global _last_request_at
@@ -107,9 +113,13 @@ class TiingoProvider:
                 time.sleep(remaining)
         _last_request_at = time.monotonic()
 
-    def _get(self, symbol: str, url: str, params: dict | None = None) -> object | None:
+    def _get(self, symbol: str, what: str, url: str, params: dict | None = None) -> object | None:
         """The JSON body about `symbol`, or None when Tiingo does not know the ticker."""
-        self._count(symbol)
+        place = self._count(symbol)
+        self._progress(
+            f"Tiingo: {symbol} {what}, ticker {place} of {self._monthly_symbols} this month "
+            f"({self._interval:g} s between requests)"
+        )
         self._throttle()
         response = requests.get(
             url,
@@ -135,6 +145,7 @@ class TiingoProvider:
             return cached
         rows = self._get(
             instrument.symbol,
+            f"prices {start}..{end}",
             f"{_BASE_URL}/{instrument.symbol}/prices",
             {
                 "startDate": start.isoformat(),
@@ -160,7 +171,8 @@ class TiingoProvider:
             settled = _day(cached["fetchedOn"]) > end + timedelta(days=_SETTLED_DAYS)
             if settled or (last is not None and last >= end):
                 return last
-        meta = self._get(instrument.symbol, f"{_BASE_URL}/{instrument.symbol}") or {}
+        meta = self._get(instrument.symbol, "last price date", f"{_BASE_URL}/{instrument.symbol}")
+        meta = meta or {}
         cached = {"endDate": meta.get("endDate"), "fetchedOn": _today().isoformat()}
         write_cached_json(_SOURCE, cached, "meta", instrument.symbol)
         return None if cached["endDate"] is None else _day(cached["endDate"])
