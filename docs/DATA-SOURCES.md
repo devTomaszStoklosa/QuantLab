@@ -25,7 +25,7 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
 | Nasdaq Data Link (Sharadar) | pełne delistingi, akcje korporacyjne, point-in-time | tak (płatne) | koszt | odrzucone: tylko darmowe źródła |
 | EODHD | ceny dzienne, spółki zdjęte z obrotu w planach płatnych | tak | 20 zapytań dziennie w darmowym planie | odrzucone: za mało zapytań, delistingi płatne |
 | Polygon (Massive) | ceny dzienne | tak | darmowy plan: ok. 1–2 lat historii | odrzucone: za krótka historia |
-| Wikipedia — *List of S&P 500 companies* | bieżący skład i tabela zmian składu, z których odtwarzamy skład wstecz | nie (API MediaWiki, nagłówek `User-Agent`) | CC BY-SA 4.0: plik uniwersum w repo z atrybucją i numerem rewizji; kompletność przed ok. 2000 r. niepewna | **wybrane**; tylko członkostwo, bez cen |
+| Wikipedia — *List of S&P 500 companies* i *Historical components of the S&P 500* | bieżący skład (pierwsza strona) i tabela zmian składu (druga; przeniesiona tam z listy 2026-08-11), z których odtwarzamy skład wstecz | nie (API MediaWiki, nagłówek `User-Agent`) | CC BY-SA 4.0: plik uniwersum w repo z atrybucją i numerami rewizji obu stron; kompletność przed ok. 2000 r. niepewna | **wybrane**; tylko członkostwo, bez cen |
 | Yahoo Finance | ceny | nie | warunki użycia zabraniają dostępu programistycznego; brak spółek zdjętych z obrotu | odrzucone |
 
 #### Tiingo lokalnie (`core.data.tiingo.TiingoProvider`, `q5`-X7c)
@@ -40,7 +40,7 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
 
 #### Skład S&P 500 lokalnie (`core.sp500`, `quantlab build-universe`, `q5`-X7d)
 
-- Komenda czyta ostatnią rewizję strony *List of S&P 500 companies* sprzed 2026-09-24T00:00Z (API MediaWiki, bez klucza), odtwarza skład wstecz do 2000-01-01 i zapisuje `src/quantlab/config/universes/sp500.yaml` z numerem rewizji i atrybucją CC BY-SA 4.0 w nagłówku (plik jest adaptacją treści Wikipedii i dzieli jej licencję).
+- Komenda czyta dwie strony, każdą w ostatniej rewizji sprzed 2026-09-24T00:00Z (API MediaWiki, bez klucza): *List of S&P 500 companies* (bieżący skład) i *Historical components of the S&P 500* (tabela zmian). Tabela zmian była częścią listy do 2026-08-11, kiedy przeniesiono ją na osobną stronę bez zmiany formatu. Komenda odtwarza skład wstecz do 2000-01-01 i zapisuje `src/quantlab/config/universes/sp500.yaml` z numerami obu rewizji i atrybucją CC BY-SA 4.0 w nagłówku (plik jest adaptacją treści Wikipedii i dzieli jej licencję).
 - Raport budowy wymienia sprzeczności tabeli zmian; zmiany tickerów (np. `FB` → `META`) trafiają do `sp500-renames.yaml`, po czym budowę się powtarza. Ticker użyty ponownie przez inną spółkę nie jest mapowany — raport pokazuje go jako ticker z kilkoma okresami.
 - Oba pliki commitowane przed zamrożeniem `xsmom_v1` (X8): skład jest częścią pre-rejestracji.
 - `quantlab run` na uniwersum point-in-time drukuje pokrycie cenami: udział dni członkostwa z ceną i członków bez żadnej ceny w źródle (REQ-554).

@@ -1,11 +1,13 @@
 """The S&P 500 point-in-time universe, rebuilt from Wikipedia (q5, X7d, REQ-553).
 
-Wikipedia's *List of S&P 500 companies* has today's constituents and a table of
-changes (effective date, ticker added, ticker removed). Walking back from
-today's set through the changes gives the index on every earlier date: undoing
-a change puts the removed ticker back and takes the added one out. The page is
-read at one pinned revision, the last before a fixed instant, so the universe
-file is reproducible and cannot drift after the hypothesis is frozen.
+Wikipedia's *List of S&P 500 companies* has today's constituents, and
+*Historical components of the S&P 500* the table of changes (effective date,
+ticker added, ticker removed); the table moved there from the list on
+2026-08-11. Walking back from today's set through the changes gives the index
+on every earlier date: undoing a change puts the removed ticker back and takes
+the added one out. Each page is read at one pinned revision, its last before
+the same fixed instant, so the universe file is reproducible and cannot drift
+after the hypothesis is frozen.
 
 Content from Wikipedia is licensed CC BY-SA 4.0; the universe file carries the
 attribution and the revision it was built from.
@@ -22,10 +24,12 @@ import yaml
 
 from quantlab.core.universe import Instrument, Membership, Universe
 
-PAGE_TITLE = "List of S&P 500 companies"
+CONSTITUENTS_PAGE = "List of S&P 500 companies"
+CHANGES_PAGE = "Historical components of the S&P 500"
 API_URL = "https://en.wikipedia.org/w/api.php"
-# The revision read is the last one before this instant; fixed before xsmom_v1 is
-# frozen (q5 X8), after the holdout's end (2025-12-31), so every change it needs is in.
+# The revision read of each page is its last one before this instant; fixed before
+# xsmom_v1 is frozen (q5 X8), after the holdout's end (2025-12-31), so every change
+# it needs is in.
 PINNED_AS_OF = datetime(2026, 9, 24, tzinfo=UTC)
 # Wikipedia's table of changes is considered complete from here on; memberships
 # are not reconstructed before it (DATA-SOURCES).
@@ -169,7 +173,10 @@ def _find(tables: list[_Table], table_id: str, *words: str) -> _Table:
         names, _ = _headers(_grid(table))
         if all(any(word in name for name in names) for word in words):
             return table
-    raise ValueError(f"No table '{table_id}' on the page")
+    found = "; ".join(
+        f"id {table.attrs.get('id')!r}: {_headers(_grid(table))[0]}" for table in tables
+    )
+    raise ValueError(f"No table '{table_id}' on the page; its tables: {found or 'none'}")
 
 
 def normalize_ticker(text: str) -> str:
@@ -210,20 +217,28 @@ class Page:
     unreadable_rows: list[str]  # rows of the table of changes without a date
 
 
-def parse_page(html: str) -> Page:
-    """Today's constituents and the table of changes from the page's HTML."""
+def _tables(html: str) -> list[_Table]:
     parser = _Tables()
     parser.feed(html)
+    return parser.tables
 
-    names, rows = _headers(_grid(_find(parser.tables, "constituents", "symbol", "date added")))
+
+def parse_constituents(html: str) -> list[Constituent]:
+    """Today's constituents from the list's HTML."""
+    table = _find(_tables(html), "constituents", "symbol", "date added")
+    names, rows = _headers(_grid(table))
     symbol, added = _column(names, "symbol"), _column(names, "date added")
-    constituents = [
+    return [
         Constituent(normalize_ticker(row[symbol].text), _parse_date(row[added].text))
         for row in rows
         if len(row) > max(symbol, added) and _clean(row[symbol].text)
     ]
 
-    names, rows = _headers(_grid(_find(parser.tables, "changes", "added", "removed")))
+
+def parse_changes(html: str) -> tuple[list[Change], list[str]]:
+    """The table of changes from its page's HTML, and the rows without a readable date."""
+    table = _find(_tables(html), "changes", "added", "removed")
+    names, rows = _headers(_grid(table))
     effective = _column(names, "date")
     added_ticker, removed_ticker = (
         _column(names, "added", "ticker"),
@@ -244,7 +259,13 @@ def parse_page(html: str) -> Page:
                 removed=normalize_ticker(row[removed_ticker].text) or None,
             )
         )
-    return Page(constituents, changes, unreadable)
+    return changes, unreadable
+
+
+def parse_pages(constituents_html: str, changes_html: str) -> Page:
+    """Today's constituents and the table of changes, each from its page's HTML."""
+    changes, unreadable = parse_changes(changes_html)
+    return Page(parse_constituents(constituents_html), changes, unreadable)
 
 
 # --- walking back through the changes ------------------------------------------------
@@ -358,6 +379,7 @@ def universe_from(reconstruction: Reconstruction, as_of: date) -> Universe:
 
 @dataclass(frozen=True)
 class Revision:
+    title: str
     id: int
     timestamp: str
     html: str
@@ -374,13 +396,13 @@ def _get(params: dict) -> dict:
     return response.json()
 
 
-def fetch_revision(as_of: datetime) -> Revision:
+def fetch_revision(title: str, as_of: datetime) -> Revision:
     """The page's last revision before `as_of`, with its rendered HTML (MediaWiki API)."""
     query = _get(
         {
             "action": "query",
             "prop": "revisions",
-            "titles": PAGE_TITLE,
+            "titles": title,
             "rvlimit": 1,
             "rvdir": "older",
             "rvstart": as_of.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -390,20 +412,27 @@ def fetch_revision(as_of: datetime) -> Revision:
     [revision] = query["query"]["pages"][0]["revisions"]
     parsed = _get({"action": "parse", "oldid": revision["revid"], "prop": "text"})
     return Revision(
-        id=revision["revid"], timestamp=revision["timestamp"], html=parsed["parse"]["text"]
+        title=title,
+        id=revision["revid"],
+        timestamp=revision["timestamp"],
+        html=parsed["parse"]["text"],
     )
 
 
-def universe_yaml(universe: Universe, revision: Revision, since: date) -> str:
+def universe_yaml(universe: Universe, revisions: list[Revision], since: date) -> str:
     """The universe file, with the attribution and provenance CC BY-SA 4.0 asks for."""
+    sources = "".join(
+        f'#   "{revision.title}", revision {revision.id} of {revision.timestamp}:\n'
+        f"#   https://en.wikipedia.org/w/index.php?oldid={revision.id}\n"
+        for revision in revisions
+    )
     header = (
         "# S&P 500 point-in-time universe (q5, REQ-553). Generated by\n"
         "#   uv run quantlab build-universe\n"
         "# Do not edit by hand: rebuild it, and fix tickers in sp500-renames.yaml.\n"
         "#\n"
-        '# Membership derived from Wikipedia, "List of S&P 500 companies", revision\n'
-        f"# {revision.id} of {revision.timestamp}:\n"
-        f"# https://en.wikipedia.org/w/index.php?oldid={revision.id}\n"
+        "# Membership derived from Wikipedia:\n"
+        f"{sources}"
         "# Wikipedia content is licensed CC BY-SA 4.0\n"
         "# (https://creativecommons.org/licenses/by-sa/4.0/); this file, as an\n"
         "# adaptation of it, is shared under the same license.\n"

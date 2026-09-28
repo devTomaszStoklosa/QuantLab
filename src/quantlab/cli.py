@@ -1459,31 +1459,36 @@ def _listed(entries: list, show) -> str:
 
 @app.command("build-universe")
 def build_universe_command() -> None:
-    """Rebuild the S&P 500 point-in-time universe from its pinned Wikipedia revision.
+    """Rebuild the S&P 500 point-in-time universe from pinned Wikipedia revisions.
 
-    Reads today's constituents and the table of changes of the last revision before
-    the pinned instant, walks back through the changes (REQ-553), and writes
-    quantlab/config/universes/sp500.yaml with the attribution CC BY-SA 4.0 asks for.
+    Reads today's constituents and the table of changes, each from its page's last
+    revision before the pinned instant, walks back through the changes (REQ-553),
+    and writes quantlab/config/universes/sp500.yaml with the attribution CC BY-SA
+    4.0 asks for.
     Then lists what the table contradicts: fix tickers in sp500-renames.yaml,
     rebuild, and commit both files before the hypothesis is frozen.
     """
     renames = sp500.load_renames(
         (_UNIVERSES_DIR / "sp500-renames.yaml").read_text(encoding="utf-8")
     )
-    revision = sp500.fetch_revision(sp500.PINNED_AS_OF)
-    page = sp500.parse_page(revision.html)
+    listed = sp500.fetch_revision(sp500.CONSTITUENTS_PAGE, sp500.PINNED_AS_OF)
+    history = sp500.fetch_revision(sp500.CHANGES_PAGE, sp500.PINNED_AS_OF)
+    page = sp500.parse_pages(listed.html, history.html)
     as_of = sp500.PINNED_AS_OF.date()
     reconstruction = sp500.reconstruct(page, renames, sp500.DEFAULT_SINCE, as_of)
     universe = sp500.universe_from(reconstruction, as_of)
     target = _UNIVERSES_DIR / f"{sp500.UNIVERSE_NAME}.yaml"
     target.write_text(
-        sp500.universe_yaml(universe, revision, sp500.DEFAULT_SINCE), encoding="utf-8"
+        sp500.universe_yaml(universe, [listed, history], sp500.DEFAULT_SINCE), encoding="utf-8"
     )
 
-    typer.echo(
-        f"Wikipedia revision {revision.id} ({revision.timestamp}): "
-        f"{len(page.constituents)} constituents, {len(page.changes)} changes"
-    )
+    for revision, count in (
+        (listed, f"{len(page.constituents)} constituents"),
+        (history, f"{len(page.changes)} changes"),
+    ):
+        typer.echo(
+            f'Wikipedia "{revision.title}", revision {revision.id} ({revision.timestamp}): {count}'
+        )
     typer.echo(
         f"Universe {universe.name}: {len(universe.instruments) - 1} tickers and "
         f"{sp500.MARKET_PROXY.symbol}, {len(universe.memberships)} membership periods "

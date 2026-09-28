@@ -322,7 +322,7 @@ Ta ścieżka trwa najdłużej, dni albo tygodnie, przez limity darmowego Tiingo.
    ```
 
    Komenda:
-   - czyta zapisaną rewizję strony Wikipedii *List of S&P 500 companies*;
+   - czyta zapisane rewizje dwóch stron Wikipedii: *List of S&P 500 companies* (bieżący skład) i *Historical components of the S&P 500* (tabela zmian składu);
    - odtwarza skład indeksu wstecz do 2000 r.;
    - zapisuje `src/quantlab/config/universes/sp500.yaml`;
    - drukuje raport sprzeczności w tabeli zmian składu.
@@ -415,6 +415,7 @@ Zamrożonych definicji się nie edytuje: każda zmiana po zamrożeniu to nowa hi
 | `log:<id>` nadal w stanie `pending` mimo wpisu | Nagłówek wpisu nie ma postaci `## RRRR-MM-DD — <id>`. Sprawdź długą pauzę (—), spacje wokół niej i kodowanie UTF-8. |
 | `xsmom_v1` przerwany komunikatem o limicie | Wyczerpany limit Tiingo. Uruchom ponownie później; pobieranie wznowi się z cache. |
 | `plan --run` zatrzymuje się na `universe:sp500` | Wikipedia nie odpowiada. Przebiegi krypto uruchom bezpośrednio komendami z planu. |
+| `No table 'changes' on the page; its tables: …` | Wikipedia zmieniła układ strony (tak było 2026-08-11, gdy tabelę zmian przeniesiono na osobną stronę). Komunikat wymienia tabele, które są na stronie; parser trzeba dostosować w `core/sp500.py`. Pozostałe przebiegi uruchom bezpośrednio komendami z planu. |
 | API nie startuje na porcie 5080 | Port jest zajęty: zamknij poprzednią instancję API (Ctrl+C w jej oknie). |
 | `http://localhost:5080` nie pokazuje aplikacji | Interfejs nie jest zbudowany: uruchom `npm ci` i `npm run build` w `presentation\web`, potem zrestartuj API. |
 
