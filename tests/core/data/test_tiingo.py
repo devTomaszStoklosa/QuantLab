@@ -277,6 +277,30 @@ def test_a_run_stops_before_the_month_s_ticker_limit_and_resumes_next_month(
         assert len(provider.fetch(_etf("CCC"), _START, _END)) == len(_PRICES)
 
 
+def test_a_run_cut_by_the_month_s_limit_leaves_nothing_of_its_tickers_for_the_next(
+    monkeypatch,
+) -> None:
+    """Each ticker's prices and metadata are asked in one pass, so a ticker counted in
+    a month is never counted again the next month for the same run."""
+    monkeypatch.setenv(tiingo.MONTHLY_SYMBOLS_VARIABLE, "2")
+    universe = Mock(cash=None)
+    universe.instruments_between.return_value = [_etf("AAA"), _etf("BBB"), _etf("CCC")]
+    parameters = Mock(missing_delisting_return=0.0)
+    parameters.fetch_start.side_effect = lambda start, universe: start
+    get = _tiingo()
+    with patch("quantlab.core.data.tiingo.requests.get", get):
+        provider = TiingoProvider()
+        with pytest.raises(DataSourceUnavailableError, match="2 different tickers a month"):
+            cli._fetch_market_data(provider, universe, parameters, _START, _END)
+        assert get.call_count == 4  # prices and metadata of AAA and BBB
+
+        monkeypatch.setattr(tiingo, "_month", lambda: "2026-10")
+        market = cli._fetch_market_data(provider, universe, parameters, _START, _END)
+
+    assert sorted(market.bars) == ["aaa", "bbb", "ccc"]
+    assert tiingo.read_cached_json("tiingo", "symbols", "2026-10") == ["CCC"]
+
+
 def test_each_request_is_announced_and_cached_answers_say_nothing() -> None:
     lines = []
     with patch("quantlab.core.data.tiingo.requests.get", _tiingo()):

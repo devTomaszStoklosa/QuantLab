@@ -45,6 +45,7 @@ from quantlab.core.data.corporate_actions import (
     with_events,
 )
 from quantlab.core.data.coverage import price_coverage
+from quantlab.core.data.events import InstrumentEvents
 from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
 from quantlab.core.data.quality import Finding, QualityReport, quality_report, reference_sessions
 from quantlab.core.data.tiingo import TiingoProvider
@@ -248,13 +249,14 @@ def _fetch_market_data(
     members and the market proxy are fetched (REQ-505).
     """
     fetch_start = parameters.fetch_start(start, universe)
-    instruments = universe.instruments_between(start, end)
-    bars = {
-        instrument.id: provider.fetch(instrument, fetch_start, end) for instrument in instruments
-    }
-    events = {
-        instrument.id: provider.events(instrument, fetch_start, end) for instrument in instruments
-    }
+    bars: dict[str, list[PriceBar]] = {}
+    events: dict[str, InstrumentEvents] = {}
+    # One instrument's prices and events in one pass: when a monthly limit on
+    # different tickers (Tiingo) stops the download, every ticker it counted has
+    # all it needs, so the next month does not count any of them again.
+    for instrument in universe.instruments_between(start, end):
+        bars[instrument.id] = provider.fetch(instrument, fetch_start, end)
+        events[instrument.id] = provider.events(instrument, fetch_start, end)
     market = with_events(bars, events, parameters.missing_delisting_return)
     return _above_cash(provider, universe, market, fetch_start, end)
 
