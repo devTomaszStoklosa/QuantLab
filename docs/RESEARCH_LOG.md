@@ -142,6 +142,38 @@ Co dalej:
 3. Koszty zabierają ponad połowę wyniku brutto. Przewaga netto istnieje tylko wtedy, gdy model realistyczny nie zaniża poślizgu.
 4. Holdout trwa ok. 8 miesięcy (243 dni), więc test ma bardzo małą moc. Odchylenie rocznego Sharpe z 8 miesięcy to ok. 1/√0.67 ≈ 1.2, więc żeby p spadło poniżej 0.1, potrzebny byłby roczny Sharpe rzędu 1.6. Przy Sharpe takim jak w treningu (0.4–0.6) najbardziej prawdopodobny werdykt to `inconclusive`, a `rejected` (Sharpe ≤ 0) ma szansę ok. 1 do 3 nawet przy prawdziwym efekcie. Brak mocy był zaakceptowany przy zamrażaniu.
 
-**Wynik — holdout 2026-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+**Wynik — holdout 2026-01-01 → 2026-08-31** (otwarty dokładnie raz, 2026-10-02 15:21 UTC, przy commicie `1efbf4d` z obserwacjami powyżej; zapis otwarcia: [config/holdout/momentum_select_v1.opened.json](../config/holdout/momentum_select_v1.opened.json), commit `3946763`; model realistyczny; liczby z zapisu otwarcia, nie łączone z treningiem):
 
-**Wniosek:** _po otwarciu holdoutu._
+| Metryka | Holdout |
+|---|---:|
+| CAGR | 14.64% |
+| Sharpe netto | 0.52 |
+| Sortino | 0.79 |
+| Calmar | 0.62 |
+| Max drawdown | −23.78% |
+| p (test permutacyjny) | 0.295 |
+
+Test permutacyjny na holdoucie: Sharpe brutto 0.68 wobec średniej przetasowań 0.04 (odch. std. 1.16); wyższy niż 70.5% przetasowań. Strategia miała pozycję przez 242 dni, mniej niż rok sesji rynku krypto (365), więc kod oznacza wynik flagą niskiej wiarygodności. **Werdykt holdoutu: `inconclusive`** (Sharpe 0.52 > 0, ale p ≥ 0.1).
+
+**Wniosek: `inconclusive`.**
+
+Status wynika mechanicznie z reguł zapisanych przed wynikami: bramka CPCV zaliczona, holdout `inconclusive` → `inconclusive`. `confirmed` wymagałby zaliczenia obu bramek.
+
+Co mówią liczby poza samym słowem werdyktu:
+
+1. **Holdout jest zgodny z treningiem, ale niczego nie rozstrzyga.** Sharpe netto 0.52 mieści się w zakresie ścieżek CPCV (0.23–0.76) i jest bliski treningowemu (0.44). Statystyka testu leży jednak tylko ok. 0.55 odchylenia nad średnią przetasowań. Odchylenie (1.16) jest takie, jak przewidywała obserwacja 4 sprzed otwarcia, więc holdout nie mógł dać istotnego wyniku przy Sharpe tego rzędu.
+2. **Nie ma dowodu, że wybór parametru na danych coś dodaje.** To było pytanie kontrastowe tej hipotezy wobec `momentum_v1`. Sharpe netto na tym samym okresie treningowym jest praktycznie taki sam (0.44 wobec 0.43). Istotność timingu w treningu (p = 0.090) znika po korekcie na 11 konfiguracji (DSR 0.29), a holdout jej nie potwierdza. Wybór przesunął strategię na lookbacki 30–60 dni, które oddają ponad połowę wyniku brutto na koszty.
+3. **Ryzyko pozostaje duże.** Obsunięcie −23.8% w 8 miesięcy holdoutu, −73.7% w treningu.
+
+Ograniczenia tego badania:
+
+- Tylko dwa, silnie skorelowane instrumenty, jak w `momentum_v1`.
+- Krótkie okresy: 4 lata treningu z pozycjami i 8 miesięcy holdoutu. Oba testy mają małą moc, co było wiadome przy zamrażaniu.
+- 9 ścieżek CPCV na 4 latach dzieli dane, więc to nie 9 niezależnych potwierdzeń.
+- Zapis otwarcia nie przechowuje lookbacku wybranego na 2026, więc ten wpis nie podaje, którą wartością handlowano w holdoucie ([#106](https://github.com/devTomaszStoklosa/QuantLab/issues/106)).
+- Koszty bez market impact, egzekucja po cenie zamknięcia, jak w `momentum_v1`.
+
+Co dalej:
+
+- `momentum_select_v1` jest zamknięta, a holdout 2026-01 → 2026-08 został dla niej zużyty. Wariant ze stałym krótkim lookbackiem albo z filtrem reżimu niskiej zmienności byłby nową hipotezą, z nowym zamrożonym holdoutem i z korektą DSR, bo powstałby po obejrzeniu tych wyników.
+- Jest to jeden z czterech składników `portfolio_v1`, którego holdout czeka jeszcze na holdouty `mean_reversion_v1` i `pairs_v1`.
