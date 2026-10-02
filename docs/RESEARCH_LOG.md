@@ -486,3 +486,47 @@ Co dalej:
 - Obie hipotezy momentum na `multiasset-etf` są zamknięte, a holdout 2018 → 2026-08 na tym uniwersum jest zużyty. Każda kolejna próba na tym koszyku, np. inny lookback albo inna konstrukcja sygnału, potrzebowałaby nowego, nieoglądanego okresu. Dane zaczynają się w 2008, więc zostają tylko przyszłe notowania (od 2026-09) albo inny koszyk.
 - Na pytanie z q12, czy reguła jest „pod krypto”, czy działa szerzej: ani na BTC i ETH, ani na koszyku ETF-ów z pięciu klas aktywów 12-miesięczne momentum nie wykazało w holdoucie timingu lepszego niż przypadek.
 - Kolejne w planie są holdouty `pairs_v1` i `mean_reversion_v1`, a po nich `portfolio_v1`.
+
+## 2026-10-02 — pairs_v1: pairs trading ETH-USDT / BTC-USDT na kointegracji
+
+**Hipoteza:** handel spreadem ETH-USDT względem BTC-USDT (otwarcie przy odchyleniu o 2 odchylenia standardowe, zamknięcie przy powrocie do średniej, tylko gdy test Engle'a-Grangera z ostatnich 12 miesięcy potwierdza kointegrację) daje dodatni wynik netto po kosztach, a jego timing jest lepszy niż przypadek.
+
+**Metodologia:**
+
+- **Dane:** Binance spot, świece dzienne, BTC-USDT i ETH-USDT (uniwersum `mvp-crypto`), te same co w `momentum_v1`. Kontrola danych (`q14`): 0 błędów; 2 ostrzeżenia to skrajne ruchy z 2020-03-12, czyli prawdziwy krach.
+- **Sygnał:** parametry z Gatev, Goetzmann i Rouwenhorst (2006): okno formowania 365 dni, wejście przy |z| ≥ 2, wyjście, gdy spread przetnie średnią. ETH jest regresowane na BTC (BTC jako czynnik rynkowy), a współczynnik zabezpieczenia jest estymowany kroczącym oknem z przeszłości. Filtr Engle'a-Grangera na poziomie 5% (Vidyamurthy 2004) dopuszcza tylko nowe pozycje i nie zamyka otwartych. Wagi nóg wynikają ze współczynnika zabezpieczenia.
+- **Koszty:** te same trzy modele co w `momentum_v1`; główny `realistic-10bps-k0.05-vol30d`.
+- **Okres treningowy:** 2018-01-01 → 2023-12-31, okres `momentum_v1` i `mean_reversion_v1`, więc wszystkie trzy hipotezy porównuje się na identycznych danych.
+- **Holdout:** 2026-01-01 → 2026-08-31, zamrożony w [config/holdout/pairs_v1.yaml](../config/holdout/pairs_v1.yaml) (commit `98bbc2b`, 2026-09-24) przed jakimkolwiek przebiegiem. Lata 2024–2025 to zużyty holdout `momentum_v1`.
+- **Walidacja:** walk-forward w oknach rocznych (Sharpe > 0 w co najmniej 2/3 okien z określonym Sharpe i łączny Sharpe > 0; nierozstrzygnięty, gdy takich okien jest mniej niż 3); test permutacyjny (10 000 przetasowań, seed 0, roczny Sharpe zwrotów brutto, α = 0.1); kryterium holdoutu: Sharpe netto > 0 i p < 0.1; Sharpe ≤ 0 → `rejected`; Sharpe > 0 i p ≥ 0.1 → `inconclusive`; brak pozycji (Sharpe nieokreślony) → `inconclusive`.
+- **Wielokrotne testowanie:** 6 prób na `mvp-crypto` 2018–2023 i 11 konfiguracji w progu deflated Sharpe.
+- **Status końcowy:** `confirmed` tylko przy zaliczonej bramce in-sample i zaliczonym holdoucie; niezaliczona którakolwiek bramka → `rejected`; pozostałe przypadki → `inconclusive`. Liczy go kod.
+
+**Wynik — okres treningowy 2018–2023:**
+
+| Metryka | `zero-cost` (brutto) | `naive-10bps` | `realistic` |
+|---|---:|---:|---:|
+| CAGR | 0.52% | 0.47% | 0.41% |
+| Sharpe | 0.15 | 0.14 | 0.12 |
+| Sortino | 0.30 | 0.28 | 0.24 |
+| Calmar | 0.08 | 0.07 | 0.06 |
+| Max drawdown | −6.69% | −6.73% | −6.77% |
+
+- **Jedna pozycja w sześć lat.** Strategia otworzyła spread raz: długie ETH (waga 0.57) i krótkie BTC (0.43) od 2023-09-11 do 2023-12-07, czyli 87 dni. Noga ETH dała +0.2523, noga BTC −0.2275, razem +0.0248 kapitału startowego netto, przy kosztach 0.0070. Wszystkie metryki powyżej opisują więc tę jedną transakcję rozłożoną na sześć lat.
+- **Kointegracja** (cały okres treningowy, 2191 dni; opisowo): współczynnik zabezpieczenia 1.32, statystyka Engle'a-Grangera −2.17 wobec wartości krytycznej −3.34 na poziomie 5% (p = 0.44), czas połowicznego powrotu spreadu 279 dni. Na całym okresie ETH i BTC nie są skointegrowane, a filtr na kroczącym 12-miesięcznym oknie przepuścił tylko jedno wejście.
+- **Koszty:** werdykt wrażliwości „robust” (różnica Sharpe między modelem naiwnym a realistycznym 0.02).
+- **Walk-forward: nierozstrzygnięty**, bo Sharpe ma tylko jedno okno (2023-09-12 → 2023-12-31: CAGR 8.37%, Sharpe 0.54), a reguła wymaga co najmniej trzech.
+- **Test permutacyjny:** Sharpe brutto 0.15 wobec średniej przetasowań 0.09 (odch. std. 0.40); wyższy niż 54.7% przetasowań; **p = 0.453**, nieistotny przy α = 0.1; kod oznacza go flagą niskiej wiarygodności (87 dni z pozycją).
+- **Wielokrotne testowanie:** Sharpe roczny 0.54, PSR 0.62, próg deflated Sharpe 2.95, DSR 0.08. Próg jest tak wysoki, bo Sharpe z 87 dni ma ogromny błąd.
+- **Reżimy zmienności:** po 36–38 dni w każdym tercylu, więc bez wartości opisowej.
+
+**Obserwacje przed otwarciem holdoutu** (zacommitowane przed uruchomieniem `open-holdout`, więc wynik holdoutu nie mógł na nie wpłynąć):
+
+1. W treningu nie da się niczego ocenić: jedna transakcja, bramka in-sample nierozstrzygnięta, test z flagą niskiej wiarygodności. Status końcowy może więc być co najwyżej `inconclusive`, a przy Sharpe holdoutu ≤ 0 będzie `rejected`.
+2. Filtr kointegracji działa zgodnie z zamysłem, czyli rzadko wpuszcza strategię na rynek, bo para ETH/BTC przez większość czasu nie jest skointegrowana. To raczej ustalenie o parze niż o regule handlu.
+3. Holdout trwa 8 miesięcy. Przy jednym wejściu na ok. 5.4 roku, w których handel był możliwy, naiwnie liczony brak pozycji w holdoucie ma ok. 90% szans. Kryterium ocenia go jako `inconclusive`. Gdyby pozycja się pojawiła, wynik też będzie opierał się na jednej transakcji.
+4. Ceny z tego okresu zostały już odczytane przy otwarciu `momentum_select_v1` i `momentum_voltarget_v1`, ale ta definicja była zamrożona wcześniej (2026-09-24), więc nic nie mogło zostać do nich dopasowane.
+
+**Wynik — holdout 2026-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+
+**Wniosek:** _po otwarciu holdoutu._
