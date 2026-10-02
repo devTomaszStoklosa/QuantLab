@@ -553,3 +553,59 @@ Co dalej:
 - `pairs_v1` jest zamknięta, a holdout 2026-01 → 2026-08 został dla niej zużyty, choć nic na nim nie zmierzono. Sensowny test pairs tradingu wymagałby wielu par z szerszego koszyka, np. akcji z jednej branży albo instrumentów z wielu giełd, tak żeby filtr kointegracji miał z czego wybierać. To byłaby nowa hipoteza z nowym holdoutem.
 - Rękaw par nie wniesie do holdoutu `portfolio_v1` żadnej pozycji. Reguła alokacji odbiera wagę rękawom o zerowej wariancji w oknie estymacji, więc najpóźniej po jednym oknie (90 dni) portfel składa się z trzech pozostałych rękawów.
 - Następny jest holdout `mean_reversion_v1`, ostatni składnik, na który czeka `portfolio_v1`.
+
+## 2026-10-02 — mean_reversion_v1: krótkoterminowe odwrócenie na BTC-USDT i ETH-USDT
+
+**Hipoteza:** krótkoterminowe odwrócenie (Jegadeesh 1990, Lehmann 1990), czyli pozycja krótka po wzroście i długa po spadku z ostatnich 7 dni, daje na BTC-USDT i ETH-USDT dodatni wynik netto po kosztach, a jego timing jest lepszy niż przypadek.
+
+**Metodologia:**
+
+- **Dane:** Binance spot, świece dzienne, BTC-USDT i ETH-USDT (uniwersum `mvp-crypto`), te same co w `momentum_v1`. Kontrola danych (`q14`): 0 błędów; 2 ostrzeżenia to skrajne ruchy z 2020-03-12, czyli prawdziwy krach.
+- **Sygnał:** znak zwrotu z ostatnich 7 dni, odwrócony: po wzroście pozycja krótka, po spadku długa. Równe wagi po znaku i rebalans dzienny, jak w `momentum_v1`, więc obie hipotezy różnią się tylko sygnałem. Sygnał jest liczony codziennie, więc pozycja trwa, dopóki 7-dniowy zwrot ma ten sam znak.
+- **Koszty:** te same trzy modele co w `momentum_v1`; główny `realistic-10bps-k0.05-vol30d`.
+- **Okres treningowy:** 2018-01-01 → 2023-12-31, okres `momentum_v1`; pierwsza pozycja 2018-01-02.
+- **Holdout:** 2026-01-01 → 2026-08-31, zamrożony w [config/holdout/mean_reversion_v1.yaml](../config/holdout/mean_reversion_v1.yaml) (commit `01ea5bf`, 2026-09-24) przed jakimkolwiek przebiegiem. Lata 2024–2025 to zużyty holdout `momentum_v1`.
+- **Walidacja:** walk-forward w oknach rocznych (Sharpe > 0 w co najmniej 2/3 okien i łączny Sharpe > 0); test permutacyjny (10 000 przetasowań, seed 0, roczny Sharpe zwrotów brutto, α = 0.1); kryterium holdoutu: Sharpe netto > 0 i p < 0.1; Sharpe ≤ 0 → `rejected`; Sharpe > 0 i p ≥ 0.1 → `inconclusive`.
+- **Wielokrotne testowanie:** 6 prób na `mvp-crypto` 2018–2023 i 11 konfiguracji w progu deflated Sharpe.
+- **Status końcowy:** `confirmed` tylko przy zaliczonej bramce in-sample i zaliczonym holdoucie; niezaliczona bramka daje `rejected`; liczy go kod.
+
+**Wynik — okres treningowy 2018–2023:**
+
+| Metryka | `zero-cost` (brutto) | `naive-10bps` | `realistic` |
+|---|---:|---:|---:|
+| CAGR | −58.63% | −63.96% | −72.68% |
+| Sharpe | −0.89 | −1.09 | −1.48 |
+| Sortino | −1.17 | −1.42 | −1.91 |
+| Calmar | −0.59 | −0.64 | −0.73 |
+| Max drawdown | −99.60% | −99.79% | −99.96% |
+
+- **Walk-forward (realistic): niezaliczony**, 0 z 6 okien ze Sharpe > 0.
+
+  | Okno | CAGR | Sharpe | Max drawdown |
+  |---|---:|---:|---:|
+  | 2018-01-02 → 2018-12-31 | −86.01% | −1.97 | −89.37% |
+  | 2019 | −75.04% | −1.85 | −78.26% |
+  | 2020 | −72.05% | −1.20 | −72.58% |
+  | 2021 | −82.34% | −1.74 | −85.58% |
+  | 2022 | −61.43% | −1.04 | −67.06% |
+  | 2023 | −37.51% | −0.95 | −40.16% |
+  | Łącznie | −72.68% | −1.48 | −99.96% |
+
+- **Test permutacyjny:** Sharpe brutto −0.89 wobec średniej przetasowań −0.03 (odch. std. 0.41); wyższy niż tylko 1.7% przetasowań; **p = 0.983**. Timing jest istotnie *gorszy* niż przypadek.
+- **Wielokrotne testowanie:** Sharpe roczny −1.48, PSR 0.00, próg deflated Sharpe 0.66, DSR 0.00.
+- **Koszty:** werdykt wrażliwości „cost-dependent” (różnica Sharpe między modelem naiwnym a realistycznym 0.39). P&L transakcji brutto to −0.7923 kapitału startowego, a koszty (0.2072) pogłębiają go do −0.9996. Przy 775 transakcjach o medianie 4 dni obrót jest bardzo wysoki.
+- **Reżimy zmienności** (opisowo): niski CAGR −55.45%, Sharpe −1.13 (686 dni); średni CAGR −83.76%, Sharpe −2.38 (591 dni); wysoki CAGR −58.83%, Sharpe −0.68 (526 dni); 387 dni bez wyznaczonego reżimu (głównie 2018, bez rocznej historii zmienności): CAGR −85.44%. Strategia traciła w każdym reżimie.
+- **Skąd strata** (P&L netto transakcji; opisowo): 559 transakcji zamkniętych w ciągu 1–7 dni wygrało w 75% i dało razem +0.618. 212 transakcji trzymanych 8–30 dni wygrało tylko w 11% i straciło −1.357, a 4 trzymane dłużej −0.261. Długo trwa pozycja, której 7-dniowy ruch się nie odwraca, czyli zakład przeciw trendowi. Pozycje długie straciły łącznie −0.622, krótkie −0.377; BTC −0.269, ETH −0.730.
+- **Transakcje:** 775 (2 otwarte na końcu), 440 z dodatnim P&L netto (57%). Duża część transakcji wygrywa, ale przegrane są znacznie większe.
+
+**Obserwacje przed otwarciem holdoutu** (zacommitowane przed uruchomieniem `open-holdout`, więc wynik holdoutu nie mógł na nie wpłynąć):
+
+1. Bramka in-sample nie przeszła w żadnym roku, więc status końcowy będzie `rejected` bez względu na holdout. Otwarcie jest potrzebne, bo czeka na nie holdout `portfolio_v1`, a przy okazji opisuje zachowanie strategii poza próbą.
+2. Strata nie jest szumem: timing jest istotnie gorszy niż przypadek. Na BTC i ETH w latach 2018–2023 ruchy 7-dniowe częściej trwały, niż się odwracały, co zgadza się z literaturą o krótkoterminowym momentum na kryptowalutach (Liu i Tsyvinski 2021). Zgadza się też z `momentum_select_v1`, która sama wybierała lookbacki 30–60 dni.
+3. Lustrzana strategia (7-dniowe momentum) wyglądałaby w tym treningu na istotną, ale ten pomysł powstał po obejrzeniu danych. Byłaby to nowa hipoteza z własnym holdoutem i z karą za wielokrotne testowanie; tutaj nie jest testowana.
+4. Przy Sharpe netto −1.48 w treningu i błędzie Sharpe z 8 miesięcy ok. 1.2 werdykt holdoutu `rejected` (Sharpe ≤ 0) ma ok. 90% szans.
+5. Ceny z tego okresu zostały już odczytane przy otwarciu `momentum_select_v1`, `momentum_voltarget_v1` i `pairs_v1`, ale ta definicja była zamrożona wcześniej (2026-09-24), więc nic nie mogło zostać do nich dopasowane.
+
+**Wynik — holdout 2026-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+
+**Wniosek:** _po otwarciu holdoutu._
