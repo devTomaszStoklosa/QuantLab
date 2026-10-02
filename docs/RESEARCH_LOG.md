@@ -241,6 +241,39 @@ Co dalej:
 4. Wynik nadal opiera się na kilku długich transakcjach i na reżimie średniej zmienności. Skalowanie zmniejszyło zależność od 2021 (+70.9% zamiast +194.5% w `momentum_v1`), ale nie zmieniło profilu.
 5. Holdout jest ten sam co w `momentum_select_v1`: 8 miesięcy i ta sama mała moc. Do p < 0.1 potrzebny byłby roczny Sharpe rzędu 1.6, więc najbardziej prawdopodobny werdykt to `inconclusive`, a `rejected` ma szansę ok. 1 do 3 nawet przy prawdziwym efekcie. Ceny z tego okresu zostały już odczytane przy otwarciu `momentum_select_v1`, ale ta definicja była zamrożona wcześniej (2026-09-26), więc nic nie mogło zostać do nich dopasowane.
 
-**Wynik — holdout 2026-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+**Wynik — holdout 2026-01-01 → 2026-08-31** (otwarty dokładnie raz, 2026-10-02 15:29 UTC, przy commicie `6672b2d` z obserwacjami powyżej; zapis otwarcia: [config/holdout/momentum_voltarget_v1.opened.json](../config/holdout/momentum_voltarget_v1.opened.json), commit `edfe905`; model realistyczny; liczby z zapisu otwarcia, nie łączone z treningiem):
 
-**Wniosek:** _po otwarciu holdoutu._
+| Metryka | Holdout |
+|---|---:|
+| CAGR | 11.58% |
+| Sharpe netto | 0.48 |
+| Sortino | 0.68 |
+| Calmar | 0.38 |
+| Max drawdown | −30.76% |
+| p (test permutacyjny) | 0.246 |
+
+Test permutacyjny na holdoucie: Sharpe brutto 0.59 wobec średniej przetasowań 0.13 (odch. std. 0.68); wyższy niż 75.5% przetasowań. Strategia miała pozycję przez 242 dni, mniej niż rok sesji rynku krypto (365), więc kod oznacza wynik flagą niskiej wiarygodności. **Werdykt holdoutu: `inconclusive`** (Sharpe 0.48 > 0, ale p ≥ 0.1).
+
+**Wniosek: `inconclusive`.**
+
+Status wynika mechanicznie z reguł zapisanych przed wynikami: walk-forward zaliczony, holdout `inconclusive` → `inconclusive`. `confirmed` wymagałby zaliczenia obu bramek.
+
+Co mówią liczby poza samym słowem werdyktu:
+
+1. **Holdout jest zgodny z treningiem, ale niczego nie rozstrzyga.** Sharpe netto 0.48 jest bliski treningowemu (0.52), a statystyka testu leży ok. 0.68 odchylenia nad średnią przetasowań.
+2. **Obserwacja 5 sprzed otwarcia zawyżyła próg istotności.** Zakładała odchylenie rozkładu przetasowań ok. 1.2 i próg rzędu 1.6, a faktyczne odchylenie to 0.68. Do p < 0.1 wystarczał więc Sharpe brutto ok. 1.0 (0.13 + 1.28 × 0.68). Przybliżenie 1/√T pasuje do strategii, która często zmienia znak pozycji, jak `momentum_select_v1` (tam odchylenie 1.16). Sygnał 12-miesięczny zmienia pozycje rzadko, a przy rzadkich zmianach przetasowanie dni rusza wynik mniej. Wniosek o małej mocy zostaje: wynik 0.59 był daleko od progu 1.0.
+3. **Holdout nie mówi nic o samym skalowaniu.** `momentum_v1` miała inny holdout (2024–2025), a zapis otwarcia nie zawiera wersji bez skalowania na 2026. Przewaga skalowania (niższa zmienność i obsunięcie przy nie gorszym Sharpe) jest więc pokazana tylko na treningu i tylko opisowo.
+4. **Skalowanie nie chroni przed dużym obsunięciem:** −30.8% w 8 miesięcy holdoutu.
+
+Ograniczenia tego badania:
+
+- Tylko dwa, silnie skorelowane instrumenty, jak w `momentum_v1`.
+- 8 miesięcy holdoutu i flaga niskiej wiarygodności testu.
+- Porównanie ze skalowaniem i bez istnieje tylko dla treningu; zapis otwarcia przechowuje jedynie metryki, test i werdykt ([#106](https://github.com/devTomaszStoklosa/QuantLab/issues/106)).
+- Pomysł powstał po obejrzeniu wyników `momentum_v1`, więc to kolejna próba na tych samych danych, policzona w progu deflated Sharpe.
+- Koszty bez market impact, egzekucja po cenie zamknięcia.
+
+Co dalej:
+
+- `momentum_voltarget_v1` jest zamknięta, a holdout 2026-01 → 2026-08 został dla niej zużyty. W treningu skalowanie zmniejszyło zmienność i obsunięcie bez utraty Sharpe; to opis wyniku historycznego, nie dowód przewagi sygnału.
+- Ta sama konstrukcja na koszyku ETF z pięciu klas aktywów jest już zamrożona jako `momentum_voltarget_multiasset_v1` i czeka na swój holdout.
