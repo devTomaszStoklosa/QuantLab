@@ -606,6 +606,37 @@ Co dalej:
 4. Przy Sharpe netto −1.48 w treningu i błędzie Sharpe z 8 miesięcy ok. 1.2 werdykt holdoutu `rejected` (Sharpe ≤ 0) ma ok. 90% szans.
 5. Ceny z tego okresu zostały już odczytane przy otwarciu `momentum_select_v1`, `momentum_voltarget_v1` i `pairs_v1`, ale ta definicja była zamrożona wcześniej (2026-09-24), więc nic nie mogło zostać do nich dopasowane.
 
-**Wynik — holdout 2026-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+**Wynik — holdout 2026-01-01 → 2026-08-31** (otwarty dokładnie raz, 2026-10-02 16:27 UTC, przy commicie `bc29f3f` z obserwacjami powyżej; zapis otwarcia: [config/holdout/mean_reversion_v1.opened.json](../config/holdout/mean_reversion_v1.opened.json), commit `31eb86a`; model realistyczny; liczby z zapisu otwarcia, nie łączone z treningiem):
 
-**Wniosek:** _po otwarciu holdoutu._
+| Metryka | Holdout |
+|---|---:|
+| CAGR | −64.38% |
+| Sharpe netto | −1.70 |
+| Sortino | −2.15 |
+| Calmar | −1.11 |
+| Max drawdown | −58.13% |
+| p (test permutacyjny) | 0.805 |
+
+Test permutacyjny na holdoucie: Sharpe brutto −1.06 wobec średniej przetasowań 0.00 (odch. std. 1.23); wyższy niż tylko 19.5% przetasowań. Strategia miała pozycję przez 242 dni, mniej niż rok sesji rynku krypto (365), więc kod oznacza wynik flagą niskiej wiarygodności. **Werdykt holdoutu: `rejected`** (Sharpe netto −1.70 ≤ 0).
+
+**Wniosek: `rejected`.**
+
+Status wynika mechanicznie z reguł zapisanych przed wynikami: walk-forward niezaliczony i holdout `rejected` → `rejected`. Obie bramki odrzucają hipotezę niezależnie od siebie.
+
+Co mówią liczby poza samym słowem werdyktu:
+
+1. **Holdout powtarza trening.** Sharpe netto −1.70 wobec −1.48 w treningu. Annualizowany CAGR −64.4% to w 8 miesięcy utrata ok. połowy kapitału. Werdykt `rejected` był najbardziej prawdopodobnym wynikiem z obserwacji 4 sprzed otwarcia (ok. 90%).
+2. **Timing znów jest gorszy niż przypadek,** tym razem od 80.5% przetasowań. Przy 8 miesiącach i odchyleniu przetasowań 1.23 nie jest to jednak istotne, w odróżnieniu od treningu, gdzie gorszy był od 98.3%.
+3. **To najjaśniejszy wynik wśród hipotez krypto:** obie bramki odrzucają krótkoterminowe odwrócenie z 7 dni na BTC i ETH. Kierunek błędu, czyli ruchy, które częściej trwają niż się odwracają, jest spójny z krótkimi lookbackami wybieranymi przez `momentum_select_v1`. Zapis otwarcia nie dzieli jednak transakcji holdoutu według czasu trzymania, więc mechanizmu z treningu nie da się tu sprawdzić wprost ([#106](https://github.com/devTomaszStoklosa/QuantLab/issues/106)).
+
+Ograniczenia tego badania:
+
+- Tylko dwa, silnie skorelowane instrumenty i jeden horyzont (7 dni); inne horyzonty odwrócenia nie były testowane.
+- Holdout 8 miesięcy, z flagą niskiej wiarygodności testu.
+- Koszty bez market impact, egzekucja po cenie zamknięcia; przy medianie 4 dni trzymania wynik jest szczególnie wrażliwy na koszty.
+
+Co dalej:
+
+- `mean_reversion_v1` jest zamknięta jako `rejected`, a holdout 2026-01 → 2026-08 został dla niej zużyty.
+- Krótkoterminowe momentum na krypto (lustro tej reguły albo lookbacki 7–60 dni) to kandydat na nową hipotezę, ale powstał po obejrzeniu tych danych. Wymagałby zamrożenia przed odczytem nowego okresu: dane krypto sprzed 2026-09 są już zużyte, więc zostają tylko przyszłe notowania. Do tego dochodzi kara deflated Sharpe za kolejną próbę na `mvp-crypto`.
+- Wszystkie składniki `portfolio_v1` mają już otwarte holdouty, więc jego holdout jest odblokowany. Bramka walk-forward portfela nie przeszła (2 z 6 okien), więc jego status końcowy będzie `rejected` bez względu na holdout.
