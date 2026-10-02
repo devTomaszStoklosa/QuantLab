@@ -347,6 +347,39 @@ Co dalej:
 5. Holdout trwa 8.7 roku, więc test ma dużo większą moc niż holdouty krypto. Po lekcji z `momentum_voltarget_v1` szacuję próg z odchylenia przetasowań w treningu (0.27), a nie z 1/√T. Do p < 0.1 Sharpe brutto musiałby być o ok. 0.35 wyższy niż średnia przetasowań, a w treningu był o 0.05 niższy. Najbardziej prawdopodobny werdykt to więc `inconclusive`; `rejected` (Sharpe netto ≤ 0) ma szansę ok. 30% nawet przy prawdziwym Sharpe 0.18.
 6. Lata holdoutu to znana historia rynku, np. 2022, gdy akcje i obligacje spadały razem, a gotówka zaczęła dawać kilka procent rocznie. Definicję zamrożono, zanim kod odczytał te dane, ale nie przed wiedzą badacza o tych latach. Tego ograniczenia zamrożenie nie usuwa.
 
-**Wynik — holdout 2018-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+**Wynik — holdout 2018-01-01 → 2026-08-31** (otwarty dokładnie raz, 2026-10-02 15:39 UTC, przy commicie `10a5f7d` z obserwacjami powyżej; zapis otwarcia: [config/holdout/momentum_voltarget_multiasset_v1.opened.json](../config/holdout/momentum_voltarget_multiasset_v1.opened.json), commit `4870ef0`; model realistyczny, zwroty ponad gotówkę; liczby z zapisu otwarcia, nie łączone z treningiem):
 
-**Wniosek:** _po otwarciu holdoutu._
+| Metryka | Holdout |
+|---|---:|
+| CAGR | 0.21% |
+| Sharpe netto | 0.07 |
+| Sortino | 0.09 |
+| Calmar | 0.02 |
+| Max drawdown | −13.47% |
+| p (test permutacyjny) | 0.554 |
+
+Test permutacyjny na holdoucie: Sharpe brutto 0.26 wobec średniej przetasowań 0.30 (odch. std. 0.31); wyższy niż 44.7% przetasowań. Strategia miała pozycję przez 2176 dni, więc wynik nie ma flagi niskiej wiarygodności. **Werdykt holdoutu: `inconclusive`** (Sharpe 0.07 > 0, ale p ≥ 0.1).
+
+**Wniosek: `inconclusive`.**
+
+Status wynika mechanicznie z reguł zapisanych przed wynikami: walk-forward zaliczony, holdout `inconclusive` → `inconclusive`. `confirmed` wymagałby zaliczenia obu bramek.
+
+Co mówią liczby poza samym słowem werdyktu:
+
+1. **Na ok. 18 latach danych nie ma śladu timingu.** W treningu i w holdoucie faktyczny Sharpe brutto jest niższy niż średnia przetasowań (0.36 wobec 0.41 i 0.26 wobec 0.30). Dodatni wynik w obu okresach daje przeciętna ekspozycja tych samych pozycji, a nie moment ich zmiany. To najmocniejsze ustalenie tego wpisu, bo holdout jest długi i nie ma flagi niskiej wiarygodności.
+2. **Wynik netto jest praktycznie równy gotówce.** CAGR 0.21% rocznie ponad BIL i Sharpe netto 0.07. Przy błędzie standardowym Sharpe z 8.7 roku ok. 0.34 nie odróżnia się to od zera, a spadek z 0.18 w treningu mieści się w tym samym szumie.
+3. **Przewidywania sprzed otwarcia się sprawdziły.** Odchylenie przetasowań wyszło 0.31 przy szacunku 0.27, więc do p < 0.1 trzeba było ok. 0.40 ponad średnią przetasowań. Wynik był 0.05 poniżej niej, tak jak w treningu. Szacowanie progu z rozkładu przetasowań w treningu zadziałało tu lepiej niż przybliżenie 1/√T przy `momentum_voltarget_v1`.
+4. **O samym skalowaniu rozstrzygnie dopiero porównanie z `momentum_multiasset_v1`**, czyli z tym samym sygnałem bez skalowania na tym samym holdoucie. Zapis otwarcia nie ma podziału P&L per klasa aktywów ani per rok, więc nie widać, czy przesunięcie ryzyka w stronę obligacji szkodziło w latach rosnących stóp ([#106](https://github.com/devTomaszStoklosa/QuantLab/issues/106)).
+
+Ograniczenia tego badania:
+
+- 10 ETF-ów wybranych w 2026 spośród notowanych do dziś (survivorship); jeden poziom docelowej zmienności (10%).
+- Koszt pożyczki ETF-u przy krótkiej sprzedaży nie jest modelowany. Pozycje krótkie w treningu traciły (−0.125), więc ten koszt jeszcze pogorszyłby wynik.
+- Zapis otwarcia nie dzieli holdoutu per klasa aktywów ani per rok (#106).
+- Lata holdoutu to znana historia rynku (obserwacja 6).
+- Koszty bez market impact, egzekucja po cenie zamknięcia.
+
+Co dalej:
+
+- `momentum_voltarget_multiasset_v1` jest zamknięta. Holdout 2018 → 2026-08 na `multiasset-etf` został dla niej zużyty, a jego wyniki znają już wszystkie kolejne próby na tym uniwersum.
+- Następny jest holdout `momentum_multiasset_v1`. Jej bramka walk-forward nie przeszła, więc status będzie `rejected` bez względu na holdout, ale jej wpis porówna ten sam sygnał bez skalowania na tym samym okresie.
