@@ -1,0 +1,27 @@
+{
+  "hypothesis": "pairs_v1",
+  "frozen_at_commit": "98bbc2b29c7643a56370fdd9f635f697646cbf76",
+  "opened_at": "2026-10-02T16:18:05.845046Z",
+  "opened_at_commit": "dbbea9e859b92c584c462543b663297ced449794",
+  "start": "2026-01-01",
+  "end": "2026-08-31",
+  "cost_model_name": "realistic-10bps-k0.05-vol30d",
+  "cagr": 0.0,
+  "sharpe": null,
+  "sortino": null,
+  "calmar": null,
+  "max_drawdown": 0.0,
+  "p_value": null,
+  "permutation": {
+    "test": "day_shuffle",
+    "statistic": "annualized Sharpe of gross daily returns",
+    "n_permutations": 10000,
+    "seed": 0,
+    "alpha": 0.1,
+    "active_days": 0,
+    "low_confidence": true,
+    "reason": "actual Sharpe undefined (no variance: no positions held?)"
+  },
+  "criterion": "Holdout net Sharpe under the realistic cost model > 0 and permutation-test p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 -> inconclusive; Sharpe > 0 and p < 0.1 -> passed; no position held (Sharpe undefined) -> inconclusive.",
+  "verdict": "inconclusive"
+}
