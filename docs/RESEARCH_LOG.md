@@ -527,6 +527,29 @@ Co dalej:
 3. Holdout trwa 8 miesięcy. Przy jednym wejściu na ok. 5.4 roku, w których handel był możliwy, naiwnie liczony brak pozycji w holdoucie ma ok. 90% szans. Kryterium ocenia go jako `inconclusive`. Gdyby pozycja się pojawiła, wynik też będzie opierał się na jednej transakcji.
 4. Ceny z tego okresu zostały już odczytane przy otwarciu `momentum_select_v1` i `momentum_voltarget_v1`, ale ta definicja była zamrożona wcześniej (2026-09-24), więc nic nie mogło zostać do nich dopasowane.
 
-**Wynik — holdout 2026-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+**Wynik — holdout 2026-01-01 → 2026-08-31** (otwarty dokładnie raz, 2026-10-02 16:18 UTC, przy commicie `dbbea9e` z obserwacjami powyżej; zapis otwarcia: [config/holdout/pairs_v1.opened.json](../config/holdout/pairs_v1.opened.json), commit `a14bb7c`; model realistyczny):
 
-**Wniosek:** _po otwarciu holdoutu._
+**Strategia nie otworzyła w holdoucie żadnej pozycji:** 0 dni z pozycją, CAGR 0.00%, max drawdown 0.00%, a Sharpe i p są nieokreślone. Test permutacyjny nie miał czego tasować. **Werdykt holdoutu: `inconclusive`**, z zamrożonej reguły „brak pozycji (Sharpe nieokreślony) → `inconclusive`”.
+
+**Wniosek: `inconclusive`.**
+
+Status wynika mechanicznie z reguł zapisanych przed wynikami: walk-forward nierozstrzygnięty, holdout `inconclusive` → `inconclusive`.
+
+Co mówią liczby poza samym słowem werdyktu:
+
+1. **Hipoteza nie została przetestowana poza próbą.** `inconclusive` znaczy tu „nie ma czego oceniać”, a nie „wynik bliski zera”. Zgodnie z obserwacją 3 sprzed otwarcia (ok. 90% szans na brak pozycji) holdout jest pusty.
+2. **W sześciu latach treningu i ośmiu miesiącach holdoutu reguła zagrała raz.** Na tej parze to reguła, której nie da się zwalidować: filtr kointegracji trzyma ją poza rynkiem prawie cały czas. Zapis otwarcia nie mówi, czy w 2026 zawiódł filtr kointegracji, czy spread nie odszedł o 2 odchylenia standardowe, bo nie przechowuje diagnostyki hipotezy ([#106](https://github.com/devTomaszStoklosa/QuantLab/issues/106)).
+3. **Najbardziej wartościowe jest ustalenie o parze, nie o strategii:** ETH i BTC nie są stabilnie skointegrowane (Engle-Granger p = 0.44 na całym treningu, powrót spreadu ok. 279 dni). Spread trading na dwóch instrumentach z tej samej klasy, napędzanych wspólnym czynnikiem, nie ma tu na czym zarabiać.
+
+Ograniczenia tego badania:
+
+- Jedna para, wybrana z góry; brak wyboru par z szerszego koszyka. To było świadome ograniczenie `q4`, z Johansenem i wyborem par odłożonymi na później.
+- Wszystkie liczby treningowe opierają się na jednej transakcji, a holdout na żadnej.
+- Brak diagnostyki kointegracji w zapisie otwarcia (#106).
+- Koszty bez market impact, egzekucja po cenie zamknięcia, koszt krótkiej sprzedaży BTC niemodelowany.
+
+Co dalej:
+
+- `pairs_v1` jest zamknięta, a holdout 2026-01 → 2026-08 został dla niej zużyty, choć nic na nim nie zmierzono. Sensowny test pairs tradingu wymagałby wielu par z szerszego koszyka, np. akcji z jednej branży albo instrumentów z wielu giełd, tak żeby filtr kointegracji miał z czego wybierać. To byłaby nowa hipoteza z nowym holdoutem.
+- Rękaw par nie wniesie do holdoutu `portfolio_v1` żadnej pozycji. Reguła alokacji odbiera wagę rękawom o zerowej wariancji w oknie estymacji, więc najpóźniej po jednym oknie (90 dni) portfel składa się z trzech pozostałych rękawów.
+- Następny jest holdout `mean_reversion_v1`, ostatni składnik, na który czeka `portfolio_v1`.
