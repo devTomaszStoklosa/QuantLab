@@ -440,6 +440,49 @@ Co dalej:
 3. Zarabiały tylko obligacje i długie pozycje; krótkie pozycje straciły łącznie −0.307. Skalowanie w siostrzanej hipotezie poprawiło wynik głównie dlatego, że przycięło tracące klasy (akcje, surowce, nieruchomości), a obligacje zostawiło w pełnej wadze: w treningu te trzy klasy przeszły z −0.157 łącznie na +0.045, a obligacje prawie się nie zmieniły (+0.058 → +0.061).
 4. Do p < 0.1 Sharpe brutto na holdoucie musiałby być o ok. 0.37 wyższy niż średnia przetasowań (odchylenie z treningu 0.29), a w treningu był o 0.27 niższy. Przy Sharpe netto −0.07 w treningu werdykt holdoutu `rejected` (Sharpe ≤ 0) jest nieco bardziej prawdopodobny (ok. 60%) niż `inconclusive`.
 
-**Wynik — holdout 2018-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+**Wynik — holdout 2018-01-01 → 2026-08-31** (otwarty dokładnie raz, 2026-10-02 16:13 UTC, przy commicie `20b7b8e` z obserwacjami powyżej; zapis otwarcia: [config/holdout/momentum_multiasset_v1.opened.json](../config/holdout/momentum_multiasset_v1.opened.json), commit `c20919b`; model realistyczny, zwroty ponad gotówkę; liczby z zapisu otwarcia, nie łączone z treningiem):
 
-**Wniosek:** _po otwarciu holdoutu._
+| Metryka | Holdout |
+|---|---:|
+| CAGR | −0.09% |
+| Sharpe netto | 0.03 |
+| Sortino | 0.04 |
+| Calmar | −0.00 |
+| Max drawdown | −21.12% |
+| p (test permutacyjny) | 0.639 |
+
+Test permutacyjny na holdoucie: Sharpe brutto 0.17 wobec średniej przetasowań 0.29 (odch. std. 0.32); wyższy niż 36.1% przetasowań. Strategia miała pozycję przez 2176 dni, więc wynik nie ma flagi niskiej wiarygodności. **Werdykt holdoutu: `inconclusive`** (Sharpe 0.03 > 0, ale p ≥ 0.1). Ujemny CAGR przy dodatnim Sharpe nie jest sprzecznością: Sharpe liczy średnią arytmetyczną dziennych zwrotów, a CAGR geometryczną, niższą mniej więcej o połowę wariancji. Przy średniej bliskiej zera ta różnica zmienia znak.
+
+**Wniosek: `rejected`.**
+
+Status wynika mechanicznie z reguł zapisanych przed wynikami: walk-forward niezaliczony, więc `rejected` bez względu na werdykt holdoutu (`inconclusive`).
+
+Co mówią liczby poza samym słowem werdyktu:
+
+1. **Holdout powtarza obraz z treningu.** Timing jest w obu okresach gorszy niż przeciętne losowe sparowanie (Sharpe brutto 0.04 wobec 0.31 w treningu i 0.17 wobec 0.29 w holdoucie), a wynik netto jest bliski zera. Na ok. 18 latach danych 12-miesięczne momentum na tym koszyku nie wykazało przewagi.
+2. **Skalowanie a jego brak na tym samym holdoucie** (oba zapisy otwarcia, ten sam okres i te same sygnały):
+
+   | Holdout 2018 → 2026-08 | Ze skalowaniem (`momentum_voltarget_multiasset_v1`) | Bez skalowania (`momentum_multiasset_v1`) |
+   |---|---:|---:|
+   | CAGR | 0.21% | −0.09% |
+   | Sharpe netto | 0.07 | 0.03 |
+   | Max drawdown | −13.47% | −21.12% |
+   | Sharpe brutto / średnia przetasowań | 0.26 / 0.30 | 0.17 / 0.29 |
+   | p | 0.554 | 0.639 |
+
+   Skalowanie znów zmniejszyło obsunięcie i nieco podniosło Sharpe. Różnica Sharpe netto skurczyła się jednak z 0.25 w treningu (0.17 wobec −0.08) do 0.04, a obie wartości nie odróżniają się od zera. To pasuje do obrazu skalowania jako ograniczenia ryzyka, a nie źródła przewagi.
+3. **Prognoza sprzed otwarcia była trafna co do rzędu wielkości, nie co do werdyktu.** Rozrzut przetasowań wyszedł 0.32 przy 0.29 w treningu. Werdyktowi `rejected` dawałem ok. 60%, a wyszedł `inconclusive` przy Sharpe 0.03, czyli tuż nad granicą reguły. Status końcowy i tak jest `rejected`.
+
+Ograniczenia tego badania:
+
+- 10 ETF-ów wybranych w 2026 spośród notowanych do dziś (survivorship).
+- Koszt pożyczki ETF-u przy krótkiej sprzedaży nie jest modelowany, a pozycje krótkie w treningu traciły (−0.307), więc ten koszt jeszcze pogorszyłby wynik.
+- Zapis otwarcia nie dzieli holdoutu per klasa aktywów ani per rok ([#106](https://github.com/devTomaszStoklosa/QuantLab/issues/106)), więc nie widać, gdzie skalowanie pomogło poza próbą.
+- Obserwacje sprzed otwarcia powstały po wyniku holdoutu wersji ze skalowaniem, a lata holdoutu to znana historia rynku.
+- Koszty bez market impact, egzekucja po cenie zamknięcia.
+
+Co dalej:
+
+- Obie hipotezy momentum na `multiasset-etf` są zamknięte, a holdout 2018 → 2026-08 na tym uniwersum jest zużyty. Każda kolejna próba na tym koszyku, np. inny lookback albo inna konstrukcja sygnału, potrzebowałaby nowego, nieoglądanego okresu. Dane zaczynają się w 2008, więc zostają tylko przyszłe notowania (od 2026-09) albo inny koszyk.
+- Na pytanie z q12, czy reguła jest „pod krypto”, czy działa szerzej: ani na BTC i ETH, ani na koszyku ETF-ów z pięciu klas aktywów 12-miesięczne momentum nie wykazało w holdoucie timingu lepszego niż przypadek.
+- Kolejne w planie są holdouty `pairs_v1` i `mean_reversion_v1`, a po nich `portfolio_v1`.
