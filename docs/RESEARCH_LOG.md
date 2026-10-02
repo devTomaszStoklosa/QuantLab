@@ -177,3 +177,103 @@ Co dalej:
 
 - `momentum_select_v1` jest zamknięta, a holdout 2026-01 → 2026-08 został dla niej zużyty. Wariant ze stałym krótkim lookbackiem albo z filtrem reżimu niskiej zmienności byłby nową hipotezą, z nowym zamrożonym holdoutem i z korektą DSR, bo powstałby po obejrzeniu tych wyników.
 - Jest to jeden z czterech składników `portfolio_v1`, którego holdout czeka jeszcze na holdouty `mean_reversion_v1` i `pairs_v1`.
+
+## 2026-10-02 — momentum_voltarget_v1: momentum skalowane do docelowej zmienności, BTC-USDT i ETH-USDT
+
+**Hipoteza:** sygnał `momentum_v1` (znak zwrotu 365-dniowego) z pozycjami skalowanymi do docelowej zmienności 40% rocznie na instrument, bez dźwigni, daje na BTC-USDT i ETH-USDT dodatni wynik netto po kosztach, a jego timing jest lepszy niż przypadek.
+
+**Metodologia:**
+
+- **Dane:** Binance spot, świece dzienne, BTC-USDT i ETH-USDT (uniwersum `mvp-crypto`), te same co w `momentum_v1`. Kontrola danych (`q14`): 0 błędów; 2 ostrzeżenia to skrajne ruchy z 2020-03-12, czyli prawdziwy krach.
+- **Sygnał i wielkość pozycji:** sygnał `momentum_v1` z rebalansem dziennym; jedyną różnicą jest wielkość pozycji. Udział każdego instrumentu to równa waga pomnożona przez min(1, 0.40 / roczna zmienność ex-ante). Zmienność to EWMA ze środkiem masy 60 dni w oknie 365 dziennych zwrotów do dnia decyzji (Moskowitz, Ooi, Pedersen 2012). Limit 1 oznacza brak dźwigni, więc nie ma kosztu finansowania. Pomysł powstał po obejrzeniu wyników `momentum_v1` (cały zysk w reżimie średniej zmienności, obsunięcie −88.7%), więc to kolejna próba na tych samych danych.
+- **Koszty:** te same trzy modele co w `momentum_v1`; główny `realistic-10bps-k0.05-vol30d`.
+- **Okres treningowy:** 2018-01-01 → 2023-12-31; pierwsza pozycja 2018-08-18, jak w `momentum_v1`.
+- **Holdout:** 2026-01-01 → 2026-08-31, zamrożony w [config/holdout/momentum_voltarget_v1.yaml](../config/holdout/momentum_voltarget_v1.yaml) (commit `ff61e2c`, 2026-09-26) przed jakimkolwiek przebiegiem. Lata 2024–2025 to zużyty holdout `momentum_v1`.
+- **Walidacja:**
+  - bramka in-sample: walk-forward w oknach rocznych od pierwszej pozycji; zaliczona, gdy Sharpe > 0 w co najmniej 2/3 okien i łączny Sharpe > 0;
+  - test permutacyjny: 10 000 przetasowań dziennych zwrotów względem trzymanych pozycji, seed 0, statystyka: roczny Sharpe zwrotów brutto, α = 0.1;
+  - kryterium holdoutu (zamrożone): Sharpe netto (model realistyczny) > 0 i p < 0.1; Sharpe ≤ 0 → `rejected`; Sharpe > 0 i p ≥ 0.1 → `inconclusive`.
+- **Wielokrotne testowanie:** 6 prób na `mvp-crypto` 2018–2023 i 11 konfiguracji w progu deflated Sharpe.
+- **Status końcowy:** jak w `momentum_v1`: `confirmed` tylko przy zaliczonej bramce in-sample i zaliczonym holdoucie; liczy go kod.
+
+**Wynik — okres treningowy 2018–2023:**
+
+| Metryka | `zero-cost` (brutto) | `naive-10bps` | `realistic` |
+|---|---:|---:|---:|
+| CAGR | 15.82% | 14.53% | 12.33% |
+| Sharpe | 0.61 | 0.58 | 0.52 |
+| Sortino | 0.85 | 0.80 | 0.72 |
+| Calmar | 0.26 | 0.24 | 0.20 |
+| Max drawdown | −60.32% | −61.13% | −63.00% |
+
+- **Koszty:** werdykt wrażliwości „robust” (różnica Sharpe między modelem naiwnym a realistycznym 0.06). Koszty w rejestrze transakcji to 0.1837 kapitału startowego przy P&L netto +1.0086.
+- **Walk-forward (realistic): zaliczony**, 5 z 6 okien ze Sharpe > 0.
+
+  | Okno | CAGR | Sharpe | Max drawdown |
+  |---|---:|---:|---:|
+  | 2018-08-18 → 2018-12-31 (niepełny rok) | 39.44% | 1.05 | −16.57% |
+  | 2019 | −42.96% | −1.93 | −47.30% |
+  | 2020 | 38.87% | 1.04 | −42.52% |
+  | 2021 | 70.90% | 1.59 | −23.99% |
+  | 2022 | 19.82% | 0.69 | −22.16% |
+  | 2023 | 9.30% | 0.43 | −36.71% |
+  | Łącznie | 13.85% | 0.55 | −63.00% |
+
+- **Skalowanie a to samo momentum bez skalowania** (to samo okno, netto, model realistyczny; opisowo):
+
+  | | Ze skalowaniem | Bez skalowania |
+  |---|---:|---:|
+  | Sharpe netto | 0.55 | 0.45 |
+  | Zmienność roczna | 35.3% | 66.9% |
+  | Max drawdown | −63.0% | −88.7% |
+
+  Średnia skala pozycji wobec równej wagi: BTC-USDT 0.64 (najniższa 0.33, na limicie 5.1% dni), ETH-USDT 0.51 (najniższa 0.26, na limicie 3.8% dni).
+- **Test permutacyjny:** Sharpe brutto 0.61 wobec średniej przetasowań 0.10 (odch. std. 0.41); wyższy niż 89.3% przetasowań; **p = 0.107**, nieistotny przy α = 0.1 (`momentum_v1`: p = 0.140).
+- **Wielokrotne testowanie:** Sharpe roczny 0.55, PSR 0.89, próg deflated Sharpe 0.70, DSR 0.36.
+- **Reżimy zmienności** (tercyl 30-dniowej zmienności BTC-USDT wobec ostatnich 365 dni; opisowo): niski CAGR −12.53%, Sharpe −0.21 (754 dni); średni CAGR 74.77%, Sharpe 1.75 (630 dni); wysoki CAGR 7.69%, Sharpe 0.39 (549 dni); 29 dni bez wyznaczonego reżimu: CAGR −72.03%, Sharpe −3.73.
+- **Transakcje:** 66 (2 otwarte na końcu), 22 z dodatnim P&L netto (33%). 9 transakcji trzymanych ponad 90 dni dało +1.29, pozostałe 57 łącznie −0.28; najlepsza transakcja przyniosła +0.58. To ten sam profil trend-following co w `momentum_v1`, bo sygnał jest ten sam.
+
+**Obserwacje przed otwarciem holdoutu** (zacommitowane przed uruchomieniem `open-holdout`, więc wynik holdoutu nie mógł na nie wpłynąć):
+
+1. Bramka in-sample przechodzi wyraźniej niż w `momentum_v1`: rok 2023 ma Sharpe 0.43 zamiast granicznego 0.01. Jedyny ujemny rok to 2019 (−43%).
+2. Skalowanie robi to, do czego służy. Na tym samym oknie zmienność spada z 66.9% do 35.3%, obsunięcie z −88.7% do −63.0%, a Sharpe netto rośnie z 0.45 do 0.55. Różnica Sharpe jest opisowa, bez testu istotności.
+3. Timing jest na granicy: p = 0.107, tuż nad α = 0.1. Po korekcie na 11 konfiguracji (DSR 0.36) wynik nie odróżnia się od najlepszej z 11 prób bez żadnego efektu.
+4. Wynik nadal opiera się na kilku długich transakcjach i na reżimie średniej zmienności. Skalowanie zmniejszyło zależność od 2021 (+70.9% zamiast +194.5% w `momentum_v1`), ale nie zmieniło profilu.
+5. Holdout jest ten sam co w `momentum_select_v1`: 8 miesięcy i ta sama mała moc. Do p < 0.1 potrzebny byłby roczny Sharpe rzędu 1.6, więc najbardziej prawdopodobny werdykt to `inconclusive`, a `rejected` ma szansę ok. 1 do 3 nawet przy prawdziwym efekcie. Ceny z tego okresu zostały już odczytane przy otwarciu `momentum_select_v1`, ale ta definicja była zamrożona wcześniej (2026-09-26), więc nic nie mogło zostać do nich dopasowane.
+
+**Wynik — holdout 2026-01-01 → 2026-08-31** (otwarty dokładnie raz, 2026-10-02 15:29 UTC, przy commicie `6672b2d` z obserwacjami powyżej; zapis otwarcia: [config/holdout/momentum_voltarget_v1.opened.json](../config/holdout/momentum_voltarget_v1.opened.json), commit `edfe905`; model realistyczny; liczby z zapisu otwarcia, nie łączone z treningiem):
+
+| Metryka | Holdout |
+|---|---:|
+| CAGR | 11.58% |
+| Sharpe netto | 0.48 |
+| Sortino | 0.68 |
+| Calmar | 0.38 |
+| Max drawdown | −30.76% |
+| p (test permutacyjny) | 0.246 |
+
+Test permutacyjny na holdoucie: Sharpe brutto 0.59 wobec średniej przetasowań 0.13 (odch. std. 0.68); wyższy niż 75.5% przetasowań. Strategia miała pozycję przez 242 dni, mniej niż rok sesji rynku krypto (365), więc kod oznacza wynik flagą niskiej wiarygodności. **Werdykt holdoutu: `inconclusive`** (Sharpe 0.48 > 0, ale p ≥ 0.1).
+
+**Wniosek: `inconclusive`.**
+
+Status wynika mechanicznie z reguł zapisanych przed wynikami: walk-forward zaliczony, holdout `inconclusive` → `inconclusive`. `confirmed` wymagałby zaliczenia obu bramek.
+
+Co mówią liczby poza samym słowem werdyktu:
+
+1. **Holdout jest zgodny z treningiem, ale niczego nie rozstrzyga.** Sharpe netto 0.48 jest bliski treningowemu (0.52), a statystyka testu leży ok. 0.68 odchylenia nad średnią przetasowań.
+2. **Obserwacja 5 sprzed otwarcia zawyżyła próg istotności.** Zakładała odchylenie rozkładu przetasowań ok. 1.2 i próg rzędu 1.6, a faktyczne odchylenie to 0.68. Do p < 0.1 wystarczał więc Sharpe brutto ok. 1.0 (0.13 + 1.28 × 0.68). Przybliżenie 1/√T pasuje do strategii, która często zmienia znak pozycji, jak `momentum_select_v1` (tam odchylenie 1.16). Sygnał 12-miesięczny zmienia pozycje rzadko, a przy rzadkich zmianach przetasowanie dni rusza wynik mniej. Wniosek o małej mocy zostaje: wynik 0.59 był daleko od progu 1.0.
+3. **Holdout nie mówi nic o samym skalowaniu.** `momentum_v1` miała inny holdout (2024–2025), a zapis otwarcia nie zawiera wersji bez skalowania na 2026. Przewaga skalowania (niższa zmienność i obsunięcie przy nie gorszym Sharpe) jest więc pokazana tylko na treningu i tylko opisowo.
+4. **Skalowanie nie chroni przed dużym obsunięciem:** −30.8% w 8 miesięcy holdoutu.
+
+Ograniczenia tego badania:
+
+- Tylko dwa, silnie skorelowane instrumenty, jak w `momentum_v1`.
+- 8 miesięcy holdoutu i flaga niskiej wiarygodności testu.
+- Porównanie ze skalowaniem i bez istnieje tylko dla treningu; zapis otwarcia przechowuje jedynie metryki, test i werdykt ([#106](https://github.com/devTomaszStoklosa/QuantLab/issues/106)).
+- Pomysł powstał po obejrzeniu wyników `momentum_v1`, więc to kolejna próba na tych samych danych, policzona w progu deflated Sharpe.
+- Koszty bez market impact, egzekucja po cenie zamknięcia.
+
+Co dalej:
+
+- `momentum_voltarget_v1` jest zamknięta, a holdout 2026-01 → 2026-08 został dla niej zużyty. W treningu skalowanie zmniejszyło zmienność i obsunięcie bez utraty Sharpe; to opis wyniku historycznego, nie dowód przewagi sygnału.
+- Ta sama konstrukcja na koszyku ETF z pięciu klas aktywów jest już zamrożona jako `momentum_voltarget_multiasset_v1` i czeka na swój holdout.
