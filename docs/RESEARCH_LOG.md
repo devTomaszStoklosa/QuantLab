@@ -640,3 +640,91 @@ Co dalej:
 - `mean_reversion_v1` jest zamknięta jako `rejected`, a holdout 2026-01 → 2026-08 został dla niej zużyty.
 - Krótkoterminowe momentum na krypto (lustro tej reguły albo lookbacki 7–60 dni) to kandydat na nową hipotezę, ale powstał po obejrzeniu tych danych. Wymagałby zamrożenia przed odczytem nowego okresu: dane krypto sprzed 2026-09 są już zużyte, więc zostają tylko przyszłe notowania. Do tego dochodzi kara deflated Sharpe za kolejną próbę na `mvp-crypto`.
 - Wszystkie składniki `portfolio_v1` mają już otwarte holdouty, więc jego holdout jest odblokowany. Bramka walk-forward portfela nie przeszła (2 z 6 okien), więc jego status końcowy będzie `rejected` bez względu na holdout.
+
+## 2026-10-02 — portfolio_v1: portfel czterech hipotez krypto ważonych odwrotnością zmienności
+
+**Hipoteza:** połączenie czterech zamrożonych hipotez krypto (`momentum_v1`, `mean_reversion_v1`, `pairs_v1`, `momentum_select_v1`) z wagami proporcjonalnymi do odwrotności zmienności każdego rękawa daje dodatni wynik netto po kosztach, a timing portfela jest lepszy niż przypadek.
+
+**Metodologia:**
+
+- **Dane:** Binance spot, świece dzienne, BTC-USDT i ETH-USDT (uniwersum `mvp-crypto`). Kontrola danych (`q14`): 0 błędów; 2 ostrzeżenia to skrajne ruchy z 2020-03-12, czyli prawdziwy krach.
+- **Reguła łączenia:** każdy składnik handluje dokładnie tak, jak jego zamrożona definicja (strategia, sizer, rebalans, koszty). Pierwszego dnia każdego miesiąca rękaw dostaje wagę proporcjonalną do 1/σ jego 90 ostatnich dziennych zwrotów netto z samodzielnego przebiegu, wyłącznie na barach sprzed tego dnia. Rękaw dostaje wagę 60 dni po pierwszym niezerowym zwrocie, a rękaw bez wariancji w oknie dostaje 0. Portfel trzyma ważoną sumę pozycji docelowych rękawów per instrument: przeciwne pozycje się kompensują, a handlowane i kosztowane są tylko zmiany pozycji netto. Równe wagi i risk parity są liczone obok, opisowo.
+- **Koszty:** `realistic-10bps-k0.05-vol30d` dla pozycji netto, obok `zero-cost` i `naive-10bps`.
+- **Okres treningowy:** 2018-01-01 → 2023-12-31, okres składników; pierwsza pozycja 2018-04-02.
+- **Holdout:** 2026-01-01 → 2026-08-31, zamrożony w [config/holdout/portfolio_v1.yaml](../config/holdout/portfolio_v1.yaml) (commit `fcbab10`, 2026-09-25) przed jakimkolwiek przebiegiem. `open-holdout` odmawiał otwarcia, dopóki holdouty składników o tym samym okresie nie zostały zapisane, więc portfel niczego o nich nie zdradził.
+- **Walidacja:** walk-forward w oknach rocznych (Sharpe > 0 w co najmniej 2/3 okien i łączny Sharpe > 0); test permutacyjny (10 000 przetasowań, seed 0, roczny Sharpe zwrotów brutto, α = 0.1); kryterium holdoutu: Sharpe netto > 0 i p < 0.1; Sharpe ≤ 0 → `rejected`; Sharpe > 0 i p ≥ 0.1 → `inconclusive`.
+- **Wielokrotne testowanie:** 6 prób na `mvp-crypto` 2018–2023 i 11 konfiguracji w progu deflated Sharpe; portfel to jedna próba i jedna konfiguracja.
+- **Status końcowy:** `confirmed` tylko przy zaliczonej bramce in-sample i zaliczonym holdoucie; niezaliczona bramka daje `rejected`; liczy go kod.
+
+**Wynik — okres treningowy 2018–2023:**
+
+| Metryka | `zero-cost` (brutto) | `naive-10bps` | `realistic` |
+|---|---:|---:|---:|
+| CAGR | −10.51% | −16.11% | −26.17% |
+| Sharpe | −0.00 | −0.14 | −0.43 |
+| Sortino | −0.00 | −0.19 | −0.54 |
+| Calmar | −0.12 | −0.18 | −0.28 |
+| Max drawdown | −87.89% | −89.83% | −93.06% |
+
+- **Walk-forward (realistic): niezaliczony**, 2 z 6 okien ze Sharpe > 0.
+
+  | Okno | CAGR | Sharpe | Max drawdown |
+  |---|---:|---:|---:|
+  | 2018-04-02 → 2018-12-31 (niepełny rok) | −61.82% | −1.13 | −66.80% |
+  | 2019 | −67.01% | −2.18 | −69.05% |
+  | 2020 | −21.89% | −0.08 | −58.11% |
+  | 2021 | 36.96% | 0.92 | −28.35% |
+  | 2022 | −12.02% | −0.16 | −31.54% |
+  | 2023 | 7.56% | 0.52 | −17.74% |
+  | Łącznie | −27.12% | −0.43 | −93.06% |
+
+- **Wagi rękawów** (odwrotność zmienności, co miesiąc przez 69 miesięcy; średnia, w nawiasie zakres): `mean_reversion_v1` 0.42 (0.18–1.00), `momentum_v1` 0.36 (0–0.76), `momentum_select_v1` 0.21 (0–0.40), `pairs_v1` 0.01 (0–0.41). Mediana współczynnika dywersyfikacji 1.82.
+- **Korelacje dziennych zwrotów netto rękawów:** od −0.29 (`mean_reversion_v1` z `momentum_select_v1`) do 0.27 (`momentum_v1` z `momentum_select_v1`); pozostałe pary między −0.04 a 0.07.
+- **Sharpe netto według reguły i rękawów osobno** (opisowo): odwrotność zmienności (zamrożona) −0.43, równe wagi −0.48, risk parity −0.56; `momentum_v1` sam 0.43, `momentum_select_v1` sam 0.44, `pairs_v1` sam 0.12, `mean_reversion_v1` sam −1.48.
+- **Test permutacyjny:** Sharpe brutto −0.00 wobec średniej przetasowań 0.02 (odch. std. 0.41); wyższy niż 47.9% przetasowań; **p = 0.521**.
+- **Wielokrotne testowanie:** Sharpe roczny −0.43, PSR 0.14, próg deflated Sharpe 0.68, DSR 0.00.
+- **Koszty:** werdykt wrażliwości „cost-dependent” (różnica Sharpe między modelem naiwnym a realistycznym 0.28). P&L transakcji brutto to −0.545 kapitału startowego, a koszty (0.293) pogłębiają go do −0.838. Przy 424 transakcjach o medianie 3 dni kompensowanie pozycji nie zbiło obrotu, który narzuca rękaw odwrócenia.
+- **Reżimy zmienności** (opisowo): niski CAGR −22.57%, Sharpe −0.52 (754 dni); średni CAGR −11.58%, Sharpe 0.02 (630 dni); wysoki CAGR −10.28%, Sharpe 0.02 (549 dni); 167 dni bez wyznaczonego reżimu: CAGR −86.50%.
+
+**Obserwacje przed otwarciem holdoutu** (zacommitowane przed uruchomieniem `open-holdout`). Piszę je, znając już wyniki holdoutów składników na tym samym okresie (wpisy powyżej), więc nie są od nich niezależne. Definicja portfela była zamrożona wcześniej (2026-09-25), więc nic nie mogło zostać do nich dopasowane.
+
+1. Bramka in-sample nie przeszła, więc status końcowy będzie `rejected` bez względu na holdout. Otwarcie zamyka zapis wszystkich prób krypto.
+2. Reguła łączenia zaszkodziła zamiast pomóc. Odwrotność zmienności patrzy tylko na ryzyko, więc najwięcej wagi (średnio 42%) dostał najgorszy rękaw, `mean_reversion_v1`. Portfel (−0.43) wypadł gorzej niż każdy z dwóch rękawów momentum osobno. Dywersyfikacja działała (współczynnik 1.82, niskie korelacje), ale nie naprawia rękawu o ujemnym oczekiwanym zwrocie. Równe wagi i risk parity dają podobny wynik, więc to problem składu portfela, nie reguły wag.
+3. Holdout portfela nie jest już niezależnym testem. Trzy z czterech rękawów mają znane wyniki na 2026: `mean_reversion_v1` Sharpe −1.70, `momentum_select_v1` +0.52, `pairs_v1` bez pozycji, a sygnał `momentum_v1` dał w wersji skalowanej +0.48. Tak było zaplanowane: portfel otwiera się ostatni, żeby niczego nie zdradzić o składnikach. Jego holdout sprawdza więc głównie arytmetykę połączenia.
+4. Jeśli `mean_reversion_v1` dostanie wagę podobną jak w treningu (ok. 40%), jego strata najpewniej przeważy zyski rękawów momentum. Spodziewam się ujemnego Sharpe i werdyktu holdoutu `rejected`.
+
+**Wynik — holdout 2026-01-01 → 2026-08-31** (otwarty dokładnie raz, 2026-10-02 16:32 UTC, przy commicie `b039d37` z obserwacjami powyżej; zapis otwarcia: [config/holdout/portfolio_v1.opened.json](../config/holdout/portfolio_v1.opened.json), commit `21a4167`; model realistyczny; liczby z zapisu otwarcia, nie łączone z treningiem):
+
+| Metryka | Holdout |
+|---|---:|
+| CAGR | −7.86% |
+| Sharpe netto | −0.20 |
+| Sortino | −0.27 |
+| Calmar | −0.52 |
+| Max drawdown | −15.07% |
+| p (test permutacyjny) | 0.411 |
+
+Test permutacyjny na holdoucie: Sharpe brutto 0.32 wobec średniej przetasowań 0.10 (odch. std. 0.99); wyższy niż 58.9% przetasowań. Strategia miała pozycję przez 242 dni, mniej niż rok sesji rynku krypto (365), więc kod oznacza wynik flagą niskiej wiarygodności. **Werdykt holdoutu: `rejected`** (Sharpe netto −0.20 ≤ 0).
+
+**Wniosek: `rejected`.**
+
+Status wynika mechanicznie z reguł zapisanych przed wynikami: walk-forward niezaliczony i holdout `rejected` → `rejected`.
+
+Co mówią liczby poza samym słowem werdyktu:
+
+1. **Werdykt zgodny z prognozą, mechanizm inny.** Obserwacja 4 zakładała, że strata rękawu odwrócenia przeważy zyski rękawów momentum. Tymczasem przed kosztami portfel był na plusie (Sharpe brutto 0.32), choć sam rękaw odwrócenia tracił (Sharpe brutto −1.06). Ujemny wynik netto (−0.20) dały koszty. Podobnie było w treningu: brutto −0.00, netto −0.43.
+2. **Portfel znów wypada gorzej niż jego najlepsze składniki.** Na tym samym okresie `momentum_select_v1` dała Sharpe netto +0.52, a sygnał `momentum_v1` w wersji skalowanej +0.48. Portfel −0.20. Połączenie z rękawem o ujemnym oczekiwanym zwrocie i wysokim obrocie kosztowało więcej, niż dała dywersyfikacja.
+3. **Obsunięcie było umiarkowane** (−15.1% w 8 miesięcy) przy −58.1% samego `mean_reversion_v1` na tym okresie. Kompensowanie pozycji i dywersyfikacja ograniczyły ryzyko, ale nie dały zwrotu.
+
+Ograniczenia tego badania:
+
+- Holdout portfela nie był niezależnym testem: wyniki składników na tym samym okresie były znane przed otwarciem (obserwacja 3).
+- Holdout 8 miesięcy, z flagą niskiej wiarygodności testu.
+- Skład portfela był zamrożony z góry i obejmował rękaw bez przewagi (`mean_reversion_v1`) oraz rękaw, który prawie nie handluje (`pairs_v1`). Portfel testował więc regułę łączenia na słabych składnikach, a nie dywersyfikację między rzeczywistymi źródłami zwrotu.
+- Koszty bez market impact, egzekucja po cenie zamknięcia.
+
+Co dalej:
+
+- `portfolio_v1` jest zamknięta jako `rejected`. Tym samym wszystkie hipotezy krypto mają otwarte holdouty i wpisy w dzienniku. Żadna nie jest `confirmed`. `momentum_v1`, `momentum_select_v1`, `momentum_voltarget_v1` i `pairs_v1` są `inconclusive`, a `mean_reversion_v1` i `portfolio_v1` są `rejected`.
+- Lekcja projektowa: reguła ważenia ryzykiem nie odfiltrowuje rękawów o ujemnym oczekiwanym zwrocie. Kolejny portfel wymagałby zamrożonego kryterium dopuszczenia rękawu, np. tylko hipotez z zaliczoną bramką in-sample, i nowego, nieoglądanego okresu. To byłaby nowa hipoteza.
+- Zostaje `xsmom_v1`, którego holdout czeka na naprawę danych z Tiingo ([#104](https://github.com/devTomaszStoklosa/QuantLab/issues/104)).
