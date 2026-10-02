@@ -1,0 +1,32 @@
+{
+  "hypothesis": "momentum_select_v1",
+  "frozen_at_commit": "d7c3d53c1913bded4e570a65c0a4192f87887ef6",
+  "opened_at": "2026-10-02T15:21:24.497846Z",
+  "opened_at_commit": "1efbf4ddbd0d4a5ed361af0d4582d06475fdda4f",
+  "start": "2026-01-01",
+  "end": "2026-08-31",
+  "cost_model_name": "realistic-10bps-k0.05-vol30d",
+  "cagr": 0.14635794144764702,
+  "sharpe": 0.5197783896358136,
+  "sortino": 0.786661171587394,
+  "calmar": 0.6155385620115396,
+  "max_drawdown": -0.2377721729884134,
+  "p_value": 0.2953704629537046,
+  "permutation": {
+    "test": "day_shuffle",
+    "statistic": "annualized Sharpe of gross daily returns",
+    "n_permutations": 10000,
+    "seed": 0,
+    "alpha": 0.1,
+    "active_days": 242,
+    "low_confidence": true,
+    "actual": 0.6757117765646217,
+    "null_mean": 0.03842433823069432,
+    "null_std": 1.1643743477339967,
+    "percentile": 0.7047,
+    "p_value": 0.2953704629537046,
+    "n_valid": 10000
+  },
+  "criterion": "In training, median net Sharpe of the CPCV paths of the choosing procedure > 0. Holdout net Sharpe under the realistic cost model > 0 and permutation-test p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 -> inconclusive; Sharpe > 0 and p < 0.1 -> passed.",
+  "verdict": "inconclusive"
+}
