@@ -97,3 +97,51 @@ Co dalej:
 
 - `momentum_v1` jest zamknięta, a holdout 2024–2025 zużyty. Każdy wariant — inny lookback, filtr reżimu średniej zmienności, szerszy koszyk — byłby nową hipotezą, z nowym zamrożonym holdoutem i z korektą na wielokrotne testowanie (`q6`: deflated Sharpe), bo powstałby po obejrzeniu tych wyników.
 - Zgodnie z [ROADMAP](ROADMAP.md): momentum nie przeszło walidacji, więc priorytet dostaje `q3` (mean reversion) jako kontrast na tym samym pipeline'ie — najlepiej na szerszym koszyku, który usuwa główne ograniczenie tego badania.
+
+## 2026-10-02 — momentum_select_v1: momentum z lookbackiem wybieranym na danych, BTC-USDT i ETH-USDT
+
+**Hipoteza:** momentum szeregów czasowych na BTC-USDT i ETH-USDT z lookbackiem wybieranym co roku na danych (siatka 30–365 dni, wybór po Sharpe netto z historii sprzed dnia wyboru) daje dodatni wynik netto po kosztach, a jego timing jest lepszy niż przypadek, także po uwzględnieniu, że parametr dobierano na danych.
+
+**Metodologia:**
+
+- **Dane:** Binance spot, świece dzienne, BTC-USDT i ETH-USDT (uniwersum `mvp-crypto`), te same co w `momentum_v1`. Kontrola danych (`q14`): 0 błędów; 2 ostrzeżenia to skrajne ruchy z 2020-03-12 (BTC −39.5%, ETH −44.6%), czyli prawdziwy krach.
+- **Procedura zamiast wartości:** 1 stycznia każdego roku każdy lookback z siatki [30, 60, 90, 180, 270, 365] jest testowany silnikiem wektorowym z modelem realistycznym, wyłącznie na barach sprzed tego dnia i we wspólnym oknie. Na cały rok handlowany jest lookback z najwyższym Sharpe netto (przy remisie krótszy). Zmiana lookbacku jest handlowana i kosztowana. Pierwszy wybór, wymagający 365 dni historii, przypada na 2020, więc pozycje są od 2020-01-02.
+- **Koszty:** te same trzy modele co w `momentum_v1`; główny `realistic-10bps-k0.05-vol30d`.
+- **Okres treningowy:** 2018-01-01 → 2023-12-31, okres `momentum_v1`; z pozycjami 4 lata (2020–2023).
+- **Holdout:** 2026-01-01 → 2026-08-31, zamrożony w [config/holdout/momentum_select_v1.yaml](../config/holdout/momentum_select_v1.yaml) (commit `d7c3d53`) przed jakimkolwiek przebiegiem. Lata 2024–2025 to zużyty holdout `momentum_v1`, więc nie należą do żadnego okresu oceny; wybór lookbacku na 2026 korzysta jednak z całej historii sprzed 2026-01-01, łącznie z nimi.
+- **Walidacja:**
+  - bramka in-sample: CPCV procedury wyboru (López de Prado 2018, rozdz. 12), 10 grup, z czego 2 testowe (45 podziałów, 9 ścieżek), purging 1 dzień i embargo 1%; zaliczona, gdy mediana Sharpe netto ścieżek > 0. Walk-forward kalendarzowy i PBO siatki są opisowe;
+  - test permutacyjny: 10 000 przetasowań dziennych zwrotów względem trzymanych pozycji, seed 0, statystyka: roczny Sharpe zwrotów brutto, α = 0.1;
+  - kryterium holdoutu (zamrożone): Sharpe netto (model realistyczny) > 0 i p < 0.1; Sharpe ≤ 0 → `rejected`; Sharpe > 0 i p ≥ 0.1 → `inconclusive`.
+- **Wielokrotne testowanie:** 6 prób na `mvp-crypto` 2018–2023 i 11 konfiguracji w progu deflated Sharpe, bo każda z sześciu wartości siatki liczy się osobno.
+- **Status końcowy:** jak w `momentum_v1`: `confirmed` tylko przy zaliczonej bramce in-sample i zaliczonym holdoucie; liczy go kod.
+
+**Wynik — okres treningowy 2018–2023** (pozycje od 2020-01-02):
+
+| Metryka | `zero-cost` (brutto) | `naive-10bps` | `realistic` |
+|---|---:|---:|---:|
+| CAGR | 19.93% | 15.92% | 9.09% |
+| Sharpe | 0.61 | 0.55 | 0.44 |
+| Sortino | 0.86 | 0.77 | 0.61 |
+| Calmar | 0.28 | 0.22 | 0.12 |
+| Max drawdown | −72.09% | −72.53% | −73.74% |
+
+- **CPCV: zaliczona.** 9 ścieżek, mediana Sharpe 0.45, zakres 0.23–0.76, wszystkie dodatnie. Ścieżki dzielą dane, więc nie są niezależnymi próbami.
+- **Wybrane lookbacki:** 2020 → 60 dni, 2021 → 30, 2022 → 60, 2023 → 30. W podziałach CPCV 30 dni wybrano w 56% przypadków, 60 dni w 38%, 270 dni w 7%, a 90, 180 i 365 dni nigdy. Procedura wybiera więc w praktyce momentum krótkoterminowe (1–2 miesiące), a nie 12-miesięczne z `momentum_v1`.
+- **Lata (netto, model realistyczny):** 2020 −18.79%, 2021 +122.85%, 2022 −39.80%, 2023 +54.68%. Dwa z czterech lat są ujemne, a skalę wyniku robi rok 2021.
+- **Koszty:** werdykt wrażliwości „cost-dependent” (różnica Sharpe między modelem naiwnym a realistycznym 0.11). Koszty w rejestrze transakcji (0.7635 kapitału startowego) są większe niż P&L netto (+0.6852), czyli realistyczne koszty zabierają ponad połowę wyniku brutto. Krótkie lookbacki to częste zmiany pozycji: 164 transakcje w 4 lata wobec 66 w 5.4 roku `momentum_v1`.
+- **Test permutacyjny:** Sharpe brutto 0.61 wobec średniej przetasowań 0.06 (odch. std. 0.41); wyższy niż 91.0% przetasowań; **p = 0.090**, istotny przy α = 0.1. To jedyny istotny timing wśród sześciu prób na tym koszyku (`momentum_v1`: p = 0.140).
+- **Wielokrotne testowanie:** Sharpe roczny 0.53, PSR 0.86, próg deflated Sharpe 0.81, DSR 0.29. Po uwzględnieniu 11 konfiguracji wynik nie odróżnia się od najlepszej z 11 prób bez żadnego efektu.
+- **Reżimy zmienności** (tercyl 30-dniowej zmienności BTC-USDT wobec ostatnich 365 dni; opisowo): niski CAGR −22.50%, Sharpe −0.17 (561 dni); średni CAGR 58.01%, Sharpe 1.05 (476 dni); wysoki CAGR 31.47%, Sharpe 0.75 (423 dni). Jak w `momentum_v1`, strategia traci przy niskiej zmienności.
+- **Transakcje:** 164 (2 otwarte na końcu), 53 z dodatnim P&L netto (32%).
+
+**Obserwacje przed otwarciem holdoutu** (zacommitowane przed uruchomieniem `open-holdout`, więc wynik holdoutu nie mógł na nie wpłynąć):
+
+1. Bramka in-sample przechodzi wyraźnie, a timing jest istotny przy α = 0.1, czego `momentum_v1` nie osiągnęła. Po korekcie na wielokrotne testowanie (DSR 0.29) wynik nie odróżnia się jednak od szczęścia najlepszej z 11 konfiguracji.
+2. Wynik jest kruchy w czasie: 4 lata z pozycjami, z czego dwa ujemne, a skalę robi 2021.
+3. Koszty zabierają ponad połowę wyniku brutto. Przewaga netto istnieje tylko wtedy, gdy model realistyczny nie zaniża poślizgu.
+4. Holdout trwa ok. 8 miesięcy (243 dni), więc test ma bardzo małą moc. Odchylenie rocznego Sharpe z 8 miesięcy to ok. 1/√0.67 ≈ 1.2, więc żeby p spadło poniżej 0.1, potrzebny byłby roczny Sharpe rzędu 1.6. Przy Sharpe takim jak w treningu (0.4–0.6) najbardziej prawdopodobny werdykt to `inconclusive`, a `rejected` (Sharpe ≤ 0) ma szansę ok. 1 do 3 nawet przy prawdziwym efekcie. Brak mocy był zaakceptowany przy zamrażaniu.
+
+**Wynik — holdout 2026-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+
+**Wniosek:** _po otwarciu holdoutu._
