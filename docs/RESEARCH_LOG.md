@@ -277,3 +277,76 @@ Co dalej:
 
 - `momentum_voltarget_v1` jest zamknięta, a holdout 2026-01 → 2026-08 został dla niej zużyty. W treningu skalowanie zmniejszyło zmienność i obsunięcie bez utraty Sharpe; to opis wyniku historycznego, nie dowód przewagi sygnału.
 - Ta sama konstrukcja na koszyku ETF z pięciu klas aktywów jest już zamrożona jako `momentum_voltarget_multiasset_v1` i czeka na swój holdout.
+
+## 2026-10-02 — momentum_voltarget_multiasset_v1: momentum skalowane do zmienności na koszyku ETF z pięciu klas aktywów
+
+**Hipoteza:** sygnał `momentum_multiasset_v1` (znak nadwyżki ponad gotówkę z 252 sesji) z pozycjami skalowanymi do docelowej zmienności 10% rocznie na instrument, bez dźwigni, daje na koszyku 10 ETF-ów z pięciu klas aktywów dodatni wynik netto ponad gotówkę po kosztach, a jego timing jest lepszy niż przypadek.
+
+**Metodologia:**
+
+- **Dane:** Tiingo, ceny dzienne skorygowane o dywidendy i splity, 10 ETF-ów (uniwersum `multiasset-etf`): akcje SPY, EFA i EEM; obligacje IEF, TLT i LQD; surowce GLD i DBC; dolar UUP; nieruchomości VNQ. Gotówką jest BIL i wszystkie zwroty liczone są ponad nią. Koszyk zamrożono przed pierwszym przebiegiem (2026-09-26); wszystkie ETF-y są notowane do dziś, co jest zastrzeżeniem survivorship. Kontrola danych (`q14`): 0 błędów; 38 ostrzeżeń to skrajne ruchy z okresu 2008-09 → 2009-04, czyli kryzys finansowy.
+- **Sygnał i wielkość pozycji:** znak nadwyżki ponad gotówkę z 252 sesji (pozycja długa albo krótka), rebalans dzienny, jak w `momentum_multiasset_v1`. Udział każdego ETF-u to równa waga pomnożona przez min(1, 0.10 / roczna zmienność ex-ante); zmienność to EWMA ze środkiem masy 60 sesji w oknie 252 zwrotów. Cel to 10%, a nie 40% jak u Moskowitza, Ooi i Pedersena (2012), bo bez dźwigni 40% przycinałoby tylko najbardziej zmienne ETF-y. To druga próba na tym uniwersum.
+- **Koszty:** `zero-cost`, `naive-3bps` i `realistic-3bps-k0.05-vol21d` (prowizja 3 bps plus poślizg 0.05 × zmienność 21-sesyjna); główny jest model realistyczny. Koszt pożyczki ETF-u przy krótkiej sprzedaży nie jest modelowany.
+- **Okres treningowy:** 2008-07-01 → 2017-12-31; pierwsza pozycja 2008-07-02.
+- **Holdout:** 2018-01-01 → 2026-08-31, zamrożony w [config/holdout/momentum_voltarget_multiasset_v1.yaml](../config/holdout/momentum_voltarget_multiasset_v1.yaml) (commit `51db59f`, 2026-09-26) przed jakimkolwiek przebiegiem.
+- **Walidacja:**
+  - bramka in-sample: walk-forward w oknach rocznych od pierwszej pozycji; zaliczona, gdy Sharpe > 0 w co najmniej 2/3 okien i łączny Sharpe > 0;
+  - test permutacyjny: 10 000 przetasowań dziennych zwrotów względem trzymanych pozycji, seed 0, statystyka: roczny Sharpe zwrotów brutto, α = 0.1;
+  - kryterium holdoutu (zamrożone): Sharpe netto (model realistyczny) > 0 i p < 0.1; Sharpe ≤ 0 → `rejected`; Sharpe > 0 i p ≥ 0.1 → `inconclusive`.
+- **Wielokrotne testowanie:** 2 próby na `multiasset-etf` (razem z `momentum_multiasset_v1`) i 2 konfiguracje w progu deflated Sharpe; próby na krypto się tu nie liczą.
+- **Status końcowy:** jak w `momentum_v1`: `confirmed` tylko przy zaliczonej bramce in-sample i zaliczonym holdoucie; liczy go kod.
+
+**Wynik — okres treningowy 2008-07 → 2017** (zwroty ponad gotówkę):
+
+| Metryka | `zero-cost` (brutto) | `naive-3bps` | `realistic` |
+|---|---:|---:|---:|
+| CAGR | 1.47% | 1.15% | 0.70% |
+| Sharpe | 0.36 | 0.28 | 0.18 |
+| Sortino | 0.49 | 0.39 | 0.25 |
+| Calmar | 0.21 | 0.16 | 0.09 |
+| Max drawdown | −6.90% | −7.21% | −8.03% |
+
+- **Koszty:** werdykt wrażliwości „cost-dependent” (różnica Sharpe między modelem naiwnym a realistycznym 0.10). Koszty w rejestrze transakcji (0.0750 kapitału startowego) są większe niż P&L netto (+0.0681), czyli zabierają ponad połowę wyniku brutto.
+- **Walk-forward (realistic): zaliczony**, 7 z 10 okien ze Sharpe > 0. Kod oznacza na kalendarzu giełdowym każde okno jako niepełne ([#110](https://github.com/devTomaszStoklosa/QuantLab/issues/110)); naprawdę niepełny jest tylko rok 2008.
+
+  | Okno | CAGR | Sharpe | Max drawdown |
+  |---|---:|---:|---:|
+  | 2008-07-02 → 2008-12-31 (niepełny rok) | 5.41% | 0.64 | −3.18% |
+  | 2009 | −2.51% | −0.52 | −6.80% |
+  | 2010 | 2.25% | 0.47 | −3.68% |
+  | 2011 | −1.14% | −0.25 | −5.79% |
+  | 2012 | 0.49% | 0.19 | −4.35% |
+  | 2013 | 3.07% | 0.85 | −4.28% |
+  | 2014 | 1.93% | 0.59 | −2.25% |
+  | 2015 | 0.33% | 0.10 | −4.24% |
+  | 2016 | −5.83% | −1.38 | −7.59% |
+  | 2017 | 5.84% | 1.84 | −1.27% |
+  | Łącznie | 0.70% | 0.18 | −8.03% |
+
+- **Skalowanie a to samo momentum bez skalowania** (`momentum_multiasset_v1`; to samo okno, netto, model realistyczny; opisowo):
+
+  | | Ze skalowaniem | Bez skalowania |
+  |---|---:|---:|
+  | Sharpe netto | 0.17 | −0.08 |
+  | Zmienność roczna | 4.4% | 11.7% |
+  | Max drawdown | −8.0% | −32.7% |
+
+  IEF, LQD i UUP są prawie zawsze na limicie (91.8%, 89.3% i 83.1% dni; średnia skala 0.99, 0.95 i 0.97). Najmocniej przycinane są EEM (średnio 0.47, nigdy na limicie), VNQ (0.56), EFA (0.57), GLD i DBC (po 0.61). Skalowanie przesuwa więc ryzyko portfela w stronę obligacji i dolara.
+- **Test permutacyjny:** Sharpe brutto 0.36 wobec średniej przetasowań 0.41 (odch. std. 0.27); wyższy niż tylko 42.2% przetasowań; **p = 0.578**, nieistotny przy α = 0.1. Faktyczny timing wypadł gorzej niż przeciętne losowe sparowanie tych samych pozycji z tymi samymi zwrotami.
+- **Wielokrotne testowanie:** Sharpe roczny 0.18, PSR 0.71, próg deflated Sharpe 0.17, DSR 0.52.
+- **Reżimy zmienności** (tercyl 21-sesyjnej zmienności SPY wobec ostatnich 252 sesji; opisowo): niski CAGR 0.19%, Sharpe 0.07 (970 dni); średni CAGR 2.00%, Sharpe 0.52 (720 dni); wysoki CAGR −0.14%, Sharpe −0.00 (697 dni); 5 dni bez wyznaczonego reżimu.
+- **Skąd wynik** (P&L netto transakcji przy kapitale startowym 1.00; opisowo, bez testu per klasa): obligacje +0.0611, akcje +0.0232, nieruchomości +0.0125, surowce +0.0094, dolar −0.0381. Najwięcej dały SPY (+0.043), IEF (+0.028) i LQD (+0.022), najwięcej straciły UUP (−0.038) i EEM (−0.025). Pozycje długie dały łącznie +0.193, krótkie −0.125.
+- **Transakcje:** 637 (10 otwartych na końcu), 188 z dodatnim P&L netto (30%). 33 transakcje trzymane ponad rok dały +0.373 (91% z nich zyskownych), wszystkie krótsze łącznie −0.305.
+
+**Obserwacje przed otwarciem holdoutu** (zacommitowane przed uruchomieniem `open-holdout`, więc wynik holdoutu nie mógł na nie wpłynąć):
+
+1. Bramka in-sample przechodzi o jedno okno: 7 z 10, a lata 2012 (Sharpe 0.19) i 2015 (0.10) są dodatnie ledwo. Jedno ujemne okno więcej dałoby 6 z 10, czyli poniżej 2/3.
+2. W treningu nie ma śladu timingu: Sharpe brutto 0.36 jest niższy niż średnia przetasowań 0.41 (p = 0.578). Dodatni wynik pochodzi z przeciętnej ekspozycji, a nie z wyczucia momentu.
+3. Skalowanie zmienia wynik z ujemnego na dodatni (Sharpe −0.08 → 0.17) głównie przez zmianę składu ryzyka: obligacje i dolar zostają w prawie pełnej wadze, a akcje, surowce i nieruchomości są przycinane. Prawie cały P&L netto pochodzi z obligacji (+0.061 z +0.068), w okresie przeważnie spadających rentowności.
+4. Koszty zabierają ponad połowę wyniku brutto, a wynik netto to 0.70% rocznie ponad gotówkę przy zmienności 4.4%.
+5. Holdout trwa 8.7 roku, więc test ma dużo większą moc niż holdouty krypto. Po lekcji z `momentum_voltarget_v1` szacuję próg z odchylenia przetasowań w treningu (0.27), a nie z 1/√T. Do p < 0.1 Sharpe brutto musiałby być o ok. 0.35 wyższy niż średnia przetasowań, a w treningu był o 0.05 niższy. Najbardziej prawdopodobny werdykt to więc `inconclusive`; `rejected` (Sharpe netto ≤ 0) ma szansę ok. 30% nawet przy prawdziwym Sharpe 0.18.
+6. Lata holdoutu to znana historia rynku, np. 2022, gdy akcje i obligacje spadały razem, a gotówka zaczęła dawać kilka procent rocznie. Definicję zamrożono, zanim kod odczytał te dane, ale nie przed wiedzą badacza o tych latach. Tego ograniczenia zamrożenie nie usuwa.
+
+**Wynik — holdout 2018-01-01 → 2026-08-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+
+**Wniosek:** _po otwarciu holdoutu._
