@@ -1,0 +1,32 @@
+{
+  "hypothesis": "mean_reversion_v1",
+  "frozen_at_commit": "01ea5bfcc437780acb710dd1276269ad97b55dfe",
+  "opened_at": "2026-10-02T16:27:10.829239Z",
+  "opened_at_commit": "bc29f3f6d32dd56b573bb11d498dd3ae72385e01",
+  "start": "2026-01-01",
+  "end": "2026-08-31",
+  "cost_model_name": "realistic-10bps-k0.05-vol30d",
+  "cagr": -0.6437663656683443,
+  "sharpe": -1.6952889602531933,
+  "sortino": -2.1497068999357003,
+  "calmar": -1.1075470424348979,
+  "max_drawdown": -0.5812541959870614,
+  "p_value": 0.8051194880511949,
+  "permutation": {
+    "test": "day_shuffle",
+    "statistic": "annualized Sharpe of gross daily returns",
+    "n_permutations": 10000,
+    "seed": 0,
+    "alpha": 0.1,
+    "active_days": 242,
+    "low_confidence": true,
+    "actual": -1.0610030626156504,
+    "null_mean": 0.00009090395820752946,
+    "null_std": 1.2264096439663574,
+    "percentile": 0.1949,
+    "p_value": 0.8051194880511949,
+    "n_valid": 10000
+  },
+  "criterion": "Holdout net Sharpe under the realistic cost model > 0 and permutation-test p-value < 0.1. Sharpe <= 0 -> rejected; Sharpe > 0 and p >= 0.1 -> inconclusive; Sharpe > 0 and p < 0.1 -> passed.",
+  "verdict": "rejected"
+}
