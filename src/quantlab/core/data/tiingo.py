@@ -6,7 +6,11 @@ Endpoints (https://www.tiingo.com/documentation/end-of-day):
   (`adjClose`, ...), `divCash` (cash dividend with that ex-date) and `splitFactor`
   (new shares per old share on that ex-date, 1.0 on other days);
 - GET /tiingo/daily/<ticker> - metadata with `startDate` and `endDate`, the first and
-  last day Tiingo has a price for.
+  last day Tiingo has a price for, and the `name` of the company.
+
+Tiingo files one company under a ticker, usually the last one to use it, with that
+company's whole price history; an earlier company with the ticker gets its prices
+(#104). `listing` says which company it is, for `quantlab audit-tickers`.
 
 Bars stay raw: the data layer adjusts them with the actions this adapter reports
 (core.data.corporate_actions), so every source is adjusted the same way. Tiingo
@@ -23,6 +27,7 @@ import requests
 
 from quantlab.core.data.cache import read_cached_json, write_cached_json
 from quantlab.core.data.events import CashDividend, Delisting, InstrumentEvents, Split
+from quantlab.core.data.identity import Listing
 from quantlab.core.data.provider import DataSourceUnavailableError, PriceBar
 from quantlab.core.universe import Instrument
 
@@ -43,6 +48,9 @@ _TIMEOUT_SECONDS = 30
 # A last price date seen this long after a range's end is final for that range:
 # the ticker stopped trading within it.
 _SETTLED_DAYS = 7
+# Metadata kept in the cache: the last price date for delistings, the rest to tell
+# which company Tiingo files under the ticker (#104).
+_METADATA_FIELDS = ("ticker", "name", "startDate", "endDate", "description")
 
 _last_request_at: float | None = None
 
@@ -159,6 +167,17 @@ class TiingoProvider:
         write_cached_json(_SOURCE, rows, "prices", instrument.symbol, str(start), str(end))
         return rows
 
+    def _metadata(self, instrument: Instrument, what: str) -> dict:
+        """Tiingo's metadata of the instrument's ticker, asked now and cached with the day
+        it was asked; every field None for a ticker Tiingo does not know."""
+        meta = self._get(instrument.symbol, what, f"{_BASE_URL}/{instrument.symbol}") or {}
+        cached = {
+            **{field: meta.get(field) for field in _METADATA_FIELDS},
+            "fetchedOn": _today().isoformat(),
+        }
+        write_cached_json(_SOURCE, cached, "meta", instrument.symbol)
+        return cached
+
     def _last_price_date(self, instrument: Instrument, end: date) -> date | None:
         """The last day Tiingo has a price for, None for an unknown ticker.
 
@@ -171,11 +190,25 @@ class TiingoProvider:
             settled = _day(cached["fetchedOn"]) > end + timedelta(days=_SETTLED_DAYS)
             if settled or (last is not None and last >= end):
                 return last
-        meta = self._get(instrument.symbol, "last price date", f"{_BASE_URL}/{instrument.symbol}")
-        meta = meta or {}
-        cached = {"endDate": meta.get("endDate"), "fetchedOn": _today().isoformat()}
-        write_cached_json(_SOURCE, cached, "meta", instrument.symbol)
+        cached = self._metadata(instrument, "last price date")
         return None if cached["endDate"] is None else _day(cached["endDate"])
+
+    def listing(self, instrument: Instrument) -> Listing | None:
+        """What Tiingo files under the instrument's ticker (#104): the company's name, its
+        first and last price dates and its description; None for a ticker Tiingo does
+        not know. Metadata cached for the last price date serves it, unless it was
+        cached before names were kept."""
+        cached = read_cached_json(_SOURCE, "meta", instrument.symbol)
+        if cached is None or "ticker" not in cached:
+            cached = self._metadata(instrument, "listing")
+        if cached["ticker"] is None:
+            return None
+        return Listing(
+            name=cached["name"] or "",
+            start=None if cached["startDate"] is None else _day(cached["startDate"]),
+            end=None if cached["endDate"] is None else _day(cached["endDate"]),
+            description=cached["description"] or "",
+        )
 
     def fetch(self, instrument: Instrument, start: date, end: date) -> list[PriceBar]:
         return [

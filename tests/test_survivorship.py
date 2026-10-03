@@ -164,7 +164,9 @@ def test_both_engines_realize_the_delisting_return() -> None:
     assert comparison.parity_difference < 1e-12
 
 
-def _run_dead_v1(tmp_path, monkeypatch, missing_delisting_return: float) -> str:
+def _run_dead_v1(
+    tmp_path, monkeypatch, missing_delisting_return: float, universe: Universe = _POINT_IN_TIME
+) -> str:
     repo = tmp_path / "definitions"
     repo.mkdir()
     (repo / "dead_v1.yaml").write_text(
@@ -193,7 +195,7 @@ success_criterion: {{description: test, min_sharpe: 0.0, max_p_value: 0.1}}
     monkeypatch.setattr(cli, "_HOLDOUT_DIR", repo)
     monkeypatch.setitem(cli._PROVIDERS, "synthetic", lambda: _Stocks(None))
     monkeypatch.setattr(cli, "_PERMUTATIONS", 20)
-    monkeypatch.setattr(Universe, "load", classmethod(lambda cls, name: _POINT_IN_TIME))
+    monkeypatch.setattr(Universe, "load", classmethod(lambda cls, name: universe))
 
     result = CliRunner().invoke(cli.app, ["run", "dead_v1"])
 
@@ -213,6 +215,20 @@ def test_run_reports_the_delistings_it_met(tmp_path, monkeypatch) -> None:
     # Every member-day has a price in this synthetic source (REQ-554).
     assert "Price coverage of the point-in-time universe: 100.0% of member-days" in output
     assert "Members without any price" not in output
+
+
+def test_run_lists_the_members_it_excluded_from_the_source(tmp_path, monkeypatch) -> None:
+    # The source files another company's prices under ddd's ticker (#104).
+    excluded = _POINT_IN_TIME.model_copy(update={"not_in_source": ["ddd"]})
+
+    output = _run_dead_v1(tmp_path, monkeypatch, -0.3, excluded)
+
+    assert "Members without any price in the source (1), invisible to the strategy: ddd" in output
+    assert (
+        "Of them, excluded because the source files another company's prices under their "
+        "ticker (1): ddd" in output
+    )
+    assert "Delistings in the data" not in output  # nothing about ddd was asked
 
 
 def test_run_shows_the_result_under_shumways_delisting_return_too(tmp_path, monkeypatch) -> None:

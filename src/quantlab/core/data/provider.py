@@ -1,4 +1,5 @@
 from bisect import bisect_right
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from datetime import date
 from typing import Protocol
@@ -79,3 +80,24 @@ class WithoutEvents:
 
     def events(self, instrument: Instrument, start: date, end: date) -> InstrumentEvents:
         return InstrumentEvents()
+
+
+class NotInSource:
+    """A source without the instruments it files another company's prices under (#104,
+    Universe.not_in_source). It asks the source nothing about them and gives no bars and
+    no events, as for a ticker the source does not know, so they stay members priced
+    nowhere and the coverage report lists them (REQ-554)."""
+
+    def __init__(self, source: DataProvider, instrument_ids: Iterable[str]) -> None:
+        self._source = source
+        self._excluded = frozenset(instrument_ids)
+
+    def fetch(self, instrument: Instrument, start: date, end: date) -> list[PriceBar]:
+        if instrument.id in self._excluded:
+            return []
+        return self._source.fetch(instrument, start, end)
+
+    def events(self, instrument: Instrument, start: date, end: date) -> InstrumentEvents:
+        if instrument.id in self._excluded:
+            return InstrumentEvents()
+        return self._source.events(instrument, start, end)

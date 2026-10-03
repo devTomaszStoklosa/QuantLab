@@ -74,6 +74,11 @@ class Universe(BaseModel):
     # run prices every bar in units of cash, so returns are returns above it. None:
     # returns are total returns and cash earns nothing (crypto, quoted in USDT).
     cash: Instrument | None = None
+    # Instruments the source has no prices of: their ticker's whole history there
+    # belongs to another company that took the ticker over (#104). The lab asks the
+    # source nothing about them, so they stay members priced nowhere, and the
+    # coverage report lists them (REQ-554).
+    not_in_source: list[str] = []
 
     _periods: dict[str, list[Membership]] = PrivateAttr(default_factory=dict)
 
@@ -92,6 +97,12 @@ class Universe(BaseModel):
                 )
             if self.cash.asset_class != "cash":
                 raise ValueError(f"Cash {self.cash.id} of universe '{self.name}' is not class cash")
+        unknown_unpriced = sorted(set(self.not_in_source) - set(ids))
+        if unknown_unpriced:
+            raise ValueError(
+                f"Instruments not in source that are not in universe '{self.name}': "
+                f"{unknown_unpriced}"
+            )
         if not self.memberships:
             return self
         periods: dict[str, list[Membership]] = defaultdict(list)

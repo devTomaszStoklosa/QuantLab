@@ -9,6 +9,7 @@ from quantlab import cli
 from quantlab.core.data import tiingo
 from quantlab.core.data.corporate_actions import with_events
 from quantlab.core.data.events import CashDividend, Split
+from quantlab.core.data.identity import Listing
 from quantlab.core.data.provider import DataSourceUnavailableError
 from quantlab.core.data.tiingo import TiingoProvider
 from quantlab.core.universe import Instrument
@@ -334,3 +335,55 @@ def test_the_lab_s_tiingo_announces_each_request_on_stderr_with_the_time(capsys)
 def test_the_default_budget_is_the_free_plan_s_monthly_tickers() -> None:
     assert tiingo.DEFAULT_MONTHLY_SYMBOLS == 500
     assert TiingoProvider()._monthly_symbols == 500
+
+
+def test_a_listing_says_which_company_tiingo_files_under_the_ticker() -> None:
+    get = _tiingo()
+    with patch("quantlab.core.data.tiingo.requests.get", get):
+        listing = TiingoProvider().listing(_SYN)
+
+    assert listing == Listing(
+        name="Synthetic Corp",
+        start=date(2010, 1, 4),
+        end=date(2026, 9, 23),
+        description="A synthetic company.",
+    )
+    (url,) = get.call_args.args
+    assert url == "https://api.tiingo.com/tiingo/daily/SYN"
+
+
+def test_a_listing_and_the_last_price_date_share_one_cached_answer() -> None:
+    lines = []
+    get = _tiingo()
+    with patch("quantlab.core.data.tiingo.requests.get", get):
+        provider = TiingoProvider(progress=lines.append)
+        provider.events(_SYN, _START, _END)  # prices, then the metadata
+        provider.listing(_SYN)
+        TiingoProvider().listing(_SYN)
+
+    assert get.call_count == 2
+    assert lines[-1].startswith("Tiingo: SYN last price date, ticker 1 of 500")
+
+
+def test_metadata_cached_before_names_were_kept_is_asked_again(monkeypatch) -> None:
+    tiingo.write_cached_json(
+        "tiingo", {"endDate": "2026-09-23", "fetchedOn": "2026-09-20"}, "meta", "SYN"
+    )
+    lines = []
+    get = _tiingo()
+    with patch("quantlab.core.data.tiingo.requests.get", get):
+        listing = TiingoProvider(progress=lines.append).listing(_SYN)
+        TiingoProvider().listing(_SYN)
+
+    assert listing is not None and listing.name == "Synthetic Corp"
+    assert get.call_count == 1  # then cached in full
+    assert lines == ["Tiingo: SYN listing, ticker 1 of 500 this month (0 s between requests)"]
+
+
+def test_a_ticker_tiingo_does_not_know_has_no_listing_and_is_asked_once() -> None:
+    get = _tiingo(prices=None)
+    with patch("quantlab.core.data.tiingo.requests.get", get):
+        assert TiingoProvider().listing(_SYN) is None
+        assert TiingoProvider().listing(_SYN) is None
+
+    assert get.call_count == 1

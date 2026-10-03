@@ -63,6 +63,7 @@ Akcje (`q5`): skład S&P 500 buduje się raz z zapisanej rewizji Wikipedii, ceny
 uv run quantlab build-universe                               # src/quantlab/config/universes/sp500.yaml + raport sprzeczności
 $env:TIINGO_API_KEY = "..."                                  # PowerShell; w bashu: export TIINGO_API_KEY=...
 uv run quantlab run xsmom_v1                                 # trening 2005-2019; wznawia pobieranie z cache
+uv run quantlab audit-tickers xsmom_v1                       # przed holdoutem: czy Tiingo trzyma pod tickerem tę samą spółkę (#104)
 uv run quantlab open-holdout xsmom_v1                        # jednorazowe otwarcie holdoutu 2020-2025
 uv run quantlab run momentum_multiasset_v1                   # ETF-y (q12): trening 2008-07..2017, zwroty ponad BIL
 uv run quantlab run momentum_voltarget_multiasset_v1         # to samo ze skalowaniem do 10% rocznie

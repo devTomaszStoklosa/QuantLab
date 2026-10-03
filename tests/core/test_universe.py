@@ -207,3 +207,39 @@ def test_an_instrument_names_its_asset_class(asset_class: str) -> None:
 def test_an_unknown_asset_class_is_refused() -> None:
     with pytest.raises(ValidationError, match="asset_class"):
         Instrument(id="x", symbol="X", asset_class="stock", quote_asset="USD")
+
+
+def _millipore(not_in_source: list[str]) -> Universe:
+    """A former member whose ticker the source files another company's prices under."""
+    return Universe(
+        name="pit",
+        asof_date=date(2026, 9, 24),
+        source="synthetic",
+        periods_per_year=252,
+        instruments=[_equity("mil"), _equity("aaa")],
+        memberships=[
+            Membership(instrument_id="mil", start=date(2000, 1, 1), end=date(2010, 7, 14)),
+            Membership(instrument_id="aaa", start=date(2000, 1, 1), end=None),
+        ],
+        not_in_source=not_in_source,
+    )
+
+
+def test_an_instrument_not_in_source_stays_a_member_the_run_fetches() -> None:
+    universe = _millipore(["mil"])
+
+    # Point in time it was a member; the data layer, not the universe, leaves it unpriced.
+    assert universe.members(date(2008, 1, 1)) == {"aaa", "mil"}
+    assert [i.id for i in universe.instruments_between(date(2008, 1, 1), date(2008, 1, 1))] == [
+        "mil",
+        "aaa",
+    ]
+
+
+def test_an_instrument_not_in_source_must_be_in_the_universe() -> None:
+    with pytest.raises(ValidationError, match=r"not in source that are not in universe 'pit'"):
+        _millipore(["mfc"])
+
+
+def test_a_universe_file_without_the_list_has_every_instrument_in_its_source() -> None:
+    assert Universe.load("mvp-crypto").not_in_source == []

@@ -20,7 +20,7 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
 
 | Źródło | Co daje | Klucz | Ograniczenia | Uwagi |
 |---|---|---|---|---|
-| Tiingo (`api.tiingo.com`) | ceny dzienne surowe i skorygowane, dywidendy (`divCash`) i splity (`splitFactor`) w dniu ex-date, metadane z ostatnim dniem notowań (także spółki zdjęte z obrotu); bez zwrotu z delistingu i bez jego przyczyny | tak: darmowe konto, plan Starter ($0), zmienna `TIINGO_API_KEY` | plan Starter według opisów z 2026-09-26: 500 różnych tickerów miesięcznie, 50 zapytań na godzinę, 1 000 dziennie, ponad 30 lat historii. Ok. 1 050 tickerów S&P 500 z lat 2004–2025 to pobieranie w trzech miesiącach kalendarzowych | **wybrane** ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)); licencja tylko na użytek własny, więc repozytorium prywatne, bez redystrybucji danych i bez publikacji wyników z cenami; warunki do potwierdzenia przy zakładaniu konta |
+| Tiingo (`api.tiingo.com`) | ceny dzienne surowe i skorygowane, dywidendy (`divCash`) i splity (`splitFactor`) w dniu ex-date, metadane z nazwą spółki oraz pierwszym i ostatnim dniem notowań (także spółki zdjęte z obrotu); bez zwrotu z delistingu i bez jego przyczyny; pod tickerem przejętym przez inną spółkę ceny tamtej spółki (#104) | tak: darmowe konto, plan Starter ($0), zmienna `TIINGO_API_KEY` | plan Starter według opisów z 2026-09-26: 500 różnych tickerów miesięcznie, 50 zapytań na godzinę, 1 000 dziennie, ponad 30 lat historii. Ok. 1 050 tickerów S&P 500 z lat 2004–2025 to pobieranie w trzech miesiącach kalendarzowych | **wybrane** ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)); licencja tylko na użytek własny, więc repozytorium prywatne, bez redystrybucji danych i bez publikacji wyników z cenami; warunki do potwierdzenia przy zakładaniu konta |
 | Alpha Vantage | lista spółek zdjętych z obrotu; skorygowane dane dzienne opisane jako premium | tak | 25 zapytań dziennie w darmowym planie | za wolne na setki spółek |
 | Nasdaq Data Link (Sharadar) | pełne delistingi, akcje korporacyjne, point-in-time | tak (płatne) | koszt | odrzucone: tylko darmowe źródła |
 | EODHD | ceny dzienne, spółki zdjęte z obrotu w planach płatnych | tak | 20 zapytań dziennie w darmowym planie | odrzucone: za mało zapytań, delistingi płatne |
@@ -39,6 +39,26 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
 - Skala dla ETF-ów (`q12`, uniwersum `multiasset-etf`): 10 ETF-ów i gotówka BIL, każdy po dwa zapytania na okno pobierania, czyli ok. 22 zapytania i ok. 35 min przy 90 s na trening i tyle samo na holdout. Dwie hipotezy na tym samym oknie czytają ten sam cache. ETF-y są w danych dziennych Tiingo na tych samych warunkach co akcje (bez redystrybucji surowych danych).
 - Test bez sieci: odpowiedź w udokumentowanym formacie Tiingo z syntetycznymi liczbami (`tests/core/data/test_tiingo.py`) — środowisko chmurowe nie ma dostępu do API, więc to nie jest nagranie na żywo. Przy pierwszym lokalnym pobraniu warto porównać format z prawdziwą odpowiedzią (pola `date`, `open`, `high`, `low`, `close`, `volume`, `adjClose`, `divCash`, `splitFactor`; metadane `endDate`).
 
+#### Tickery przejęte przez inne spółki (`quantlab audit-tickers`, #104)
+
+- Tiingo trzyma pod tickerem jedną spółkę, zwykle ostatnią, która go używa, z całą jej historią cen. Wcześniejsza spółka z tym tickerem nie dostaje więc pustej serii, tylko wiarygodnie wyglądające ceny innej spółki. Nie wychwyci ich ani raport pokrycia, ani `check-data`. Metadane pobrane 2026-10-02 to potwierdziły:
+  - pod `MIL` jest MFC Industrial zamiast Millipore;
+  - pod `LSI` jest Life Storage zamiast LSI Corp;
+  - pod `GENZ` jest ETF VanEck zamiast Genzyme;
+  - pod `EP` jest Empire Petroleum zamiast El Paso;
+  - `NVLS` nosi nazwę ETF-u Defiance, choć ceny z lat 2006–2017 mogą należeć do Novellusa.
+- Dokumentacja cen dziennych nie opisuje dostępu do wcześniejszej spółki pod tym samym tickerem. Stały identyfikator `permaTicker` jest opisany tylko dla danych fundamentalnych, a te są darmowe wyłącznie dla spółek DOW 30. Dlatego takich cen nie odzyskujemy (decyzja z 2026-10-02).
+- Takie spółki trafiają na listę `not_in_source` w `sp500-renames.yaml`, a `build-universe` przepisuje ją do `sp500.yaml`. Laboratorium nie pyta o nie Tiingo. Zostają członkami bez cen, strategia ich nie widzi, a `run` wymienia je w raporcie pokrycia osobno, jako wykluczone celowo.
+- To ograniczenie, nie naprawa. Wykluczone spółki to zwykle spółki przejęte, często z premią, więc ich brak zmienia przekrój tak samo jak każdy brak cen w źródle. Wpis w dzienniku podaje, które spółki wykluczono i jaki to udział dni członkostwa.
+- `quantlab audit-tickers <id>` sprawdza każdego byłego członka S&P 500 w oknie hipotezy (trening i holdout). Porównuje nazwy spółki z tabeli zmian Wikipedii (przypięta rewizja) z tym, co Tiingo trzyma pod tickerem: nazwą, pierwszym i ostatnim dniem notowań oraz opisem. Oznacza:
+  - nazwę bez wspólnego słowa (`name differs`) albo częściowo inną (`name partly differs`);
+  - ceny, które zaczynają się po początku członkostwa;
+  - ceny, które kończą się ponad tydzień przed końcem członkostwa;
+  - ticker nieznany Tiingo.
+- Audyt dokłada medianę ceny i obrotu w dniach członkostwa, wyłącznie z cen treningowych z cache; cen holdoutu nie czyta. Tabelę zapisuje w `results/ticker-audit-<id>.csv` (poza repozytorium, bo mediany pochodzą z cen Tiingo), z oznaczonymi tickerami na początku.
+- Audyt niczego nie rozstrzyga. Spółka po zmianie nazwy też ma inną nazwę, a nazwa w metadanych Tiingo potrafi nie zgadzać się z opisem (`LSI`: nazwa Life Storage, opis LSI Logic). Każdy oznaczony ticker przegląda się ręcznie, a potwierdzone przypadki trafiają do `not_in_source` z dowodem w komentarzu. Przypadki niejednoznaczne wykluczamy zachowawczo: brak danych szkodzi mniej niż ceny nieznanej spółki.
+- Koszt: jedno zapytanie o metadane na ticker. Cache metadanych trzyma nazwę, pierwszy dzień notowań i opis obok ostatniego dnia notowań. Wpisy zapisane przed #104 miały tylko ostatni dzień, więc audyt pyta o nie ponownie. Dla `xsmom_v1` to 343 byłych członków, ok. 8,6 h przy 90 s, a każdy ticker liczy się do limitu miesięcznego.
+
 #### Skład S&P 500 lokalnie (`core.sp500`, `quantlab build-universe`, `q5`-X7d)
 
 - Komenda czyta dwie strony, każdą w ostatniej rewizji sprzed 2026-09-24T00:00Z (API MediaWiki, bez klucza): *List of S&P 500 companies* (bieżący skład) i *Historical components of the S&P 500* (tabela zmian). Tabela zmian była częścią listy do 2026-08-11, kiedy przeniesiono ją na osobną stronę bez zmiany formatu. Komenda odtwarza skład wstecz do 2000-01-01 i zapisuje `src/quantlab/config/universes/sp500.yaml` z numerami obu rewizji i atrybucją CC BY-SA 4.0 w nagłówku (plik jest adaptacją treści Wikipedii i dzieli jej licencję).
@@ -47,9 +67,9 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
   - Tabela zmian nie ma wiersza dodania części spółek; w pierwszej budowie dotyczyło to 99 obecnych członków. Obecny okres członkostwa zaczyna się więc w dniu „date added” z listy spółek, chyba że ta data wypada we wcześniejszym okresie tego samego tickera. Członkostwo sprzed wejścia do indeksu zawyżałoby momentum, bo spółki trafiają do indeksu po silnych wzrostach. Raport wymienia każdą tak ustaloną datę.
   - Kilka dat na liście wygląda na błędne (np. D 2016, SRE 2017, TROW 2019). Te spółki wypadają z uniwersum na część lat, co jest mniej szkodliwe dla testu momentum niż członkostwo przed wejściem do indeksu; wpis w dzienniku to opisuje.
   - Przylegające okresy jednego tickera zostają osobne. Tak wygląda zmiana tickera zapisana w tabeli jako dodanie i usunięcie (np. WLTW → WTW), ale też ticker, którym dwie spółki wymieniły się jednego dnia (FOXA: 21st Century Fox do 2019-03-18, Fox Corp od 2019-03-19). Data z listy równa początkowi przylegających okresów jest spójna i nie trafia do raportu.
-- Znane ograniczenia po pierwszej budowie: stare AT&T Corp (`T` do 2005) i Allergan Inc (`AGN` do 2015) mają tickery przejęte przez inne spółki, więc nie mają własnego okresu. Starsze spółki tickerów z kilkoma okresami (np. `Q`: Qwest do 2011) mogą nie mieć cen w Tiingo; pokaże to raport pokrycia w `run` (REQ-554).
+- Znane ograniczenia po pierwszej budowie: stare AT&T Corp (`T` do 2005) i Allergan Inc (`AGN` do 2015) mają tickery przejęte przez inne spółki, więc nie mają własnego okresu. Starsze spółki tickerów z kilkoma okresami (np. `Q`: Qwest do 2011) mogą nie mieć cen w Tiingo, co pokaże raport pokrycia w `run` (REQ-554). Mogą też mieć ceny innej spółki, co pokaże dopiero audyt tickerów (#104, patrz wyżej).
 - Oba pliki commitowane przed zamrożeniem `xsmom_v1` (X8): skład jest częścią pre-rejestracji.
-- `quantlab run` na uniwersum point-in-time drukuje pokrycie cenami: udział dni członkostwa z ceną i członków bez żadnej ceny w źródle (REQ-554).
+- `quantlab run` na uniwersum point-in-time drukuje pokrycie cenami: udział dni członkostwa z ceną i członków bez żadnej ceny w źródle (REQ-554), a wśród nich osobno członków z listy `not_in_source`.
 
 Przed pierwszym użyciem źródła: sprawdzić aktualne warunki na stronie dostawcy (ten dokument nie jest źródłem prawdy dla licencji — zmieniają się bez ostrzeżenia), zapisać datę weryfikacji w tej tabeli.
 
