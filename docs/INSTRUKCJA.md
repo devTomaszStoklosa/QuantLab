@@ -353,7 +353,19 @@ Ta ścieżka trwa najdłużej, dni albo tygodnie, przez limity darmowego Tiingo.
    - **Wznawianie.** Przerwane pobieranie (limit, zamknięte okno, restart komputera) wznawia się od miejsca przerwania, bo odpowiedzi są w `data/cache/`. Wyczerpany limit kończy komendę jednym komunikatem; wystarczy uruchomić ją ponownie później.
    - **Pokrycie cenami.** Przebieg drukuje udział dni członkostwa z ceną i członków bez żadnej ceny w źródle.
 
-5. **Holdout, commit i wpis w dzienniku** jak w rozdziałach 6 i 7.
+5. **Audyt tickerów przed holdoutem** (#104, krok ręczny; `plan` go nie pokazuje). Pod tickerem, który przejęła inna spółka, Tiingo daje ceny tej nowej spółki, a nie pusty wynik. Raport pokrycia tego nie widzi. Szczegóły i przykłady: [DATA-SOURCES.md](DATA-SOURCES.md), sekcja o tickerach przejętych przez inne spółki.
+
+   ```powershell
+   uv run quantlab audit-tickers xsmom_v1
+   ```
+
+   - **Czas.** Komenda pyta Tiingo o metadane każdego byłego członka S&P 500 w oknie hipotezy, czyli 343 tickerów, ok. 8,6 h przy 90 s. Tickery liczą się do limitu miesięcznego, a przerwany audyt wznawia się z cache. Ceny bierze tylko z treningu, z cache; cen holdoutu nie czyta.
+   - **Wynik.** Tabela w `results/ticker-audit-xsmom_v1.csv`: oznaczone tickery na początku, z nazwami z Wikipedii i z Tiingo, datami notowań i medianą ceny oraz obrotu. W terminalu lista oznaczonych tickerów.
+   - **Przegląd.** Każdy oznaczony ticker oceń ręcznie: inna nazwa może oznaczać zmianę nazwy tej samej spółki. Potwierdzone przypadki, a także niejednoznaczne, dopisz do `not_in_source` w `src/quantlab/config/universes/sp500-renames.yaml`, każdy z dowodem w komentarzu.
+   - **Poprawka.** Zbuduj uniwersum ponownie (`uv run quantlab build-universe`) i zacommituj oba pliki. Raport budowy wymienia listę `not_in_source`.
+   - **Dziennik i powtórzony trening.** Poprawkę danych opisz w dzienniku, zanim powtórzysz trening: które tickery wykluczono i dlaczego. Potem uruchom trening ponownie: `uv run quantlab run xsmom_v1`. Plan nie oznaczy starego przebiegu jako nieaktualnego, bo nie śledzi zmian uniwersum.
+
+6. **Holdout, commit i wpis w dzienniku** jak w rozdziałach 6 i 7.
 
 ## 9. Wyniki w aplikacji (prawdziwe dane)
 
@@ -382,6 +394,7 @@ API udostępnia też endpointy JSON tylko do odczytu: `/api/health`, `/api/hypot
 | `uv run quantlab check-source binance` | czy Binance odpowiada z tego komputera |
 | `uv run quantlab check-source tiingo` | czy jest klucz Tiingo i czy API odpowiada |
 | `uv run quantlab check-data <id>` | kontrola danych treningowych hipotezy (z rozgrzewką): wszystkie błędy i ostrzeżenia z datami; danych holdoutu nie czyta; kod wyjścia 1 przy błędzie |
+| `uv run quantlab audit-tickers <id> [--output plik]` | czy Tiingo trzyma pod tickerem każdego byłego członka S&P 500 tę samą spółkę (#104): nazwy z Wikipedii i z Tiingo, daty notowań, mediana ceny i obrotu z treningu; tabela do przeglądu w `results/`; cen holdoutu nie czyta |
 | `uv run quantlab run <id> --contrast <inny_id>` | dodatkowo korelacja dziennych zwrotów netto z inną hipotezą |
 | `uv run quantlab --help`, `uv run quantlab <komenda> --help` | opis komend i opcji |
 
