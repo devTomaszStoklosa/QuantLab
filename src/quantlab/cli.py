@@ -1,3 +1,4 @@
+import csv
 import importlib.metadata
 import importlib.resources
 import os
@@ -46,7 +47,20 @@ from quantlab.core.data.corporate_actions import (
 )
 from quantlab.core.data.coverage import price_coverage
 from quantlab.core.data.events import InstrumentEvents
-from quantlab.core.data.provider import DataProvider, DataSourceUnavailableError, PriceBar
+from quantlab.core.data.identity import (
+    ListingSource,
+    TickerAudit,
+    former_members,
+    member_medians,
+    member_spans,
+    review_order,
+)
+from quantlab.core.data.provider import (
+    DataProvider,
+    DataSourceUnavailableError,
+    NotInSource,
+    PriceBar,
+)
 from quantlab.core.data.quality import Finding, QualityReport, quality_report, reference_sessions
 from quantlab.core.data.tiingo import TiingoProvider
 from quantlab.core.universe import ASSET_CLASSES, Universe
@@ -173,10 +187,21 @@ _PROVIDERS: dict[str, Callable[[], DataProvider]] = {
     "binance": BinanceProvider,
     "tiingo": partial(TiingoProvider, progress=_download_progress),
 }
+# Sources that say which company they file a ticker's prices under, for the ticker
+# audit (#104), by the same source names.
+_LISTING_SOURCES: dict[str, Callable[[], ListingSource]] = {
+    "tiingo": partial(TiingoProvider, progress=_download_progress),
+}
 
 
 def _provider(universe: Universe) -> DataProvider:
-    """The universe's data provider, or exit before fetching anything."""
+    """The universe's data provider without the instruments whose prices in it are
+    another company's (#104), or exit before fetching anything."""
+    return NotInSource(_source(universe), universe.not_in_source)
+
+
+def _source(universe: Universe) -> DataProvider:
+    """The universe's data provider as it is, or exit before fetching anything."""
     factory = _PROVIDERS.get(universe.source)
     if factory is None:
         typer.echo(
@@ -949,6 +974,12 @@ def run(
                 f"Members without any price in the source ({len(coverage.without_prices)}), "
                 f"invisible to the strategy: {', '.join(coverage.without_prices)}"
             )
+            excluded = [i for i in coverage.without_prices if i in universe.not_in_source]
+            if excluded:
+                typer.echo(
+                    "Of them, excluded because the source files another company's prices "
+                    f"under their ticker ({len(excluded)}): {', '.join(excluded)}"
+                )
     permutation = _SIGNIFICANCE_TESTS[config.success_criterion.significance_test](
         _TestInputs(bars, parameters, universe, _PERMUTATIONS, _PERMUTATION_ALPHA)
     ).validate(runs[2])
@@ -1482,17 +1513,22 @@ def build_universe_command() -> None:
     and writes quantlab/config/universes/sp500.yaml with the attribution CC BY-SA
     4.0 asks for.
     Then lists what the table contradicts: fix tickers in sp500-renames.yaml,
-    rebuild, and commit both files before the hypothesis is frozen.
+    rebuild, and commit both files before the hypothesis is frozen. Its
+    not_in_source list (#104) goes into the universe file as it is.
     """
-    renames = sp500.load_renames(
-        (_UNIVERSES_DIR / "sp500-renames.yaml").read_text(encoding="utf-8")
-    )
+    corrections = (_UNIVERSES_DIR / "sp500-renames.yaml").read_text(encoding="utf-8")
+    renames = sp500.load_renames(corrections)
+    not_in_source = sp500.load_not_in_source(corrections)
     listed = sp500.fetch_revision(sp500.CONSTITUENTS_PAGE, sp500.PINNED_AS_OF)
     history = sp500.fetch_revision(sp500.CHANGES_PAGE, sp500.PINNED_AS_OF)
     page = sp500.parse_pages(listed.html, history.html)
     as_of = sp500.PINNED_AS_OF.date()
     reconstruction = sp500.reconstruct(page, renames, sp500.DEFAULT_SINCE, as_of)
-    universe = sp500.universe_from(reconstruction, as_of)
+    try:
+        universe = sp500.universe_from(reconstruction, as_of, not_in_source)
+    except ValueError as error:  # a ticker in not_in_source the universe does not have
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
     target = _UNIVERSES_DIR / f"{sp500.UNIVERSE_NAME}.yaml"
     target.write_text(
         sp500.universe_yaml(universe, [listed, history], sp500.DEFAULT_SINCE), encoding="utf-8"
@@ -1509,6 +1545,10 @@ def build_universe_command() -> None:
         f"Universe {universe.name}: {len(universe.instruments) - 1} tickers and "
         f"{sp500.MARKET_PROXY.symbol}, {len(universe.memberships)} membership periods "
         f"from {sp500.DEFAULT_SINCE} -> {target}"
+    )
+    typer.echo(
+        f"Not in source, Tiingo's prices under the ticker being another company's "
+        f"({len(not_in_source)}): " + _listed(not_in_source, str)
     )
     typer.echo("")
     typer.echo("To check (renames go to sp500-renames.yaml; then rebuild):")
@@ -1542,6 +1582,133 @@ def build_universe_command() -> None:
     typer.echo(
         f"Rows of the table of changes without a readable date "
         f"({len(reconstruction.unreadable_rows)}): " + _listed(reconstruction.unreadable_rows, str)
+    )
+
+
+# --- #104: whose prices a ticker carries ----------------------------------------------
+
+# How much of a source's description the review table shows.
+_DESCRIPTION_CHARS = 200
+_AUDIT_COLUMNS = (
+    "ticker",
+    "flags",
+    "index names",
+    "first member day",
+    "last member day",
+    "source name",
+    "source first price",
+    "source last price",
+    "name similarity",
+    "median close",
+    "median dollar volume",
+    "not in source",
+    "source description",
+)
+
+
+def _optional(value: object, spec: str = "") -> str:
+    return "" if value is None else format(value, spec)
+
+
+def _audit_row(audit: TickerAudit) -> list[str]:
+    listing = audit.listing
+    return [
+        audit.instrument.symbol,
+        "; ".join(audit.flags),
+        " / ".join(audit.index_names),
+        audit.first_member_day.isoformat(),
+        audit.last_member_day.isoformat(),
+        _optional(listing and listing.name),
+        _optional(listing and listing.start),
+        _optional(listing and listing.end),
+        _optional(audit.similarity, ".2f"),
+        _optional(audit.median_close, ".2f"),
+        _optional(audit.median_dollar_volume, ".0f"),
+        "yes" if audit.not_in_source else "",
+        "" if listing is None else " ".join(listing.description.split())[:_DESCRIPTION_CHARS],
+    ]
+
+
+@app.command("audit-tickers")
+def audit_tickers(
+    hypothesis: Annotated[str, _HYPOTHESIS_ARGUMENT],
+    output: Annotated[
+        Path | None,
+        typer.Option(help="Write the review table here instead of results/ticker-audit-<id>.csv."),
+    ] = None,
+) -> None:
+    """Check whose prices Tiingo files under each former S&P 500 member's ticker (#104).
+
+    For every former member in the hypothesis's training and holdout windows, puts side
+    by side the names Wikipedia's table of changes gives the company (pinned revision),
+    what Tiingo files under the ticker (name, first and last price date, description)
+    and the median price and dollar volume while a member, from the training prices
+    only: the holdout's prices are never read. Writes a table, flagged tickers first,
+    for a review; confirmed cases go to not_in_source in sp500-renames.yaml. Asks
+    Tiingo once per ticker and caches the answer, so a first audit takes hours.
+    """
+    config = _load_definition(hypothesis).config
+    parameters = config.parameters
+    universe = _universe(parameters.universe)
+    if universe.name != sp500.UNIVERSE_NAME:
+        typer.echo(
+            f"Error: audit-tickers checks the {sp500.UNIVERSE_NAME} universe's former "
+            f"members; {hypothesis} trades {universe.name}",
+            err=True,
+        )
+        raise typer.Exit(1)
+    try:
+        listings = _LISTING_SOURCES[universe.source]()
+    except DataSourceUnavailableError as error:
+        typer.echo(f"Error: {error}", err=True)
+        raise typer.Exit(1) from error
+    prices = _source(universe)  # all of it: an audit also re-checks what is excluded
+    corrections = (_UNIVERSES_DIR / "sp500-renames.yaml").read_text(encoding="utf-8")
+    history = sp500.fetch_revision(sp500.CHANGES_PAGE, sp500.PINNED_AS_OF)
+    changes, _ = sp500.parse_changes(history.html)
+    names = sp500.security_names(changes, sp500.load_renames(corrections))
+
+    start, end = config.training_start, config.end
+    fetch_start = parameters.fetch_start(config.training_start, universe)
+    audits = []
+    for instrument in former_members(universe, start, end):
+        spans = member_spans(universe, instrument.id, start, end)
+        training = member_spans(universe, instrument.id, config.training_start, config.training_end)
+        listing = listings.listing(instrument)
+        # The prices the training run read, from the cache; none of the holdout's.
+        bars = prices.fetch(instrument, fetch_start, config.training_end) if training else []
+        median_close, median_dollar_volume = member_medians(bars, training)
+        audits.append(
+            TickerAudit(
+                instrument=instrument,
+                index_names=names.get(instrument.symbol, ()),
+                first_member_day=min(span.start for span in spans),
+                last_member_day=max(span.end or end for span in spans),
+                listing=listing,
+                median_close=median_close,
+                median_dollar_volume=median_dollar_volume,
+                not_in_source=instrument.id in universe.not_in_source,
+            )
+        )
+
+    audits = review_order(audits)
+    target = output or _RESULTS_DIR / f"ticker-audit-{hypothesis}.csv"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with target.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(_AUDIT_COLUMNS)
+        writer.writerows(_audit_row(audit) for audit in audits)
+    flagged = [audit for audit in audits if audit.flags]
+    typer.echo(
+        f"Ticker audit of {hypothesis} ({universe.name} members {start} .. {end}): "
+        f"{len(audits)} former members, {len(flagged)} flagged -> {target}"
+    )
+    for audit in flagged:
+        excluded = ", already not in source" if audit.not_in_source else ""
+        typer.echo(f"  {audit.instrument.symbol}: {'; '.join(audit.flags)}{excluded}")
+    typer.echo(
+        "Review each flagged ticker in the table. Confirmed cases go to not_in_source in "
+        "sp500-renames.yaml with their evidence; then build-universe and commit both files."
     )
 
 

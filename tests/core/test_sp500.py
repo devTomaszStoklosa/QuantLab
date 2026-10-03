@@ -398,3 +398,94 @@ def test_a_dated_rename_without_a_window_is_refused() -> None:
 def test_a_stray_character_next_to_a_ticker_is_dropped() -> None:
     assert sp500.normalize_ticker("ALLE|") == "ALLE"
     assert sp500.normalize_ticker(" brk.b ") == "BRK-B"
+
+
+def test_tickers_not_in_source_are_read_as_the_universe_spells_them() -> None:
+    text = "not_in_source:\n  - mil\n  - ' brk.b '\n  - MIL\n"
+
+    assert sp500.load_not_in_source(text) == ["BRK-B", "MIL"]
+    assert sp500.load_not_in_source("renames: {}\n") == []
+
+
+def test_a_ticker_yaml_reads_as_a_boolean_is_refused() -> None:
+    with pytest.raises(TypeError, match="quote it"):
+        sp500.load_not_in_source("not_in_source: [NO]\n")
+
+
+def test_the_universe_file_keeps_members_not_in_source_as_members() -> None:
+    result = sp500.reconstruct(sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), _FB, _SINCE, _AS_OF)
+
+    universe = sp500.universe_from(result, _AS_OF, ["OLD"])
+
+    assert universe.not_in_source == ["old"]
+    assert "old" in universe.members(date(2013, 12, 23))
+    text = sp500.universe_yaml(universe, [], _SINCE)
+    assert Universe.model_validate(yaml.safe_load(text)).not_in_source == ["old"]
+
+
+def test_a_ticker_not_in_source_must_be_in_the_universe() -> None:
+    result = sp500.reconstruct(sp500.parse_pages(_LIST_HTML, _HISTORY_HTML), _FB, _SINCE, _AS_OF)
+
+    with pytest.raises(ValueError, match="not in source that are not in universe 'sp500'"):
+        sp500.universe_from(result, _AS_OF, ["FB"])  # META in the universe
+
+
+def test_security_names_follow_each_ticker_as_the_universe_spells_it() -> None:
+    text = (Path(str(cli._UNIVERSES_DIR)) / "sp500-renames.yaml").read_text(encoding="utf-8")
+    changes = [
+        Change(date(2025, 11, 3), "Q", None, "Qnity Electronics"),
+        Change(date(2017, 11, 15), "IQV", "Q", "IQVIA", "Quintiles IMS"),
+        Change(date(2017, 8, 29), "Q", None, "Quintiles IMS"),
+        Change(date(2013, 12, 23), "FB", "GONE", "Facebook", "Gone Co"),
+        Change(date(2011, 4, 1), None, "Q", "", "Qwest Communications"),
+    ]
+
+    names = sp500.security_names(changes, sp500.load_renames(text))
+
+    assert names["Q"] == ("Qwest Communications", "Qnity Electronics")
+    assert names["IQV"] == ("Quintiles IMS", "IQVIA")
+    assert names["META"] == ("Facebook",)
+    assert names["GONE"] == ("Gone Co",)
+
+
+def _build(tmp_path, monkeypatch, corrections: str):
+    (tmp_path / "sp500-renames.yaml").write_text(corrections, encoding="utf-8")
+    monkeypatch.setattr(cli, "_UNIVERSES_DIR", tmp_path)
+    revisions = {
+        sp500.CONSTITUENTS_PAGE: Revision(sp500.CONSTITUENTS_PAGE, 7, "t", _LIST_HTML),
+        sp500.CHANGES_PAGE: Revision(sp500.CHANGES_PAGE, 8, "t", _HISTORY_HTML),
+    }
+    monkeypatch.setattr(sp500, "fetch_revision", lambda title, as_of: revisions[title])
+    return CliRunner().invoke(cli.app, ["build-universe"])
+
+
+def test_build_universe_writes_and_reports_the_members_not_in_source(tmp_path, monkeypatch) -> None:
+    result = _build(tmp_path, monkeypatch, "renames: {FB: META}\nnot_in_source: [GONE, OLD]\n")
+
+    assert result.exit_code == 0, result.output
+    universe = Universe.model_validate(
+        yaml.safe_load((tmp_path / "sp500.yaml").read_text(encoding="utf-8"))
+    )
+    assert universe.not_in_source == ["gone", "old"]
+    assert (
+        "Not in source, Tiingo's prices under the ticker being another company's (2): GONE; OLD"
+        in result.output
+    )
+
+
+def test_build_universe_refuses_a_ticker_not_in_source_it_does_not_have(
+    tmp_path, monkeypatch
+) -> None:
+    result = _build(tmp_path, monkeypatch, "renames: {FB: META}\nnot_in_source: [FB]\n")
+
+    assert result.exit_code == 1
+    assert "not in source that are not in universe 'sp500'" in result.output
+    assert not (tmp_path / "sp500.yaml").exists()
+
+
+def test_the_committed_list_of_members_not_in_source_loads() -> None:
+    text = (Path(str(cli._UNIVERSES_DIR)) / "sp500-renames.yaml").read_text(encoding="utf-8")
+
+    assert all(
+        ticker == sp500.normalize_ticker(ticker) for ticker in sp500.load_not_in_source(text)
+    )

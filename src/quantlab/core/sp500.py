@@ -418,8 +418,12 @@ def reconstruct(page: Page, renames: Renames, since: date, as_of: date) -> Recon
     )
 
 
-def universe_from(reconstruction: Reconstruction, as_of: date) -> Universe:
-    """The universe file's content: every ticker ever a member since `since`, and SPY."""
+def universe_from(
+    reconstruction: Reconstruction, as_of: date, not_in_source: list[str] | None = None
+) -> Universe:
+    """The universe file's content: every ticker ever a member since `since`, and SPY.
+    `not_in_source` names the tickers whose prices in Tiingo are another company's
+    (#104): they stay members, priced nowhere."""
     tickers = sorted({span.instrument_id for span in reconstruction.memberships})
     return Universe(
         name=UNIVERSE_NAME,
@@ -440,7 +444,22 @@ def universe_from(reconstruction: Reconstruction, as_of: date) -> Universe:
             span.model_copy(update={"instrument_id": span.instrument_id.lower()})
             for span in reconstruction.memberships
         ],
+        not_in_source=sorted(ticker.lower() for ticker in not_in_source or []),
     )
+
+
+def security_names(changes: list[Change], renames: Renames) -> dict[str, tuple[str, ...]]:
+    """The names the table of changes gives the companies of each ticker, the ticker
+    spelled as the universe spells it (renamed as in `reconstruct`), oldest first."""
+    names: dict[str, dict[str, None]] = defaultdict(dict)
+    for change in sorted(changes, key=lambda change: change.effective):
+        for ticker, name in (
+            (change.added, change.added_name),
+            (change.removed, change.removed_name),
+        ):
+            if ticker is not None and name:
+                names[renames.ticker(ticker, change.effective)][name] = None
+    return {ticker: tuple(found) for ticker, found in names.items()}
 
 
 # --- fetching and writing -------------------------------------------------------------
@@ -536,3 +555,16 @@ def load_renames(text: str) -> Renames:
             )
         )
     return Renames(tuple(entries))
+
+
+def load_not_in_source(text: str) -> list[str]:
+    """`not_in_source`: the tickers, as the universe spells them, whose whole price
+    history in Tiingo belongs to another company that took the ticker over (#104)."""
+    raw = yaml.safe_load(text) or {}
+    tickers = []
+    for entry in raw.get("not_in_source") or []:
+        if not isinstance(entry, str):
+            # YAML 1.1 reads an unquoted ON, NO or Y as a boolean.
+            raise TypeError(f"not_in_source entry {entry!r} is not a ticker; quote it")
+        tickers.append(normalize_ticker(entry))
+    return sorted(set(tickers))
