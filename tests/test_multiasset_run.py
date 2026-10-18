@@ -270,3 +270,20 @@ def test_narrate_drafts_the_log_entry_from_the_stored_run(tmp_path, monkeypatch)
     assert "never overwrites" in again.output
     assert unrun.exit_code == 1
     assert "uv run quantlab run etf_vt_v1" in unrun.output
+
+
+def test_narrate_prints_the_draft_in_utf8_through_a_cp1250_pipe(tmp_path, monkeypatch) -> None:
+    # A pipe on a Polish Windows encodes stdout as cp1250, which has no "→" (#103).
+    _committed(tmp_path, monkeypatch)
+    monkeypatch.setattr(cli, "_today", lambda: date(2026, 9, 27))
+    runner = CliRunner()
+    assert runner.invoke(cli.app, ["run", "etf_mom_v1"]).exit_code == 0
+    output = tmp_path / "reports" / "etf_mom_v1-log.md"
+    assert runner.invoke(cli.app, ["narrate", "etf_mom_v1", "--output", str(output)]).exit_code == 0
+
+    printed = CliRunner(charset="cp1250").invoke(cli.app, ["narrate", "etf_mom_v1"])
+
+    assert printed.exit_code == 0, printed.output
+    draft = printed.stdout_bytes.decode("utf-8").replace("\r\n", "\n")
+    assert "→" in draft
+    assert draft == output.read_text(encoding="utf-8") + "\n"  # echo adds a newline

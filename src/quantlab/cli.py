@@ -1809,7 +1809,8 @@ def narrate(
         raise typer.Exit(1) from error
     draft = research_log_draft(facts, _NARRATOR.sections(facts), _today())
     if output is None:
-        typer.echo(draft)
+        # UTF-8 like the --output file: a Windows pipe's code page lacks "→" (#103).
+        typer.echo(draft, file=typer.get_text_stream("stdout", encoding="utf-8"))
         return
     if output.exists():
         typer.echo(f"Error: {output} exists; the draft never overwrites a file", err=True)
