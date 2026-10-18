@@ -380,6 +380,45 @@ def test_metadata_cached_before_names_were_kept_is_asked_again(monkeypatch) -> N
     assert lines == ["Tiingo: SYN listing, ticker 1 of 500 this month (0 s between requests)"]
 
 
+@pytest.mark.parametrize(
+    ("prices", "expected"),
+    [
+        (None, None),
+        (
+            _PRICES,
+            Listing(
+                name="Synthetic Corp",
+                start=date(2010, 1, 4),
+                end=date(2020, 9, 3),
+                description="A synthetic company.",
+            ),
+        ),
+    ],
+    ids=["ticker unknown now", "ticker taken over since"],
+)
+def test_names_asked_for_old_metadata_keep_the_last_price_date_runs_delist_from(
+    prices, expected
+) -> None:
+    """A rerun dates the delisting as the first run did, whatever Tiingo files under the
+    ticker now (#126)."""
+    tiingo.write_cached_json(
+        "tiingo", {"endDate": "2020-09-03", "fetchedOn": "2026-09-20"}, "meta", "SYN"
+    )
+    get = _tiingo(prices=prices)
+    with patch("quantlab.core.data.tiingo.requests.get", get):
+        provider = TiingoProvider()
+        listing = provider.listing(_SYN)
+        events = provider.events(_SYN, _START, _END)
+
+    assert listing == expected
+    assert events.delisting is not None
+    assert events.delisting.date == date(2020, 9, 4)  # the day after the cached last price
+    cached = tiingo.read_cached_json("tiingo", "meta", "SYN")
+    assert (cached["endDate"], cached["fetchedOn"]) == ("2020-09-03", "2026-09-20")
+    metadata_requests = [c for c in get.call_args_list if not c.args[0].endswith("/prices")]
+    assert len(metadata_requests) == 1  # the names, then settled from the cache
+
+
 def test_a_ticker_tiingo_does_not_know_has_no_listing_and_is_asked_once() -> None:
     get = _tiingo(prices=None)
     with patch("quantlab.core.data.tiingo.requests.get", get):

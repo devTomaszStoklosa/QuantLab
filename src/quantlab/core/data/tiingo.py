@@ -167,14 +167,18 @@ class TiingoProvider:
         write_cached_json(_SOURCE, rows, "prices", instrument.symbol, str(start), str(end))
         return rows
 
-    def _metadata(self, instrument: Instrument, what: str) -> dict:
+    def _metadata(self, instrument: Instrument, what: str, earlier: dict | None = None) -> dict:
         """Tiingo's metadata of the instrument's ticker, asked now and cached with the day
-        it was asked; every field None for a ticker Tiingo does not know."""
+        it was asked; every field None for a ticker Tiingo does not know. With an
+        `earlier` answer, its last price date and the day it was asked stay: runs date
+        delistings from them, and Tiingo's answer may have changed since (#126)."""
         meta = self._get(instrument.symbol, what, f"{_BASE_URL}/{instrument.symbol}") or {}
         cached = {
             **{field: meta.get(field) for field in _METADATA_FIELDS},
             "fetchedOn": _today().isoformat(),
         }
+        if earlier is not None:
+            cached.update(endDate=earlier["endDate"], fetchedOn=earlier["fetchedOn"])
         write_cached_json(_SOURCE, cached, "meta", instrument.symbol)
         return cached
 
@@ -196,11 +200,13 @@ class TiingoProvider:
     def listing(self, instrument: Instrument) -> Listing | None:
         """What Tiingo files under the instrument's ticker (#104): the company's name, its
         first and last price dates and its description; None for a ticker Tiingo does
-        not know. Metadata cached for the last price date serves it, unless it was
-        cached before names were kept."""
+        not know. Metadata cached for the last price date serves it; metadata cached
+        before names were kept gets the names only and keeps its last price date."""
         cached = read_cached_json(_SOURCE, "meta", instrument.symbol)
-        if cached is None or "ticker" not in cached:
+        if cached is None:
             cached = self._metadata(instrument, "listing")
+        elif "ticker" not in cached:
+            cached = self._metadata(instrument, "listing", earlier=cached)
         if cached["ticker"] is None:
             return None
         return Listing(
