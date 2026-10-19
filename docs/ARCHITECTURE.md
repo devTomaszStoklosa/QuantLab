@@ -59,7 +59,6 @@ QuantLab/
 │   ├── fixtures/results/           # syntetyczny magazyn wyników (generowany przez tests/test_results_fixture.py)
 │   └── design-system/              # QuantForge: tokeny, komponenty React 18
 ├── data/
-│   ├── fixtures/                  # syntetyczne dane testowe (w repo)
 │   ├── raw/                       # pobrane dane publiczne (gitignored)
 │   └── cache/                     # cache HTTP (gitignored)
 ├── notebooks/                      # eksploracja per hipoteza
@@ -132,7 +131,7 @@ presentation (.NET + React, rozszerzenie q7)
 
 ## Testy
 
-- Testy jednostkowe bez sieci: dane testowe z `data/fixtures/`.
+- Testy jednostkowe bez sieci: syntetyczne świece budowane w kodzie testu; syntetyczny magazyn wyników w `presentation/fixtures/results/` (generowany przez `tests/test_results_fixture.py`).
 - Golden-master dla silnika backtestu: syntetyczne serie ze znanym z góry wynikiem (np. stały trend → policzalny z góry Sharpe).
 - `tests/test_environment.py` sprawdza importy zależności natywnych (maszyna bez AVX2) — patrz [CLAUDE.md](../CLAUDE.md).
 

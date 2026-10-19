@@ -16,7 +16,7 @@ Repozytorium jest publiczne. Granica jest następująca:
 |---|---|
 | kod, testy, konfiguracja CI | surowe odpowiedzi API i cache (`data/raw/`, `data/cache/`) |
 | metodologia, ADR-y, specyfikacje, dziennik badawczy | magazyn wyników z przebiegów na prawdziwych danych (`results/`) |
-| syntetyczne fixtures (`data/fixtures/`, `presentation/fixtures/`) | tear-sheety (`reports/`) |
+| syntetyczne fixtures (`presentation/fixtures/`) | tear-sheety (`reports/`) |
 | zagregowane statystyki: Sharpe, CAGR, drawdown, p-value, werdykt, zapisy otwarcia holdoutu | szeregi cen, krzywe kapitału i rejestr transakcji z prawdziwych danych |
 | skład indeksów (tylko członkostwo, bez cen) z atrybucją Wikipedii (CC BY-SA 4.0) | klucze API i plik `.env` |
 
