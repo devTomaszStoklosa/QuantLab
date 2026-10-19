@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # Where synthetic data files may live (docs/DATA-SOURCES.md). Anything else
 # with a data extension is a candidate market-data leak.
-ALLOWED_DATA_DIRS = ("data/fixtures/", "presentation/fixtures/")
+ALLOWED_DATA_DIRS = ("presentation/fixtures/",)
 DATA_EXTENSIONS = frozenset(
     {".parquet", ".csv", ".tsv", ".duckdb", ".db", ".sqlite", ".sqlite3", ".feather", ".xlsx"}
 )
@@ -92,11 +92,16 @@ def _relative(files: Iterable[Path]) -> list[str]:
 def test_data_file_outside_the_fixtures_is_flagged() -> None:
     paths = [
         "data/raw/btc.parquet",
+        "data/fixtures/bars.csv",
         "notes/prices.CSV",
         "presentation/fixtures/results/demo_momentum/run.parquet",
         "src/quantlab/core/universe.py",
     ]
-    assert data_files_outside_fixtures(paths) == ["data/raw/btc.parquet", "notes/prices.CSV"]
+    assert data_files_outside_fixtures(paths) == [
+        "data/raw/btc.parquet",
+        "data/fixtures/bars.csv",
+        "notes/prices.CSV",
+    ]
 
 
 def test_oversized_file_is_flagged() -> None:

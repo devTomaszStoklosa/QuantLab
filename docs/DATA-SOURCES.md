@@ -6,7 +6,7 @@
 2. **Throttling po naszej stronie**, nie przez odpowiedzi z kodem błędu. Każdy klient w `core.data` ma minimalny odstęp między żądaniami.
 3. **Cache na dysku** (`data/cache/`, gitignored) — tych samych danych nie pobieramy dwa razy.
 4. **Atrybucja** idzie razem z danymi (źródło + URL w metadanych zapisu).
-5. **Dane testowe w repo tylko syntetyczne** (`data/fixtures/`) — wygenerowane, nie pobrane.
+5. **Dane testowe w repo tylko syntetyczne** — wygenerowane, nie pobrane: świece budowane w kodzie testów, a magazyn wyników w `presentation/fixtures/results/` generowany pełnym pipeline'em (`tests/test_results_fixture.py`).
 
 ## Źródła rozważane
 
