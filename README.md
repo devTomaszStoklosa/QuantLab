@@ -6,6 +6,21 @@ Platforma do prowadzenia systematycznych badań inwestycyjnych: hipoteza, dane, 
 
 Cel nie jest jedna działająca strategia — cel jest pokazanie procesu badawczego: hipoteza, test, walidacja, wniosek, także gdy wniosek to „nie działa".
 
+## Szybki start (bez kluczy, na danych syntetycznych)
+
+Wymagania: [uv](https://docs.astral.sh/uv/), a dla aplikacji .NET 10 SDK i Node.js ≥ 22.22.
+
+```bash
+git clone https://github.com/devTomaszStoklosa/QuantLab.git   # pełny klon: rejestr prób (q6) czyta historię gita
+cd QuantLab
+uv sync
+uv run pytest -q                                               # testy silnika na danych syntetycznych, bez sieci
+(cd presentation/web && npm ci && npm run build)
+dotnet run --project presentation/QuantLab.Api --launch-profile demo   # aplikacja na syntetycznym magazynie: http://localhost:5080
+```
+
+Przebiegi na prawdziwych danych wymagają dostępu do Binance i darmowego klucza Tiingo. Ich ceny, rejestr transakcji i tear-sheety zostają lokalnie; w repozytorium są kod, metodologia i zagregowane statystyki ([ADR-0010](docs/adr/0010-public-repo-data-boundary.md)).
+
 ## Status
 
 MVP zamknięte (`lab-foundation` + `q1-momentum-research-mvp`): pierwsza hipoteza — time-series momentum na BTC-USDT i ETH-USDT — przeszła pełny pipeline (sygnał, silnik wektorowy z testem golden-master, trzy modele kosztów, walk-forward, zamrożony holdout otwarty raz, test permutacyjny, reżimy, stress test, rejestr transakcji, tear-sheet). Wynik: `inconclusive`, opisany w [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md).
@@ -57,7 +72,7 @@ uv run quantlab open-holdout portfolio_v1                   # dopiero po holdout
 uv run quantlab run momentum_voltarget_v1                    # trening 2018-2023: skala pozycji i porównanie z wersją bez skalowania
 ```
 
-Akcje (`q5`): skład S&P 500 buduje się raz z zapisanej rewizji Wikipedii, ceny pobiera adapter Tiingo (darmowy plan Starter, klucz w zmiennej środowiskowej; limit 500 tickerów miesięcznie rozkłada pobieranie S&P 500 na trzy miesiące, a adapter sam go pilnuje). Wszystkie źródła są darmowe, a repozytorium jest prywatne ze względu na licencję użytku własnego ([ADR-0009](docs/adr/0009-private-repo-free-tiingo-plan.md), [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)):
+Akcje (`q5`): skład S&P 500 buduje się raz z zapisanej rewizji Wikipedii, ceny pobiera adapter Tiingo (darmowy plan Starter, klucz w zmiennej środowiskowej; limit 500 tickerów miesięcznie rozkłada pobieranie S&P 500 na trzy miesiące, a adapter sam go pilnuje). Wszystkie źródła są darmowe ([ADR-0009](docs/adr/0009-private-repo-free-tiingo-plan.md)). Licencja Tiingo pozwala tylko na użytek własny, więc pobrane ceny i wyniki z cenami zostają lokalnie ([ADR-0010](docs/adr/0010-public-repo-data-boundary.md), [docs/DATA-SOURCES.md](docs/DATA-SOURCES.md)):
 
 ```bash
 uv run quantlab build-universe                               # src/quantlab/config/universes/sp500.yaml + raport sprzeczności
@@ -97,6 +112,10 @@ Python 3.12 + uv, pandas/numpy, DuckDB + Parquet, statsmodels/scipy, pytest. War
 - [docs/RESEARCH_LOG.md](docs/RESEARCH_LOG.md) — dziennik badawczy: hipotezy, metodologia, wnioski.
 - [docs/adr/](docs/adr/) — decyzje architektoniczne z uzasadnieniem.
 - [docs/specs/](docs/specs/) — specyfikacje RoleKit per epik (story/spec/design).
+
+## Licencja
+
+Kod i dokumentacja: [MIT](LICENSE). Plik składu S&P 500 (`src/quantlab/config/universes/sp500.yaml`) pochodzi z Wikipedii i jest na licencji CC BY-SA 4.0, z atrybucją w nagłówku. Repozytorium nie zawiera danych rynkowych.
 
 ## Disclaimer
 

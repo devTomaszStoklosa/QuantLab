@@ -74,11 +74,11 @@ uv sync
 uv run pytest -q
 ```
 
-Repozytorium jest prywatne ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)), więc `git clone` poprosi o zalogowanie do GitHuba. Git for Windows otwiera wtedy okno logowania przez przeglądarkę. Potrzebny jest pełny klon, bez `--depth`, bo rejestr prób czyta całą historię definicji. Ostatnia komenda uruchamia ok. 700 testów na syntetycznych danych, bez sieci; wszystkie powinny przejść. Jeśli repozytorium już jest na dysku, wystarczą `git pull` i `uv sync`.
+Repozytorium jest publiczne ([ADR-0010](adr/0010-public-repo-data-boundary.md)), więc `git clone` nie wymaga logowania. Potrzebny jest pełny klon, bez `--depth`, bo rejestr prób czyta całą historię definicji. Ostatnia komenda uruchamia ok. 700 testów na syntetycznych danych, bez sieci; wszystkie powinny przejść. Jeśli repozytorium już jest na dysku, wystarczą `git pull` i `uv sync`.
 
 ### 2.3 Klucz Tiingo (`xsmom_v1` i hipotezy na ETF-ach)
 
-Klucz daje darmowe konto na tiingo.com (plan Starter, $0). Płatny plan nie jest potrzebny: limity darmowego pilnuje adapter (rozdział 8). Licencja darmowego planu pozwala tylko na użytek własny. Dlatego repozytorium jest prywatne, a rejestru transakcji i tear-sheetów z cenami się nie publikuje. Ustawienie:
+Klucz daje darmowe konto na tiingo.com (plan Starter, $0). Płatny plan nie jest potrzebny: limity darmowego pilnuje adapter (rozdział 8). Licencja darmowego planu pozwala tylko na użytek własny. Dlatego pobrane ceny, rejestr transakcji i tear-sheety zostają na dysku i nie trafiają do repozytorium ([ADR-0010](adr/0010-public-repo-data-boundary.md)). Ustawienie:
 
 ```powershell
 $env:TIINGO_API_KEY = "twój-klucz"     # tylko w bieżącym oknie

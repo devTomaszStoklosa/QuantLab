@@ -10,7 +10,7 @@ Dokument żywy: docelowy układ repo i kontrakty modułów wspólnych. Decyzje z
 4. Hipoteza bez walidacji (walk-forward + zamrożony holdout) nie jest „confirmed" ([ADR-0004](adr/0004-validation-first-frozen-holdout.md)).
 5. Raporty opisowe, bez rekomendacji inwestycyjnych ([ADR-0005](adr/0005-descriptive-reports-no-investment-advice.md)).
 6. .NET i React tylko w warstwie prezentacji/orkiestracji, nie w rdzeniu obliczeniowym ([ADR-0006](adr/0006-dotnet-react-presentation-layer-only.md)).
-7. Tylko darmowe źródła danych (Binance, plan Starter Tiingo), repozytorium prywatne ze względu na licencję użytku własnego ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)).
+7. Tylko darmowe źródła danych (Binance, plan Starter Tiingo) ([ADR-0009](adr/0009-private-repo-free-tiingo-plan.md)); repozytorium publiczne, a dane rynkowe i wyniki z cenami poza nim ze względu na licencję użytku własnego. Granicę pilnuje test ([ADR-0010](adr/0010-public-repo-data-boundary.md)).
 8. `core` nie zależy od żadnej warstwy domenowej; warstwy domenowe zależą od `core`, nie od siebie nawzajem poza jawnymi punktami integracji (`reporting` czyta wyniki `backtest`; `validation` i `risk` czytają wyniki `backtest`).
 
 ## Warstwy i przepływ

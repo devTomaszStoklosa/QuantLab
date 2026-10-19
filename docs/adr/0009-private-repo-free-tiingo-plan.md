@@ -2,6 +2,8 @@
 
 Status: Accepted
 
+> Decyzję o prywatnym repozytorium zastąpił [ADR-0010](0010-public-repo-data-boundary.md). Zasada „tylko darmowe źródła" i limity Tiingo obowiązują nadal.
+
 ## Context
 
 Tomasz ustalił 2026-09-26, że wszystkie dane mają być darmowe. Wcześniejsze dokumenty dopuszczały „miesiąc płatnego tieru" Tiingo, żeby szybciej pobrać S&P 500 dla `xsmom_v1`. To było z tą zasadą niezgodne.
