@@ -1,0 +1,69 @@
+# Weekly, grouped version updates for every ecosystem in the repository (#140).
+#
+# CI runs on GitHub runners, which have AVX2; the development machine does not.
+# Packages with native code therefore get their own groups: before merging one
+# of those PRs, run `uv run pytest -q tests/test_environment.py` and
+# `dotnet test --solution presentation/QuantLab.Presentation.slnx` locally.
+#
+# A dependency joins the first group whose patterns match it. Major updates of
+# the catch-all groups come as separate PRs, so a breaking change is reviewed
+# on its own. The cooldown skips releases younger than a week, which keeps a
+# freshly published bad release out of the queue.
+version: 2
+updates:
+  - package-ecosystem: uv
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      python-native:
+        patterns: [duckdb, numpy, pandas, pyarrow, pydantic, pydantic-core, scipy, statsmodels]
+      python:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /presentation/web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      web:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: nuget
+    directory: /presentation
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      dotnet-native:
+        patterns: [DuckDB.NET.*]
+      dotnet:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # The workflow references actions by commit SHA with the version in a
+  # comment; Dependabot updates both.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore(ci)
+    groups:
+      actions:
+        patterns: ["*"]
