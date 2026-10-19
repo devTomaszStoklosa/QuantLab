@@ -788,3 +788,67 @@ Co dalej:
 - Wynik po poprawce jest nieco gorszy, bo 13 transakcji w `mil` i `lsi` dawało łącznie +0.0324. Werdykt bramki in-sample się nie zmienia: walk-forward jest niezaliczony, więc status końcowy będzie `rejected` bez względu na holdout. Wniosek z treningu, że momentum 12-1 na tym przekroju nie dało dodatniego wyniku w latach 2005–2019, nie zależał więc od błędnych cen.
 
 **Ograniczenie:** wykluczone spółki to głównie spółki przejęte. Ich brak zmienia przekrój tak samo jak każdy brak cen w źródle, czyli wprowadza część survivorship bias, którego point-in-time uniwersum miało unikać.
+
+## 2026-10-19 — xsmom_v1: momentum przekrojowe 12-1 na S&P 500 point-in-time
+
+**Hipoteza:** spółki S&P 500 z najwyższym zwrotem z ostatnich 12 miesięcy bez ostatniego (12-1) dają w następnym miesiącu wyższy zwrot niż spółki z najniższym, więc portfel long górnego i short dolnego decyla ma dodatni wynik netto po kosztach, a ranking wybiera spółki lepiej niż losowe portfele z tego samego przekroju (Jegadeesh i Titman 1993).
+
+**Metodologia:**
+
+- **Dane:** Tiingo, ceny dzienne surowe, korygowane w laboratorium o dywidendy i splity. Uniwersum `sp500` point-in-time, odtworzone z przypiętych rewizji dwóch stron Wikipedii sprzed 2026-09-24, z SPY jako proxy rynku: w treningu 737 członków indeksu z lat 2005–2019, w holdoucie 609 członków z lat 2020–2025. Delisting datowany ostatnim dniem notowań w Tiingo; zwrot z delistingu jest nieznany, więc obowiązuje zamrożone założenie 0%. Siedem tickerów z cenami innej spółki jest wykluczonych (`not_in_source`), patrz wpis z 2026-10-18 powyżej. Pokrycie cenami w treningu: 87.7% dni członkostwa; 105 członków bez żadnej ceny, w tym 7 wykluczonych celowo.
+- **Strategia:** w miesiącu m ranking członków indeksu według zwrotu od końca miesiąca m−13 do końca m−2. Górny decyl long, dolny short, równe wagi. Spółki notowane poniżej 5 USD na koniec m−1 są pomijane. Sygnał zmienia się raz w miesiącu, a dryf wag między formacjami nie jest handlowany.
+- **Koszty:** `realistic-5bps-k0.05-vol21d` (prowizja i pół spreadu 5 bps, poślizg 0.05 dziennej zmienności z 21 sesji), obok `zero-cost` i `naive-5bps`. Koszt pożyczki akcji na krótkiej nodze nie jest modelowany.
+- **Okres treningowy:** 2005-01-01 → 2019-12-31; pierwsza pozycja 2005-01-04.
+- **Holdout:** 2020-01-01 → 2025-12-31, zamrożony w [config/holdout/xsmom_v1.yaml](../config/holdout/xsmom_v1.yaml) (commit `c3efab4`) przed pierwszym przebiegiem. Żaden przebieg nie czytał cen z tego okresu. Pobranie to 609 tickerów (610 instrumentów z SPY, bez `DISCA`), 682 zapytania i ok. 17 h. Przy limicie 500 tickerów miesięcznie listopad 2026 pobiera pierwsze 500, a grudniowe uruchomienie `open-holdout` pobiera resztę i od razu otwiera holdout ([#132](https://github.com/devTomaszStoklosa/QuantLab/issues/132)). Przebieg zatrzymany limitem niczego nie liczy i nie zapisuje.
+- **Walidacja:** walk-forward w oknach rocznych (Sharpe > 0 w co najmniej 2/3 okien ze zdefiniowanym Sharpe i łączny Sharpe > 0); test losowych portfeli losowanych z rankingu każdej decyzji (10 000 losowań, seed 0, roczny Sharpe zwrotów brutto, α = 0.1), czyli test doboru spółek, nie timingu; kryterium holdoutu: Sharpe netto > 0 i p < 0.1; Sharpe ≤ 0 → `rejected`; Sharpe > 0 i p ≥ 0.1 → `inconclusive`; brak pozycji → `inconclusive`.
+- **Wielokrotne testowanie:** 1 próba na tym uniwersum i 1 konfiguracja w progu deflated Sharpe.
+- **Status końcowy:** `confirmed` tylko przy zaliczonej bramce in-sample i zaliczonym holdoucie; niezaliczona bramka daje `rejected`; liczy go kod.
+
+**Wynik — okres treningowy 2005–2019** (przebieg z 2026-10-19 na danych po poprawce, liczby ze szkicu `narrate`):
+
+| Metryka | `zero-cost` (brutto) | `naive-5bps` | `realistic` |
+|---|---:|---:|---:|
+| CAGR | −1.92% | −2.32% | −3.19% |
+| Sharpe | −0.09 | −0.13 | −0.20 |
+| Sortino | −0.13 | −0.17 | −0.26 |
+| Calmar | −0.03 | −0.04 | −0.05 |
+| Max drawdown | −57.74% | −58.45% | −60.68% |
+
+- **Walk-forward (realistic): niezaliczony**, 7 z 15 okien ze Sharpe > 0. Okna to lata kalendarzowe, pierwsze od 2005-01-04. Szkic `narrate` oznacza każde jako niepełne, bo sesje nie wypadają 1 stycznia ani 31 grudnia ([#110](https://github.com/devTomaszStoklosa/QuantLab/issues/110)).
+
+  | Rok | CAGR | Sharpe |
+  |---|---:|---:|
+  | 2005 | 11.85% | 1.41 |
+  | 2006 | −8.62% | −1.16 |
+  | 2007 | 16.25% | 2.21 |
+  | 2008 | −10.68% | −0.35 |
+  | 2009 | −40.71% | −1.69 |
+  | 2010 | −2.27% | −0.31 |
+  | 2011 | −0.88% | −0.06 |
+  | 2012 | 0.43% | 0.09 |
+  | 2013 | 2.06% | 0.41 |
+  | 2014 | −1.73% | −0.27 |
+  | 2015 | 20.67% | 1.73 |
+  | 2016 | −15.99% | −1.45 |
+  | 2017 | 1.73% | 0.26 |
+  | 2018 | 4.25% | 0.59 |
+  | 2019 | −6.68% | −0.65 |
+  | Łącznie | −3.19% | −0.20 |
+
+- **Test losowych portfeli:** Sharpe brutto −0.09 wobec średniej losowań 0.00 (odch. std. 0.25); wyższy niż 34.9% losowań; **p = 0.651**.
+- **Wielokrotne testowanie:** Sharpe roczny −0.20, PSR 0.22, próg deflated Sharpe 0.00, DSR 0.22.
+- **Koszty:** werdykt wrażliwości „robust” (różnica Sharpe między modelem naiwnym a realistycznym 0.07). P&L netto transakcji −0.3849 kapitału startowego, z czego koszty 0.1540.
+- **Transakcje:** 4 410 (98 otwartych na końcu), 2 047 z dodatnim P&L netto.
+- **Reżimy zmienności** (opisowo; tercyl zmienności SPY z 21 sesji względem ostatnich 252): niski CAGR −1.30%, Sharpe −0.11 (1 366 dni); średni CAGR −3.86%, Sharpe −0.21 (1 158 dni); wysoki CAGR −4.61%, Sharpe −0.26 (1 250 dni).
+
+**Obserwacje przed otwarciem holdoutu** (zacommitowane i wypchnięte przed pierwszym zapytaniem o ceny holdoutu, a więc przed listopadowym pobieraniem i przed grudniowym otwarciem).
+
+1. Bramka in-sample nie przeszła (7 z 15 okien, łączny Sharpe netto −0.20), więc status końcowy będzie `rejected` bez względu na holdout. Otwarcie zamyka zapis ostatniej hipotezy bez otwartego holdoutu i pokazuje, jak ta sama zamrożona reguła zachowała się w latach 2020–2025.
+2. Słaby wynik nie wynika z kosztów. Sharpe był ujemny już brutto (−0.09), a werdykt wrażliwości to „robust”. Ranking 12-1 nie wybierał spółek lepiej niż losowe portfele z tego samego przekroju (p = 0.651). Wynik zależał od kilku lat: dodatnie 2005, 2007 i 2015, a najgorszy 2009 (CAGR −40.71%), czyli rok odbicia po kryzysie, w którym literatura opisuje największe straty momentum (Daniel i Moskowitz 2016, „Momentum crashes”). Ten wpis nie rozbija wyniku na nogę long i short.
+3. Holdout nie jest okresem nieznanym. Lata 2020–2025 to historia rynku, którą znam: krach i odbicie w 2020 r., gwałtowna rotacja po ogłoszeniu skuteczności szczepionki w listopadzie 2020 r., bessa 2022 r., a w latach 2023–2024 wzrosty prowadzone przez wąską grupę dużych spółek technologicznych. Holdout jest „nieoglądany” tylko w tym sensie, że żaden przebieg laboratorium nie czytał cen z tego okresu. Definicja była zamrożona wcześniej (`c3efab4`), a lista wykluczeń z 2026-10-18 nie zależała od wyniku, więc nic nie mogło zostać dopasowane do tych lat. Wyniku tej strategii na tych latach nie znam.
+4. Poprawka danych prawie nie dotyka holdoutu: wykluczony `DISCA` to 593 z 787 836 dni członkostwa (0.08%).
+5. Prognoza: trening nie dał dodatniego wyniku ani brutto, ani netto, i nie pobił losowych portfeli. Nie widzę powodu, by holdout wypadł inaczej. Spodziewam się Sharpe netto bliskiego zera, raczej ujemnego, i werdyktu holdoutu `rejected`. Drugi w kolejności wynik to dodatni Sharpe z p ≥ 0.1, czyli `inconclusive`. Werdykt `passed` po 15 latach treningu bez przewagi świadczyłby raczej o zmienności wyniku między okresami niż o przewadze reguły.
+
+**Wynik — holdout 2020-01-01 → 2025-12-31:** _holdout nieotwarty w chwili zapisu obserwacji powyżej._
+
+**Wniosek:** _po otwarciu holdoutu._
