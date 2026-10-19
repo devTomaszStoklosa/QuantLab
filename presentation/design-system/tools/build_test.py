@@ -1,4 +1,5 @@
 """Assemble standalone test pages (tokens + bundle + preview) for headless rendering."""
+
 import glob
 import json
 import os

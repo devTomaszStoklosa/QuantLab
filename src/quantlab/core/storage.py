@@ -51,8 +51,7 @@ def read_price_bars(instrument_id: str, start: date, end: date) -> list[PriceBar
     con = duckdb.connect()
     try:
         rows = con.execute(
-            f"SELECT * FROM read_parquet('{path.as_posix()}') "
-            "WHERE ts BETWEEN ? AND ? ORDER BY ts",
+            f"SELECT * FROM read_parquet('{path.as_posix()}') WHERE ts BETWEEN ? AND ? ORDER BY ts",
             [start, end],
         ).df()
     finally:

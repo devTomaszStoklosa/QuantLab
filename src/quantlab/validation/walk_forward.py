@@ -79,7 +79,9 @@ class WalkForwardValidator:
             )
 
         windows = []
-        for year, group in groupby(range(first, len(snapshots)), key=lambda i: snapshots[i].ts.year):
+        for year, group in groupby(
+            range(first, len(snapshots)), key=lambda i: snapshots[i].ts.year
+        ):
             indices = list(group)
             window_start, window_end = snapshots[indices[0]].ts, snapshots[indices[-1]].ts
             equity = [snapshots[indices[0] - 1].equity] + [snapshots[i].equity for i in indices]

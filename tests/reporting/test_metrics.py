@@ -37,9 +37,7 @@ def test_cagr_raises_when_total_growth_not_positive() -> None:
 def test_sharpe_matches_manual_calculation() -> None:
     returns = [0.04, -0.02, 0.04, -0.02]
     periods_per_year = 365
-    expected = (
-        statistics.mean(returns) / statistics.stdev(returns) * math.sqrt(periods_per_year)
-    )
+    expected = statistics.mean(returns) / statistics.stdev(returns) * math.sqrt(periods_per_year)
 
     assert sharpe(returns, periods_per_year) == pytest.approx(expected)
 
