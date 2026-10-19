@@ -13,7 +13,7 @@ Platforma do systematycznych badań inwestycyjnych (hipoteza, dane, sygnał, bac
 
 ## Praca z RoleKit
 
-- Plugin leży w `C:\Users\Tomasz\Desktop\AI Lab\rolekit`, nie jest zainstalowany globalnie. Start sesji: `claude --plugin-dir "C:\Users\Tomasz\Desktop\AI Lab\rolekit"`.
+- Plugin leży lokalnie poza repozytorium i nie jest zainstalowany globalnie. Start sesji: `claude --plugin-dir "<ścieżka-do-rolekit>"`.
 - Konfiguracja: `.claude/rolekit.json`. Artefakty: `docs/specs/<epik>/01-story.md`, `02-spec.md`, `03-design.md`. ADR-y: `docs/adr/NNNN-tytul.md`.
 - Linię `Status:` w nagłówku artefaktu czyta skrypt RoleKit — nie zmieniaj jej formatu.
 - `gates.dev` i `gates.qa` są `null`, dopóki epik `lab-foundation` nie doda pierwszego testu. Potem ustaw: dev = `uv run ruff check . && uv run pytest -q`, qa = `uv run pytest -q`.
