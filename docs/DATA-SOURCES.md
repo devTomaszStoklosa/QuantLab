@@ -46,9 +46,9 @@ Warunki poniżej to stan wiedzy, nie weryfikacja — do sprawdzenia na stronie d
   - pod `LSI` jest Life Storage zamiast LSI Corp;
   - pod `GENZ` jest ETF VanEck zamiast Genzyme;
   - pod `EP` jest Empire Petroleum zamiast El Paso;
-  - `NVLS` nosi nazwę ETF-u Defiance, choć ceny z lat 2006–2017 mogą należeć do Novellusa.
+  - `NVLS` nosi nazwę ETF-u Defiance, ale ceny z dni członkostwa należą do Novellusa (przegląd 2026-10-18), więc zostaje.
 - Dokumentacja cen dziennych nie opisuje dostępu do wcześniejszej spółki pod tym samym tickerem. Stały identyfikator `permaTicker` jest opisany tylko dla danych fundamentalnych, a te są darmowe wyłącznie dla spółek DOW 30. Dlatego takich cen nie odzyskujemy (decyzja z 2026-10-02).
-- Takie spółki trafiają na listę `not_in_source` w `sp500-renames.yaml`, a `build-universe` przepisuje ją do `sp500.yaml`. Laboratorium nie pyta o nie Tiingo. Zostają członkami bez cen, strategia ich nie widzi, a `run` wymienia je w raporcie pokrycia osobno, jako wykluczone celowo.
+- Takie spółki trafiają na listę `not_in_source` w `sp500-renames.yaml`, a `build-universe` przepisuje ją do `sp500.yaml`. Laboratorium nie pyta o nie Tiingo. Zostają członkami bez cen, strategia ich nie widzi, a `run` wymienia je w raporcie pokrycia osobno, jako wykluczone celowo. Przegląd audytu `xsmom_v1` (2026-10-18) wykluczył siedem tickerów: `AA`, `DISCA`, `EP`, `GENZ`, `LSI`, `MIL` i `SUN`. Dowody są w komentarzach `sp500-renames.yaml`, a uzasadnienie i udział wykluczonych dni członkostwa w [dzienniku](RESEARCH_LOG.md).
 - To ograniczenie, nie naprawa. Wykluczone spółki to zwykle spółki przejęte, często z premią, więc ich brak zmienia przekrój tak samo jak każdy brak cen w źródle. Wpis w dzienniku podaje, które spółki wykluczono i jaki to udział dni członkostwa.
 - `quantlab audit-tickers <id>` sprawdza każdego byłego członka S&P 500 w oknie hipotezy (trening i holdout). Porównuje nazwy spółki z tabeli zmian Wikipedii (przypięta rewizja) z tym, co Tiingo trzyma pod tickerem: nazwą, pierwszym i ostatnim dniem notowań oraz opisem. Oznacza:
   - nazwę bez wspólnego słowa (`name differs`) albo częściowo inną (`name partly differs`);

@@ -770,6 +770,21 @@ Co dalej:
 - `mil`: 7 transakcji, P&L netto +0.0306 przy kapitale startowym 1.00; `lsi`: 6 transakcji, +0.0018. Łączny P&L netto treningu to −0.3665 z 4 421 transakcji. Pozostałe wykluczone tickery nie miały transakcji.
 - Wynik przed poprawką (model realistyczny): CAGR −3.00%, Sharpe −0.18, max drawdown −59.91%; walk-forward niezaliczony (7 z 15 okien ze Sharpe > 0); test losowych portfeli p = 0.650. Te liczby były znane przed poprawką. Poprawka nie wynika z nich, tylko z audytu tożsamości tickerów, a lista wykluczeń nie zależy od wyniku strategii.
 
-**Trening po poprawce:** do uzupełnienia po powtórzonym przebiegu (`uv run quantlab run xsmom_v1`).
+**Trening po poprawce** (`uv run quantlab run xsmom_v1`, 2026-10-19, commit `61d5ea8`; liczby z przebiegu i ze szkicu `narrate`):
+
+| Metryka | przed poprawką | po poprawce |
+|---|---:|---:|
+| CAGR (`realistic`) | −3.00% | −3.19% |
+| Sharpe netto (`realistic`) | −0.18 | −0.20 |
+| Sharpe brutto (`zero-cost`) | −0.08 | −0.09 |
+| Max drawdown (`realistic`) | −59.91% | −60.68% |
+| Walk-forward | niezaliczony, 7 z 15 okien | niezaliczony, 7 z 15 okien |
+| Test losowych portfeli | p = 0.650 | p = 0.651 |
+| PSR / DSR | 0.25 / 0.25 | 0.22 / 0.22 |
+| Transakcje | 4 421 | 4 410 |
+
+- Pokrycie cenami: 87.7% dni członkostwa (1 614 268 z 1 840 269); 105 członków bez żadnej ceny, w tym 7 wykluczonych celowo. Strategia nie ma już transakcji w wykluczonych instrumentach.
+- Dni 2009-11-16 i 2009-11-17 dają teraz +0.21% i −0.02% zamiast −7.52% i +7.99%. Największe dzienne ruchy kapitału przypadają na marzec–maj 2009 (do +9.16% 2009-04-20), czyli na odbicie po kryzysie, a nie na błąd danych.
+- Wynik po poprawce jest nieco gorszy, bo 13 transakcji w `mil` i `lsi` dawało łącznie +0.0324. Werdykt bramki in-sample się nie zmienia: walk-forward jest niezaliczony, więc status końcowy będzie `rejected` bez względu na holdout. Wniosek z treningu, że momentum 12-1 na tym przekroju nie dało dodatniego wyniku w latach 2005–2019, nie zależał więc od błędnych cen.
 
 **Ograniczenie:** wykluczone spółki to głównie spółki przejęte. Ich brak zmienia przekrój tak samo jak każdy brak cen w źródle, czyli wprowadza część survivorship bias, którego point-in-time uniwersum miało unikać.
