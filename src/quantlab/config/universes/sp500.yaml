@@ -6070,3 +6070,11 @@ memberships:
   end: null
 market_proxy: spy
 cash: null
+not_in_source:
+- aa
+- disca
+- ep
+- genz
+- lsi
+- mil
+- sun

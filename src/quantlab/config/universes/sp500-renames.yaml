@@ -44,4 +44,35 @@ dated_renames:
 # cases `uv run quantlab audit-tickers` flags and a review confirms go here, each
 # with its evidence in a comment; then rebuild the universe and commit both files.
 # Quote a ticker YAML would read as a boolean ('ON', 'NO', 'Y').
-not_in_source: []
+#
+# Entries below come from the review of the xsmom_v1 audit of 2026-10-03..05
+# (Tiingo metadata as asked then). The audit table with the price medians stays
+# local (results/ticker-audit-xsmom_v1.csv), as it is computed from Tiingo prices.
+not_in_source:
+  # Alcoa Inc. (member to 2016-10-31): Tiingo's AA is Alcoa Corp, the 2016 spin-off,
+  # from 2016-10-18 (when-issued); its last 10 member sessions are the spin-off's,
+  # below Alcoa Inc.'s price (around $30) and at a small fraction of its volume.
+  - AA
+  # Discovery class A (member to 2022-04-10, ticker WBD from 2022-04-11): Tiingo
+  # gives DISCA no name and a history of 2022-04-08..2022-09-16 only, which matches
+  # neither company; excluded as ambiguous (one member session, in the holdout).
+  - DISCA
+  # El Paso Corp (member to 2012-05-16): Tiingo's EP is Empire Petroleum, from
+  # 2011-02-23; prices of a few cents and no volume on about half the sessions,
+  # where El Paso traded around $10-35.
+  - EP
+  # Genzyme (member to 2011-03-31): Tiingo's GENZ is a VanEck ETF, from 2008-01-24;
+  # almost no volume, where Genzyme was a large cap trading around $50-80.
+  - GENZ
+  # LSI Corp (member to 2014-05-07): Tiingo's LSI is Life Storage (Sovran),
+  # 1995-06-21..2023-07-19; prices at Life Storage's level, where LSI Corp traded
+  # around $3-15.
+  - LSI
+  # Millipore (member to 2010-07-13): Tiingo's MIL is MFC Industrial,
+  # 1996-05-08..2016-02-12; thin volume and one-day moves of +607% (2009-11-16) and
+  # +737% (2010-05-06), where Millipore traded around $60-100.
+  - MIL
+  # Sunoco Inc. (member to 2012-10-09): Tiingo's SUN is Sunoco LP, from its listing
+  # as Susser Petroleum Partners on 2012-09-20; its last 14 member sessions are the
+  # partnership's, at half Sunoco Inc.'s price (around $47-50).
+  - SUN

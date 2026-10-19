@@ -728,3 +728,63 @@ Co dalej:
 - `portfolio_v1` jest zamknięta jako `rejected`. Tym samym wszystkie hipotezy krypto mają otwarte holdouty i wpisy w dzienniku. Żadna nie jest `confirmed`. `momentum_v1`, `momentum_select_v1`, `momentum_voltarget_v1` i `pairs_v1` są `inconclusive`, a `mean_reversion_v1` i `portfolio_v1` są `rejected`.
 - Lekcja projektowa: reguła ważenia ryzykiem nie odfiltrowuje rękawów o ujemnym oczekiwanym zwrocie. Kolejny portfel wymagałby zamrożonego kryterium dopuszczenia rękawu, np. tylko hipotez z zaliczoną bramką in-sample, i nowego, nieoglądanego okresu. To byłaby nowa hipoteza.
 - Zostaje `xsmom_v1`, którego holdout czeka na naprawę danych z Tiingo ([#104](https://github.com/devTomaszStoklosa/QuantLab/issues/104)).
+
+## 2026-10-18 — xsmom_v1: poprawka danych przed holdoutem (tickery przejęte przez inne spółki)
+
+**Hipoteza:** bez zmian: momentum przekrojowe 12-1 na S&P 500 point-in-time, zamrożone w [config/holdout/xsmom_v1.yaml](../config/holdout/xsmom_v1.yaml) (commit `c3efab4`). Ten wpis nie ma werdyktu. Opisuje poprawkę danych treningowych przed otwarciem holdoutu 2020–2025, którego cen nikt jeszcze nie czytał. Pełny wpis powstanie przy otwarciu holdoutu.
+
+**Problem** ([#104](https://github.com/devTomaszStoklosa/QuantLab/issues/104)):
+
+- Tiingo trzyma pod tickerem jedną spółkę, zwykle ostatnią, która go używa, z całą jej historią cen. Dawny członek indeksu z tickerem przejętym przez inną spółkę dostawał więc nie pustą serię, tylko ceny tamtej spółki. Nie widzi tego ani raport pokrycia (REQ-554), ani kontrole `check-data` (`q14`).
+- Najwyraźniejszy przypadek to `MIL`: zamiast Millipore ceny MFC Industrial, z jednodniowymi ruchami +607% (2009-11-16) i +737% (2010-05-06). Strategia miała wtedy krótką pozycję w `mil`, więc kapitał zmienił się o −7.52% 2009-11-16 i o +7.99% dzień później. To trzeci i czwarty największy dzienny ruch kapitału w 15 latach treningu.
+
+**Audyt i przegląd:**
+
+- `uv run quantlab audit-tickers xsmom_v1` (2026-10-03..05): 343 byłych członków S&P 500 w oknie 2005–2025, z nich 145 oznaczonych. Mediany ceny i obrotu pochodzą tylko z cen treningowych z cache; cen holdoutu audyt nie czytał.
+- Przegląd (2026-10-18) objął każdy oznaczony ticker. Dodatkowo wszyscy byli członkowie z cenami treningowymi przeszli przez trzy progi: mediana ceny poniżej 5 USD, mediana obrotu poniżej 15 mln USD dziennie, jednodniowy ruch ponad 50%. Poza wykluczonymi niżej progi wskazały tylko ruchy z wyjaśnieniem: kryzys 2008, oferty przejęcia, przerwy między okresami członkostwa.
+- Wykluczone, czyli lista `not_in_source` w `sp500-renames.yaml` (dowody w komentarzach):
+
+  | Ticker | Członek indeksu | Co Tiingo trzyma pod tickerem | Sesje z cenami innej spółki w treningu |
+  |---|---|---|---:|
+  | `MIL` | Millipore (do 2010-07) | MFC Industrial | 1 391 |
+  | `LSI` | LSI Corp (do 2014-05) | Life Storage | 2 352 |
+  | `GENZ` | Genzyme (do 2011-03) | ETF VanEck | 804 |
+  | `EP` | El Paso (do 2012-05) | Empire Petroleum | 311 |
+  | `AA` | Alcoa Inc. (do 2016-10) | Alcoa Corp, wydzielona w 2016 (od 2016-10-18) | 10 |
+  | `SUN` | Sunoco Inc. (do 2012-10) | Sunoco LP (od debiutu 2012-09-20) | 14 |
+  | `DISCA` | Discovery kl. A (do 2022-04) | seria bez nazwy, 2022-04-08..2022-09-16; przypadek niejednoznaczny | 0 (1 sesja w holdoucie) |
+
+- Zostają mimo oznaczenia:
+  - Nazwa w metadanych należy do późniejszego użytkownika tickera, ale ceny w dniach członkostwa mają poziom, płynność i datę końca właściwej spółki: `CAM`, `PCL`, `LLL`, `TSS`, `HOT`, `NVLS`, `CPWR`. Wskazany w #104 `NVLS` ma ceny Novellusa, np. 34.6 USD na koniec 2006, 11.5 w listopadzie 2008 i 46.5 w lutym 2012. Wskazany tam też `SVU` nie jest oznaczony, a jego ceny pasują do SuperValu.
+  - Ta sama spółka pod nową nazwą (np. `AIV`, `ATI`, `CNX`, `ODP`, `OI`, `SIAL`) i wszystkie nazwy oznaczone jako częściowo inne.
+  - Tickery bez cen w dniach członkostwa: nieznane Tiingo, bez dat notowań albo z historią innej spółki zaczynającą się po końcu członkostwa. Nic błędnego do danych nie wchodzi, a raport pokrycia już je wymienia. Odzyskanie części z nich przez zmiany tickerów opisuje [#127](https://github.com/devTomaszStoklosa/QuantLab/issues/127), odłożone decyzją z 2026-10-03.
+
+**Poprawka:**
+
+- Lista `not_in_source` w `sp500-renames.yaml`; uniwersum `sp500.yaml` przebudowane z tych samych rewizji Wikipedii, w którym zmieniła się tylko ta lista (commit `d17db2b`). Wykluczone instrumenty zostają członkami bez cen (point-in-time). Strategia ich nie widzi, a raport pokrycia wymienia je osobno.
+- Udział wykluczonych dni członkostwa (dni robocze razy członkowie, liczone z samego składu, bez czytania cen): w treningu 16 457 z 1 907 065 (0.86%), w holdoucie 593 z 787 836 (0.08%, tylko `DISCA`). Ceny innej spółki miało w treningu 4 882 z nich (ok. 0.26%); pozostałe dni tych instrumentów i tak nie miały cen.
+- Definicja hipotezy, zakres holdoutu i kryterium sukcesu się nie zmieniają. To ta sama hipoteza, bez nowej próby w rejestrze, zgodnie z decyzją z 2026-10-02: dane poprawia się w obrębie `xsmom_v1`, bez `xsmom_v2`.
+
+**Wpływ na zapisany trening** (przebieg z 2026-10-02, przed poprawką):
+
+- `mil`: 7 transakcji, P&L netto +0.0306 przy kapitale startowym 1.00; `lsi`: 6 transakcji, +0.0018. Łączny P&L netto treningu to −0.3665 z 4 421 transakcji. Pozostałe wykluczone tickery nie miały transakcji.
+- Wynik przed poprawką (model realistyczny): CAGR −3.00%, Sharpe −0.18, max drawdown −59.91%; walk-forward niezaliczony (7 z 15 okien ze Sharpe > 0); test losowych portfeli p = 0.650. Te liczby były znane przed poprawką. Poprawka nie wynika z nich, tylko z audytu tożsamości tickerów, a lista wykluczeń nie zależy od wyniku strategii.
+
+**Trening po poprawce** (`uv run quantlab run xsmom_v1`, 2026-10-19, commit `61d5ea8`; liczby z przebiegu i ze szkicu `narrate`):
+
+| Metryka | przed poprawką | po poprawce |
+|---|---:|---:|
+| CAGR (`realistic`) | −3.00% | −3.19% |
+| Sharpe netto (`realistic`) | −0.18 | −0.20 |
+| Sharpe brutto (`zero-cost`) | −0.08 | −0.09 |
+| Max drawdown (`realistic`) | −59.91% | −60.68% |
+| Walk-forward | niezaliczony, 7 z 15 okien | niezaliczony, 7 z 15 okien |
+| Test losowych portfeli | p = 0.650 | p = 0.651 |
+| PSR / DSR | 0.25 / 0.25 | 0.22 / 0.22 |
+| Transakcje | 4 421 | 4 410 |
+
+- Pokrycie cenami: 87.7% dni członkostwa (1 614 268 z 1 840 269); 105 członków bez żadnej ceny, w tym 7 wykluczonych celowo. Strategia nie ma już transakcji w wykluczonych instrumentach.
+- Dni 2009-11-16 i 2009-11-17 dają teraz +0.21% i −0.02% zamiast −7.52% i +7.99%. Największe dzienne ruchy kapitału przypadają na marzec–maj 2009 (do +9.16% 2009-04-20), czyli na odbicie po kryzysie, a nie na błąd danych.
+- Wynik po poprawce jest nieco gorszy, bo 13 transakcji w `mil` i `lsi` dawało łącznie +0.0324. Werdykt bramki in-sample się nie zmienia: walk-forward jest niezaliczony, więc status końcowy będzie `rejected` bez względu na holdout. Wniosek z treningu, że momentum 12-1 na tym przekroju nie dało dodatniego wyniku w latach 2005–2019, nie zależał więc od błędnych cen.
+
+**Ograniczenie:** wykluczone spółki to głównie spółki przejęte. Ich brak zmienia przekrój tak samo jak każdy brak cen w źródle, czyli wprowadza część survivorship bias, którego point-in-time uniwersum miało unikać.

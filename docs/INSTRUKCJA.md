@@ -20,7 +20,7 @@ uv run quantlab narrate <id> --output reports/<id>-log.md   # szkic wpisu z poli
 
 ## 1. Co jest gotowe
 
-Kod wszystkich epików (`lab-foundation`, `q1`–`q14`) jest gotowy i przechodzi testy w CI na Linuksie i Windowsie. Środowisko, w którym powstawał kod, nie ma dostępu do Binance, Tiingo ani Wikipedii, więc przebiegi na prawdziwych danych wykonuje się lokalnie. Zrobiono je 2026-10-02: wszystkie hipotezy mają przebiegi treningowe, a osiem z dziewięciu ma otwarte holdouty i wpisy w [dzienniku](RESEARCH_LOG.md). Holdout `xsmom_v1` czeka na naprawę danych ([#104](https://github.com/devTomaszStoklosa/QuantLab/issues/104)).
+Kod wszystkich epików (`lab-foundation`, `q1`–`q14`) jest gotowy i przechodzi testy w CI na Linuksie i Windowsie. Środowisko, w którym powstawał kod, nie ma dostępu do Binance, Tiingo ani Wikipedii, więc przebiegi na prawdziwych danych wykonuje się lokalnie. Zrobiono je 2026-10-02: wszystkie hipotezy mają przebiegi treningowe, a osiem z dziewięciu ma otwarte holdouty i wpisy w [dzienniku](RESEARCH_LOG.md). Holdout `xsmom_v1` czeka na otwarcie: dane poprawiono, a trening powtórzono 2026-10-18 ([#104](https://github.com/devTomaszStoklosa/QuantLab/issues/104)).
 
 Hipotezy zamrożone w `config/holdout/`, czyli z parametrami, zakresami dat i kryterium sukcesu zacommitowanymi przed pierwszym przebiegiem:
 
@@ -32,7 +32,7 @@ Hipotezy zamrożone w `config/holdout/`, czyli z parametrami, zakresami dat i kr
 | `momentum_select_v1` | momentum z lookbackiem wybieranym co rok z siatki 30–365 dni, bramka CPCV | BTC, ETH | 2018–2023 | 01–08.2026 | zamknięta: `inconclusive`, wpis w dzienniku |
 | `portfolio_v1` | portfel czterech hipotez krypto ważonych odwrotnością zmienności | BTC, ETH | 2018–2023 | 01–08.2026 | zamknięta: `rejected`, wpis w dzienniku |
 | `momentum_voltarget_v1` | sygnał `momentum_v1` z pozycjami skalowanymi do docelowej zmienności 40% rocznie, bez dźwigni | BTC, ETH | 2018–2023 | 01–08.2026 | zamknięta: `inconclusive`, wpis w dzienniku |
-| `xsmom_v1` | momentum przekrojowe 12-1 | S&P 500 point-in-time (Tiingo, Wikipedia) | 2005–2019 | 2020–2025 | trening zrobiony; holdout wstrzymany do naprawy danych ([#104](https://github.com/devTomaszStoklosa/QuantLab/issues/104)) |
+| `xsmom_v1` | momentum przekrojowe 12-1 | S&P 500 point-in-time (Tiingo, Wikipedia) | 2005–2019 | 2020–2025 | trening powtórzony po poprawce danych 2026-10-18 ([#104](https://github.com/devTomaszStoklosa/QuantLab/issues/104)); holdout do otwarcia |
 | `momentum_multiasset_v1` | reguła `momentum_v1` (252 sesje, równe wagi po znaku) na zwrotach ponad gotówkę | 10 ETF-ów z pięciu klas aktywów, gotówka BIL (Tiingo) | 07.2008–2017 | 2018–08.2026 | zamknięta: `rejected`, wpis w dzienniku |
 | `momentum_voltarget_multiasset_v1` | ten sam sygnał ze skalowaniem do 10% rocznie na instrument, bez dźwigni | jak wyżej | 07.2008–2017 | 2018–08.2026 | zamknięta: `inconclusive`, wpis w dzienniku |
 

@@ -314,7 +314,10 @@ def test_the_revision_is_the_last_before_the_pinned_instant() -> None:
 
 def test_build_universe_writes_the_file_and_lists_what_to_check(tmp_path, monkeypatch) -> None:
     renames = Path(str(cli._UNIVERSES_DIR)) / "sp500-renames.yaml"
-    (tmp_path / "sp500-renames.yaml").write_text(renames.read_text(encoding="utf-8"))
+    corrections = yaml.safe_load(renames.read_text(encoding="utf-8"))
+    # The made-up pages have none of the committed not_in_source tickers (#104).
+    corrections["not_in_source"] = []
+    (tmp_path / "sp500-renames.yaml").write_text(yaml.safe_dump(corrections))
     monkeypatch.setattr(cli, "_UNIVERSES_DIR", tmp_path)
     revisions = {
         sp500.CONSTITUENTS_PAGE: Revision(
