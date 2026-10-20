@@ -307,7 +307,7 @@ Co dalej:
 | Max drawdown | −6.90% | −7.21% | −8.03% |
 
 - **Koszty:** werdykt wrażliwości „cost-dependent” (różnica Sharpe między modelem naiwnym a realistycznym 0.10). Koszty w rejestrze transakcji (0.0750 kapitału startowego) są większe niż P&L netto (+0.0681), czyli zabierają ponad połowę wyniku brutto.
-- **Walk-forward (realistic): zaliczony**, 7 z 10 okien ze Sharpe > 0. Kod oznacza na kalendarzu giełdowym każde okno jako niepełne ([#110](https://github.com/devTomaszStoklosa/QuantLab/issues/110)); naprawdę niepełny jest tylko rok 2008.
+- **Walk-forward (realistic): zaliczony**, 7 z 10 okien ze Sharpe > 0. Niepełny jest tylko rok 2008; przed poprawką [#110](https://github.com/devTomaszStoklosa/QuantLab/issues/110) kod oznaczał tak każde okno na kalendarzu giełdowym.
 
   | Okno | CAGR | Sharpe | Max drawdown |
   |---|---:|---:|---:|
@@ -410,7 +410,7 @@ Co dalej:
 | Max drawdown | −29.67% | −30.02% | −32.71% |
 
 - **Koszty:** werdykt wrażliwości „robust” (różnica Sharpe między modelem naiwnym a realistycznym 0.07). P&L transakcji jest ujemny już przed kosztami (ok. −0.024 kapitału startowego); koszty (0.1131) pogłębiają go do −0.1373.
-- **Walk-forward (realistic): niezaliczony** z dwóch powodów: tylko 6 z 10 okien ma Sharpe > 0, a łączny Sharpe jest ujemny. Kod oznacza każde okno na kalendarzu giełdowym jako niepełne ([#110](https://github.com/devTomaszStoklosa/QuantLab/issues/110)); naprawdę niepełny jest tylko rok 2008.
+- **Walk-forward (realistic): niezaliczony** z dwóch powodów: tylko 6 z 10 okien ma Sharpe > 0, a łączny Sharpe jest ujemny. Niepełny jest tylko rok 2008; przed poprawką [#110](https://github.com/devTomaszStoklosa/QuantLab/issues/110) kod oznaczał tak każde okno na kalendarzu giełdowym.
 
   | Okno | CAGR | Sharpe | Max drawdown |
   |---|---:|---:|---:|

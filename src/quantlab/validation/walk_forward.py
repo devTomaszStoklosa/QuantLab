@@ -61,6 +61,11 @@ class WalkForwardValidator:
     is not counted. Each window's first return is measured from the previous
     day's equity, so no day is lost at a boundary. A metric that is undefined
     in a window (e.g. zero variance) is recorded as None.
+
+    A window is partial unless it holds the whole year on the run's own
+    calendar: its base equity lies in an earlier year (so it starts at the
+    year's first session, whatever date that is on an exchange) and the run's
+    period reaches 31 December (so it ends at the year's last session).
     """
 
     def __init__(self, periods_per_year: int) -> None:
@@ -83,7 +88,9 @@ class WalkForwardValidator:
             indices = list(group)
             window_start, window_end = snapshots[indices[0]].ts, snapshots[indices[-1]].ts
             equity = [snapshots[indices[0] - 1].equity] + [snapshots[i].equity for i in indices]
-            partial = window_start != date(year, 1, 1) or window_end != date(year, 12, 31)
+            starts_year = snapshots[indices[0] - 1].ts.year < year
+            ends_year = run.end >= date(year, 12, 31)
+            partial = not (starts_year and ends_year)
             windows.append(
                 _window_metrics(equity, window_start, window_end, partial, self.periods_per_year)
             )
