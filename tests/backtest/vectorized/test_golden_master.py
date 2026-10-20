@@ -46,9 +46,7 @@ def test_buy_and_hold_sharpe_matches_analytically_expected_value() -> None:
     for period_return in period_returns:
         prices.append(prices[-1] * (1.0 + period_return))
 
-    bars = {
-        "a": [_bar("a", _START + timedelta(days=i), price) for i, price in enumerate(prices)]
-    }
+    bars = {"a": [_bar("a", _START + timedelta(days=i), price) for i, price in enumerate(prices)]}
     strategy = _AlwaysLongStrategy("a")
 
     result = run(

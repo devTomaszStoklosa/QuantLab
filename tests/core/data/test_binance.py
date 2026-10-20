@@ -11,14 +11,32 @@ from quantlab.core.universe import Instrument
 # on 2026-09-23. See ADR-0007.
 _RECORDED_KLINES = [
     [
-        1789948800000, "81178.01000000", "87395.67000000", "80850.22000000",
-        "86620.00000000", "31963.17872000", 1790035199999, "2702559883.82269890",
-        4461004, "16545.20736000", "1398317660.97195110", "0",
+        1789948800000,
+        "81178.01000000",
+        "87395.67000000",
+        "80850.22000000",
+        "86620.00000000",
+        "31963.17872000",
+        1790035199999,
+        "2702559883.82269890",
+        4461004,
+        "16545.20736000",
+        "1398317660.97195110",
+        "0",
     ],
     [
-        1790035200000, "86620.01000000", "86717.60000000", "85114.00000000",
-        "86208.56000000", "21328.45813000", 1790121599999, "1834036114.86076060",
-        3386775, "9485.28663000", "815537527.83543300", "0",
+        1790035200000,
+        "86620.01000000",
+        "86717.60000000",
+        "85114.00000000",
+        "86208.56000000",
+        "21328.45813000",
+        1790121599999,
+        "1834036114.86076060",
+        3386775,
+        "9485.28663000",
+        "815537527.83543300",
+        "0",
     ],
 ]
 
@@ -93,7 +111,9 @@ def test_unknown_symbol_raises_data_not_found_error(mock_get, tmp_path, monkeypa
 
 
 @patch("quantlab.core.data.binance.requests.get")
-def test_fetch_pages_through_ranges_longer_than_a_thousand_bars(mock_get, tmp_path, monkeypatch) -> None:
+def test_fetch_pages_through_ranges_longer_than_a_thousand_bars(
+    mock_get, tmp_path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     start = date(2018, 1, 1)
     second_page_start = start + timedelta(days=1000)

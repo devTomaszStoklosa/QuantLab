@@ -12,9 +12,7 @@ def _cache_path(source: str, instrument_id: str, start: date, end: date) -> Path
     return CACHE_DIR / f"{key}.json"
 
 
-def read_cached_bars(
-    source: str, instrument_id: str, start: date, end: date
-) -> list[dict] | None:
+def read_cached_bars(source: str, instrument_id: str, start: date, end: date) -> list[dict] | None:
     path = _cache_path(source, instrument_id, start, end)
     if not path.exists():
         return None

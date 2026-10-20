@@ -64,9 +64,7 @@ class PermutationTestValidator:
                 if previous.ts not in instrument_closes or current.ts not in instrument_closes:
                     row.append(np.nan)
                 else:
-                    row.append(
-                        instrument_closes[current.ts] / instrument_closes[previous.ts] - 1.0
-                    )
+                    row.append(instrument_closes[current.ts] / instrument_closes[previous.ts] - 1.0)
             returns.append(row)
             weights.append([current.positions.get(i, 0.0) for i in instruments])
         returns_matrix = np.array(returns, dtype=np.float64)
@@ -95,7 +93,9 @@ class PermutationTestValidator:
         if missing.any():
             detail["missing_returns"] = int(missing.sum())
 
-        actual = _defined_sharpe((weights_matrix * returns_matrix).sum(axis=1), self.periods_per_year)
+        actual = _defined_sharpe(
+            (weights_matrix * returns_matrix).sum(axis=1), self.periods_per_year
+        )
         if np.isnan(actual):
             detail["reason"] = "actual Sharpe undefined (no variance: no positions held?)"
             return ValidationResult(method="permutation", passed=None, detail=detail)
@@ -104,7 +104,9 @@ class PermutationTestValidator:
         null = np.array(
             [
                 _defined_sharpe(
-                    (weights_matrix * returns_matrix[rng.permutation(len(returns_matrix))]).sum(axis=1),
+                    (weights_matrix * returns_matrix[rng.permutation(len(returns_matrix))]).sum(
+                        axis=1
+                    ),
                     self.periods_per_year,
                 )
                 for _ in range(self.n_permutations)

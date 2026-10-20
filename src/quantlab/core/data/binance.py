@@ -89,7 +89,5 @@ class BinanceProvider(WithoutEvents):
 
         bars.sort(key=lambda bar: bar.ts)
 
-        write_cached_bars(
-            _SOURCE, instrument.id, start, end, [bar.to_json() for bar in bars]
-        )
+        write_cached_bars(_SOURCE, instrument.id, start, end, [bar.to_json() for bar in bars])
         return bars

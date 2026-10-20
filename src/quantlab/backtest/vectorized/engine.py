@@ -54,7 +54,10 @@ def run(
     dates = trading_dates(bars, start, end)
     if not dates:
         raise ValueError(f"No price data available between {start} and {end}")
-    closes = {instrument_id: _closes_by_date(instrument_bars) for instrument_id, instrument_bars in bars.items()}
+    closes = {
+        instrument_id: _closes_by_date(instrument_bars)
+        for instrument_id, instrument_bars in bars.items()
+    }
     delisted_on = {
         instrument_id: {bar.ts for bar in instrument_bars if bar.delisting}
         for instrument_id, instrument_bars in bars.items()
@@ -108,7 +111,9 @@ def run(
 
         equity *= 1.0 + period_return
         held = {
-            instrument_id: weight * (1.0 + instrument_returns[instrument_id]) / (1.0 + period_return)
+            instrument_id: weight
+            * (1.0 + instrument_returns[instrument_id])
+            / (1.0 + period_return)
             for instrument_id, weight in weights.items()
         }
         invested = sum(abs(weight) for weight in weights.values())

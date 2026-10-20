@@ -42,7 +42,11 @@ def test_write_then_read_round_trips_without_precision_loss(tmp_path, monkeypatc
 def test_read_filters_by_date_range(tmp_path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     write_price_bars(
-        [_bar(date(2026, 9, 19), 100.0), _bar(date(2026, 9, 20), 101.0), _bar(date(2026, 9, 21), 102.0)]
+        [
+            _bar(date(2026, 9, 19), 100.0),
+            _bar(date(2026, 9, 20), 101.0),
+            _bar(date(2026, 9, 21), 102.0),
+        ]
     )
 
     bars = read_price_bars(_INSTRUMENT_ID, date(2026, 9, 20), date(2026, 9, 20))

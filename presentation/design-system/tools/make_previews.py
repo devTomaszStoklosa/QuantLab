@@ -41,20 +41,44 @@ var H1 = {
 """
 
 P = {}
-def add(name, group, height, body, extra="", pad="16px", data=False):
-    P[name] = {"group": group, "height": height, "body": body, "extra": extra, "pad": pad, "data": data}
 
-add("Logo", "Brand", 72, r"""
+
+def add(name, group, height, body, extra="", pad="16px", data=False):
+    P[name] = {
+        "group": group,
+        "height": height,
+        "body": body,
+        "extra": extra,
+        "pad": pad,
+        "data": data,
+    }
+
+
+add(
+    "Logo",
+    "Brand",
+    72,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-row', style: {gap: 32}},
   h(Q.Logo, {size: 28}), h(Q.Logo, {size: 22}), h(Q.Logo, {size: 28, wordmark: false})));
-""")
+""",
+)
 
-add("Icon", "Brand", 150, r"""
+add(
+    "Icon",
+    "Brand",
+    150,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: '14px 8px'}},
   Q.Icon.names.map(function (n) { return h('div', {key: n, style: {display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)'}}, h(Q.Icon, {name: n, size: 20, style: {color: 'var(--ink)'}}), n); })));
-""")
+""",
+)
 
-add("Button", "Actions", 96, r"""
+add(
+    "Button",
+    "Actions",
+    96,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 12}},
   h('div', {className: 'qf-row'},
     h(Q.Button, {variant: 'primary', icon: 'run'}, 'Run walk-forward'),
@@ -65,26 +89,46 @@ ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className:
     h(Q.Button, {variant: 'seal', icon: 'lock', disabled: true}, 'Open holdout')),
   h('div', {className: 'qf-row'},
     h(Q.Button, {variant: 'primary', size: 'sm'}, 'Run'), h(Q.Button, {size: 'sm', icon: 'filter'}, 'Filter'), h(Q.Button, {variant: 'ghost', size: 'sm', iconRight: 'arrow'}, 'Open tear sheet'))));
-""")
+""",
+)
 
-add("StatusBadge", "Status", 84, r"""
+add(
+    "StatusBadge",
+    "Status",
+    84,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 12}},
   h('div', {className: 'qf-row'}, ['proposed', 'testing', 'confirmed', 'rejected', 'inconclusive'].map(function (s) { return h(Q.StatusBadge, {key: s, status: s}); })),
   h('div', {className: 'qf-row'}, ['confirmed', 'rejected', 'inconclusive'].map(function (s) { return h(Q.StatusBadge, {key: s, status: s, size: 'lg'}); }))));
-""")
+""",
+)
 
-add("PartitionTag", "Status", 64, r"""
+add(
+    "PartitionTag",
+    "Status",
+    64,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-row'},
   h(Q.PartitionTag, {partition: 'is'}), h(Q.PartitionTag, {partition: 'oos'}), h(Q.PartitionTag, {partition: 'holdout'}), h(Q.PartitionTag, {partition: 'holdout', sealed: false}, 'Holdout · opened'),
   h('span', {style: {width: 16}}), h(Q.PartitionTag, {partition: 'is', short: true}), h(Q.PartitionTag, {partition: 'oos', short: true})));
-""")
+""",
+)
 
-add("Panel", "Layout", 190, r"""
+add(
+    "Panel",
+    "Layout",
+    190,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Panel, {title: 'Transaction costs', icon: 'costs', subtitle: 'RealisticCostModel · spread + 10 bps fee + vol-scaled slippage', actions: h(Q.Button, {size: 'sm', variant: 'ghost'}, 'Compare models'), footer: h('span', null, 'Computed by ', h('code', null, 'quantlab.costs'), ' at ', h('code', null, '3f9a2c1'))},
   h('p', {style: {margin: 0}}, 'Costs remove 0.48 of the 1.12 gross Sharpe. The edge survives, narrowly.')));
-""")
+""",
+)
 
-add("Metric", "Data display", 132, r"""
+add(
+    "Metric",
+    "Data display",
+    132,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h(Q.MetricStrip, {items: [
   {label: 'Sharpe, net', partition: 'oos', value: '0.64', ci: ['0.21', '1.05'], size: 'lg'},
   {label: 'Sharpe, net', partition: 'is', value: '1.12', delta: '−0.48', deltaLabel: 'IS → OOS decay', size: 'lg'},
@@ -92,48 +136,85 @@ ReactDOM.createRoot(document.getElementById('root')).render(h(Q.MetricStrip, {it
   {label: 'CAGR', value: '+14.2', unit: '%', delta: '+3.1 pp', deltaTone: 'gain', deltaLabel: 'vs buy & hold'},
   {label: 'Holdout Sharpe', partition: 'holdout', value: '—', hint: 'sealed'}
 ]}));
-""")
+""",
+)
 
-add("StageRail", "Research flow", 96, r"""
+add(
+    "StageRail",
+    "Research flow",
+    96,
+    r"""
 var st = ['passed','passed','passed','passed','passed','active','locked','pending','pending','pending'];
 var meta = ['frozen 14 Aug', '7 assets · daily', 'mom_12w', 'SR 1.12 IS', 'SR 0.64 net', 'fold 5 of 6', 'sealed', '', '', ''];
 ReactDOM.createRoot(document.getElementById('root')).render(h(Q.StageRail, {current: 'walkforward', stages: Q.StageRail.STAGES.map(function (s, i) { return {key: s[0], label: s[1], state: st[i], meta: meta[i]}; })}));
-""", pad="16px 16px 8px")
+""",
+    pad="16px 16px 8px",
+)
 
-add("StageMeter", "Research flow", 96, r"""
+add(
+    "StageMeter",
+    "Research flow",
+    96,
+    r"""
 function row(id, states) { return h('div', {className: 'qf-row', style: {gap: 16}}, h('code', null, id), h(Q.StageMeter, {states: states})); }
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 10}},
   row('H-001', ['passed','passed','passed','passed','passed','active','locked','pending','pending','pending']),
   row('H-002', ['passed','passed','passed','passed','failed','pending','locked','pending','pending','passed']),
   row('H-004', ['passed','passed','passed','passed','passed','passed','passed','passed','passed','passed'])));
-""")
+""",
+)
 
-add("HypothesisCard", "Research flow", 470, r"""
+add(
+    "HypothesisCard",
+    "Research flow",
+    470,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 720}}, h(Q.HypothesisCard, H1)));
-""", data=True)
+""",
+    data=True,
+)
 
-add("HoldoutSeal", "Validation", 250, r"""
+add(
+    "HoldoutSeal",
+    "Validation",
+    250,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16}},
   h(Q.HoldoutSeal, {range: '1 Mar 2023 → 31 Dec 2023', sha: '3f9a2c1', frozenAt: '14 Aug 2026, 09:12', criterion: 'Sharpe, net ≥ 0.30'}),
   h(Q.HoldoutSeal, {state: 'unsealed', range: '1 Mar 2023 → 31 Dec 2023', sha: '3f9a2c1', frozenAt: '14 Aug 2026, 09:12', criterion: 'Sharpe, net ≥ 0.30', openedAt: '22 Sep 2026 by T. Stokłosa'})));
-""")
+""",
+)
 
-add("Verdict", "Validation", 300, r"""
+add(
+    "Verdict",
+    "Validation",
+    300,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 12}},
   h(Q.Verdict, {verdict: 'rejected', meta: 'Decided 19 Sep 2026 · criteria frozen at 8be41d0', side: ['Gross SR 0.91', h('br', {key: 1}), 'Net SR −0.22']}, 'The one-day reversal is real before costs and gone after them: spread and slippage absorb the whole edge.'),
   h(Q.Verdict, {verdict: 'confirmed', meta: 'Decided 2 Sep 2026 · criteria frozen at a71c0e3', side: ['Holdout SR 0.58', h('br', {key: 1}), 'p = 0.012']}, 'Scaling exposure to 20-day volatility shortened drawdowns in every fold and in the holdout.'),
   h(Q.Verdict, {verdict: 'inconclusive', meta: 'Decided 28 Aug 2026 · criteria frozen at 51d9e20', side: ['Holdout SR 0.21', h('br', {key: 1}), 'p = 0.14']}, 'The spread mean-reverts, but 23 trades in the holdout cannot separate the effect from noise.')));
-""")
+""",
+)
 
-add("Callout", "Feedback", 250, r"""
+add(
+    "Callout",
+    "Feedback",
+    250,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 10}},
   h(Q.Callout, {tone: 'danger', title: 'Look-ahead detected in signal mom_12w_v2'}, 'The signal on 2021-03-04 reads the close of 2021-03-05. Runs using this signal are quarantined until it is fixed.'),
   h(Q.Callout, {tone: 'warning', title: 'Only 38 trades in fold 3'}, 'Fold Sharpe estimates below ~50 trades have wide confidence intervals. Read fold 3 with care.'),
   h(Q.Callout, {tone: 'frozen', title: 'Parameters frozen'}, 'lookback, rebalance and universe were committed at 3f9a2c1 before any walk-forward run. Editing them registers a new hypothesis.'),
   h(Q.Callout, {tone: 'info', title: 'This is a historical simulation'}, 'Results describe past behaviour under the stated costs. They are not a forecast or a recommendation.')));
-""")
+""",
+)
 
-add("ChecksList", "Validation", 290, r"""
+add(
+    "ChecksList",
+    "Validation",
+    290,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 520}}, h(Q.ChecksList, {items: [
   {state: 'pass', label: 'No look-ahead', detail: 'Signals lagged one bar; verified by shift test', value: 'shift=1'},
   {state: 'pass', label: 'Costs applied', detail: 'RealisticCostModel on every fill', value: '24.6 bps avg'},
@@ -142,38 +223,68 @@ ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {ma
   {state: 'na', label: 'Survivorship', detail: 'Static crypto universe, no delistings in window', value: 'n/a'},
   {state: 'fail', label: 'Minimum trade count', detail: 'Fold 3 below 50 trades', value: '38'}
 ]})));
-""")
+""",
+)
 
-add("Tabs", "Navigation", 64, r"""
+add(
+    "Tabs",
+    "Navigation",
+    64,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Tabs, {items: [
   {value: 'all', label: 'All', count: 12}, {value: 'testing', label: 'Testing', count: 3}, {value: 'confirmed', label: 'Confirmed', count: 2},
   {value: 'rejected', label: 'Rejected', count: 5}, {value: 'inconclusive', label: 'Inconclusive', count: 2}]}));
-""")
+""",
+)
 
-add("Field", "Forms", 250, r"""
+add(
+    "Field",
+    "Forms",
+    250,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, maxWidth: 640}},
   h(Q.Field, {label: 'Lookback window', hint: 'Weeks of trailing return used for the signal.', frozen: true}, h(Q.TextInput, {mono: true, value: '12', readOnly: true})),
   h(Q.Field, {label: 'Cost model'}, h(Q.Select, {options: ['RealisticCostModel', 'NaiveCostModel (10 bps)'], defaultValue: 'RealisticCostModel'})),
   h(Q.Field, {label: 'Holdout window', error: 'Holdout overlaps the walk-forward window by 14 days.'}, h(Q.TextInput, {mono: true, defaultValue: '2023-02-15 → 2023-12-31', 'aria-invalid': true})),
   h(Q.Field, {label: 'Random seed', hint: 'Stored with the run for reproducibility.'}, h(Q.TextInput, {mono: true, placeholder: '42'}))));
-""")
+""",
+)
 
-add("TextInput", "Forms", 64, r"""
+add(
+    "TextInput",
+    "Forms",
+    64,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, maxWidth: 560}},
   h(Q.TextInput, {placeholder: 'Name the hypothesis in one line'}), h(Q.TextInput, {mono: true, defaultValue: 'lookback=12w, rebalance=W-FRI'})));
-""")
+""",
+)
 
-add("Select", "Forms", 64, r"""
+add(
+    "Select",
+    "Forms",
+    64,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 280}}, h(Q.Select, {options: ['Walk-forward (expanding)', 'Walk-forward (rolling)', 'Permutation test']})));
-""")
+""",
+)
 
-add("Checkbox", "Forms", 96, r"""
+add(
+    "Checkbox",
+    "Forms",
+    96,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-stack', style: {gap: 10}},
   h(Q.Checkbox, {defaultChecked: true, label: 'Parameters are unchanged since the freeze at 3f9a2c1'}),
   h(Q.Checkbox, {label: 'I will record the result in the research log whatever it is'})));
-""")
+""",
+)
 
-add("DataTable", "Data display", 250, r"""
+add(
+    "DataTable",
+    "Data display",
+    250,
+    r"""
 var rows = [
   {id: 't1', entry: '2022-11-04', asset: 'ETH-USDT', side: 'Long', days: 21, gross: 0.084, cost: -0.0031, regime: 'mid'},
   {id: 't2', entry: '2022-11-25', asset: 'SOL-USDT', side: 'Long', days: 7, gross: -0.061, cost: -0.0042, regime: 'high'},
@@ -189,55 +300,98 @@ ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Panel, {flush: t
   {key: 'gross', label: 'Gross', numeric: true, format: function (v) { return fmt.pct(v, 2, true); }, tone: tone},
   {key: 'cost', label: 'Costs', numeric: true, format: function (v) { return fmt.pct(v, 2, true); }, tone: function (v) { return v ? 'dim' : 'dim'; }},
   {key: 'net', label: 'Net', numeric: true, render: function (v, r) { return fmt.pct(r.gross + r.cost, 2, true); }, tone: function (v, r) { return tone(r.gross + r.cost); }}]})));
-""")
+""",
+)
 
-add("EquityChart", "Charts", 420, r"""
+add(
+    "EquityChart",
+    "Charts",
+    420,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Panel, {title: 'Equity, net of costs', subtitle: 'Weekly rebalance · index = 100', tag: h(Q.PartitionTag, {partition: 'holdout'})},
   h(Q.EquityChart, {series: eq, benchmark: bh, xTicks: xt, partitions: [{kind: 'is', from: 0, to: OOS}, {kind: 'oos', from: OOS, to: HOLD}, {kind: 'holdout', from: HOLD, to: N - 1, sealed: true}]})));
-""", data=True)
+""",
+    data=True,
+)
 
-add("Sparkline", "Charts", 72, r"""
+add(
+    "Sparkline",
+    "Charts",
+    72,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {className: 'qf-row', style: {gap: 28}},
   h(Q.Sparkline, {series: eq, oosFrom: OOS, holdoutFrom: HOLD, width: 120, height: 28}),
   h(Q.Sparkline, {series: eq, oosFrom: OOS, holdoutFrom: HOLD, sealed: false, width: 120, height: 28}),
   h(Q.Sparkline, {series: bh, width: 120, height: 28})));
-""", data=True)
+""",
+    data=True,
+)
 
-add("CostWaterfall", "Charts", 240, r"""
+add(
+    "CostWaterfall",
+    "Charts",
+    240,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 620}}, h(Q.CostWaterfall, {steps: [
   {label: 'Gross Sharpe', value: 1.12, kind: 'total'}, {label: 'Bid–ask spread', value: -0.21}, {label: 'Exchange fees', value: -0.12},
   {label: 'Slippage', value: -0.15}, {label: 'Net Sharpe', kind: 'total'}]})));
-""")
+""",
+)
 
-add("WalkForward", "Charts", 240, r"""
+add(
+    "WalkForward",
+    "Charts",
+    240,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h(Q.WalkForward, {span: [0, 60], holdout: [50, 60],
   ticks: [{t: 0, label: '2019'}, {t: 12, label: '2020'}, {t: 24, label: '2021'}, {t: 36, label: '2022'}, {t: 48, label: '2023'}, {t: 60, label: '2024'}],
   folds: [{train: [0, 24], test: [24, 28], sharpe: 1.21}, {train: [0, 28], test: [28, 32], sharpe: 0.44}, {train: [0, 32], test: [32, 36], sharpe: -0.37},
           {train: [0, 36], test: [36, 41], sharpe: 0.92}, {train: [0, 41], test: [41, 46], sharpe: 0.58}, {train: [0, 46], test: [46, 50], sharpe: 0.71}]}));
-""")
+""",
+)
 
-add("PermutationTest", "Charts", 250, r"""
+add(
+    "PermutationTest",
+    "Charts",
+    250,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 620}}, h(Q.PermutationTest, {nullDist: S.draws(3, 1000, 0, 0.33), observed: 0.64, pValue: 0.031})));
-""")
+""",
+)
 
-add("RegimeTable", "Charts", 200, r"""
+add(
+    "RegimeTable",
+    "Charts",
+    200,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h(Q.Panel, {flush: true}, h(Q.RegimeTable, {rows: [
   {regime: 'low', share: 0.33, sharpe: 0.94, ret: 0.121, maxdd: -0.112, hit: 0.54},
   {regime: 'mid', share: 0.34, sharpe: 0.71, ret: 0.162, maxdd: -0.187, hit: 0.52},
   {regime: 'high', share: 0.33, sharpe: -0.18, ret: -0.061, maxdd: -0.289, hit: 0.46}]})));
-""")
+""",
+)
 
-add("MonthlyHeatmap", "Charts", 200, r"""
+add(
+    "MonthlyHeatmap",
+    "Charts",
+    200,
+    r"""
 var r = S.rng(5); function yr(y, k, hf) { var m = []; for (var i = 0; i < 12; i++) m.push(i < k ? (r() - 0.44) * 0.16 : null); return {year: y, months: m, holdoutFrom: hf}; }
 ReactDOM.createRoot(document.getElementById('root')).render(h(Q.MonthlyHeatmap, {years: [yr(2020, 12), yr(2021, 12), yr(2022, 12), yr(2023, 12, 2)]}));
-""")
+""",
+)
 
-add("LogEntry", "Research flow", 330, r"""
+add(
+    "LogEntry",
+    "Research flow",
+    330,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {maxWidth: 760}},
   h(Q.LogEntry, {date: '19 Sep 2026', id: 'H-002', title: 'One-day reversal', verdict: 'rejected', conclusion: 'Real before costs, gone after them. Spread and slippage absorb the whole edge; retesting needs a cheaper venue, not a better signal.', facts: [['gross SR', '0.91'], ['net SR', '−0.22'], ['p', '0.40'], ['trades', '2,184']]}),
   h(Q.LogEntry, {date: '2 Sep 2026', id: 'H-004', title: 'Volatility targeting', verdict: 'confirmed', conclusion: 'Scaling exposure to 20-day volatility shortened drawdowns in every fold and in the holdout.', facts: [['holdout SR', '0.58'], ['p', '0.012'], ['max DD', '−14.1%']]}),
   h(Q.LogEntry, {date: '28 Aug 2026', id: 'H-003', title: 'ETH/BTC spread reversion', verdict: 'inconclusive', conclusion: '23 trades in the holdout cannot separate the effect from noise. Revisit with hourly data.', facts: [['holdout SR', '0.21'], ['p', '0.14']]})));
-""")
+""",
+)
 
 UNSEAL = r"""
 h(Q.Dialog, {tone: 'holdout', icon: 'lock', title: 'Open the holdout for H-001?', subtitle: 'You get one look. The result is final and goes to the research log whatever it is.',
@@ -249,12 +403,26 @@ h(Q.Dialog, {tone: 'holdout', icon: 'lock', title: 'Open the holdout for H-001?'
   h(Q.Field, {label: 'Type H-001 to confirm'}, h(Q.TextInput, {mono: true, defaultValue: 'H-001'})))
 """
 
-add("Dialog", "Overlays", 600, "ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {position: 'relative', height: 568}}, " + UNSEAL + "));", pad="0")
+add(
+    "Dialog",
+    "Overlays",
+    600,
+    "ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {position: 'relative', height: 568}}, "
+    + UNSEAL
+    + "));",
+    pad="0",
+)
 
-add("AppShell", "Layout", 360, r"""
+add(
+    "AppShell",
+    "Layout",
+    360,
+    r"""
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 360}}, h(Q.AppShell, {active: 'registry', crumbs: ['Crypto majors', 'Hypothesis registry'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}},
   h('div', {className: 'qf-panel', style: {height: 160, display: 'grid', placeItems: 'center', color: 'var(--ink-muted)'}}, 'Page content'))));
-""", pad="0")
+""",
+    pad="0",
+)
 
 # ------------------------------------------------------------- screens (pages)
 REG = r"""
@@ -290,7 +458,15 @@ var body = h(F, null,
   h('div', {className: 'qf-disclaimer'}, 'All figures are historical simulations net of the stated cost model. QuantForge describes past behaviour; it does not recommend trades.'));
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 900}}, h(Q.AppShell, {active: 'registry', crumbs: ['Crypto majors', 'Hypothesis registry'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}}, body)));
 """
-add("RegistryScreen", "Screens", 900, REG, extra=' width=1360 page subtitle="Hypothesis registry: every idea, its pipeline position and its verdict"', pad="0", data=True)
+add(
+    "RegistryScreen",
+    "Screens",
+    900,
+    REG,
+    extra=' width=1360 page subtitle="Hypothesis registry: every idea, its pipeline position and its verdict"',
+    pad="0",
+    data=True,
+)
 
 WS = r"""
 var st = ['passed','passed','passed','passed','passed','active','locked','pending','pending','pending'];
@@ -323,7 +499,15 @@ var body = h(F, null,
         {state: 'warn', label: 'Six variants tried', detail: 'Deflated Sharpe applied', value: 'DSR 0.41'}, {state: 'fail', label: 'Fold 3 trade count', detail: 'Below the 50-trade floor', value: '38'}]})))));
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 1400}}, h(Q.AppShell, {active: 'registry', crumbs: ['Crypto majors', 'Hypothesis registry', 'H-001'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}}, body)));
 """
-add("WorkspaceScreen", "Screens", 1400, WS, extra=' width=1440 page subtitle="Hypothesis workspace: pipeline rail, partitioned evidence, the sealed holdout"', pad="0", data=True)
+add(
+    "WorkspaceScreen",
+    "Screens",
+    1400,
+    WS,
+    extra=' width=1440 page subtitle="Hypothesis workspace: pipeline rail, partitioned evidence, the sealed holdout"',
+    pad="0",
+    data=True,
+)
 
 TS = r"""
 var eq2 = S.series(31, N, 0.0012, 0.018, 100, [{from: OOS, to: N, mu: -0.0003, sigma: 0.018}]);
@@ -356,15 +540,35 @@ var body = h(F, null,
   h('div', {className: 'qf-disclaimer'}, 'Historical simulation on Binance daily data, net of RealisticCostModel. Metrics computed by quantlab.reporting at 8be41d0. Past behaviour does not predict future results; nothing here is a recommendation to trade.'));
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 1540}}, h(Q.AppShell, {active: 'reports', crumbs: ['Crypto majors', 'Tear sheets', 'H-002'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}}, body)));
 """
-add("TearSheetScreen", "Screens", 1540, TS, extra=' width=1440 page subtitle="Tear sheet of a rejected hypothesis: the verdict first, then the evidence"', pad="0", data=True)
+add(
+    "TearSheetScreen",
+    "Screens",
+    1540,
+    TS,
+    extra=' width=1440 page subtitle="Tear sheet of a rejected hypothesis: the verdict first, then the evidence"',
+    pad="0",
+    data=True,
+)
 
-UN = r"""
+UN = (
+    r"""
 var body = h(F, null,
   h('div', {className: 'qf-pagehead'}, h('div', {className: 'qf-pagehead__titles'}, h('div', {className: 'qf-row'}, h('span', {className: 'qf-num', style: {fontWeight: 600, color: 'var(--ink-muted)'}}, 'H-001'), h(Q.StatusBadge, {status: 'testing'})), h('h1', {className: 'qf-pagehead__title'}, 'Time-series momentum on crypto majors'))),
   h(Q.Panel, {title: 'Equity, net of costs'}, h(Q.EquityChart, {series: eq, benchmark: bh, xTicks: xt, height: 300, partitions: [{kind: 'is', from: 0, to: OOS}, {kind: 'oos', from: OOS, to: HOLD}, {kind: 'holdout', from: HOLD, to: N - 1, sealed: true}]})));
-ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 820}}, h(Q.AppShell, {active: 'validation', crumbs: ['Crypto majors', 'Validation', 'H-001'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}, overlay: """ + UNSEAL + r"""}, body)));
+ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 820}}, h(Q.AppShell, {active: 'validation', crumbs: ['Crypto majors', 'Validation', 'H-001'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}, overlay: """
+    + UNSEAL
+    + r"""}, body)));
 """
-add("HoldoutScreen", "Screens", 820, UN, extra=' width=1360 page subtitle="Opening the holdout: a deliberate, one-time ceremony"', pad="0", data=True)
+)
+add(
+    "HoldoutScreen",
+    "Screens",
+    820,
+    UN,
+    extra=' width=1360 page subtitle="Opening the holdout: a deliberate, one-time ceremony"',
+    pad="0",
+    data=True,
+)
 
 LOG = r"""
 var body = h(F, null,
@@ -385,11 +589,30 @@ var body = h(F, null,
       h(Q.Callout, {tone: 'info', title: 'Why log rejections?'}, 'An undocumented failure gets tested again next year, at the same cost. A documented one is a finding.'))));
 ReactDOM.createRoot(document.getElementById('root')).render(h('div', {style: {height: 860}}, h(Q.AppShell, {active: 'log', crumbs: ['Crypto majors', 'Research log'], counts: {registry: 12, runs: 148, log: 9}, style: {height: '100%'}}, body)));
 """
-add("ResearchLogScreen", "Screens", 860, LOG, extra=' width=1360 page subtitle="Research log: rejected results recorded as carefully as confirmed ones"', pad="0")
+add(
+    "ResearchLogScreen",
+    "Screens",
+    860,
+    LOG,
+    extra=' width=1360 page subtitle="Research log: rejected results recorded as carefully as confirmed ones"',
+    pad="0",
+)
 
 for name, c in P.items():
-    d = os.path.join(ROOT, name); os.makedirs(d, exist_ok=True)
+    d = os.path.join(ROOT, name)
+    os.makedirs(d, exist_ok=True)
     body = c["body"]
-    if "</script" in body.lower() or "<!--" in body: sys.exit("bad body " + name)
-    Path(d, "preview.html").write_text(TPL.format(group=c["group"], height=c["height"], extra=c["extra"], name=name, pad=c["pad"], data=DATA if c["data"] else "", body=body.strip()))
+    if "</script" in body.lower() or "<!--" in body:
+        sys.exit("bad body " + name)
+    Path(d, "preview.html").write_text(
+        TPL.format(
+            group=c["group"],
+            height=c["height"],
+            extra=c["extra"],
+            name=name,
+            pad=c["pad"],
+            data=DATA if c["data"] else "",
+            body=body.strip(),
+        )
+    )
 print(len(P), "previews")
