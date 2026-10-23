@@ -1,6 +1,6 @@
 # Architektura
 
-Dokument żywy: docelowy układ repo i kontrakty modułów wspólnych. Decyzje z uzasadnieniem w [adr/](adr/), szczegóły pierwszej implementacji w [specs/lab-foundation/03-design.md](specs/lab-foundation/03-design.md) i [specs/q1-momentum-research-mvp/03-design.md](specs/q1-momentum-research-mvp/03-design.md).
+Dokument żywy: docelowy układ repo i kontrakty modułów wspólnych. Decyzje z uzasadnieniem w [adr/](adr/), przewodnik po modułach i rozszerzaniu w [DEVELOPER-GUIDE.md](DEVELOPER-GUIDE.md), indeks dokumentacji w [README.md](README.md), szczegóły pierwszej implementacji w [specs/lab-foundation/03-design.md](specs/lab-foundation/03-design.md) i [specs/q1-momentum-research-mvp/03-design.md](specs/q1-momentum-research-mvp/03-design.md).
 
 ## Zasady
 
@@ -32,13 +32,15 @@ Dokument żywy: docelowy układ repo i kontrakty modułów wspólnych. Decyzje z
 
 ```
 QuantLab/
-├── pyproject.toml              # extras: stats, ui
+├── pyproject.toml              # zależności i grupa dev (uv)
 ├── .python-version             # 3.12
 ├── src/quantlab/
 │   ├── cli.py                   # komenda `quantlab`
+│   ├── config/universes/         # pliki uniwersów (YAML)
 │   ├── core/
-│   │   ├── data/                 # DataProvider, adapter Binance, kanoniczny schemat
+│   │   ├── data/                 # DataProvider, adaptery Binance i Tiingo, kanoniczny schemat, jakość danych
 │   │   ├── universe.py           # point-in-time uniwersum
+│   │   ├── sp500.py              # odtwarzanie składu S&P 500
 │   │   └── storage.py            # DuckDB/Parquet I/O
 │   ├── research/                 # Hypothesis, rejestr
 │   ├── strategy/                 # interfejs Strategy + implementacje per hipoteza
@@ -55,13 +57,15 @@ QuantLab/
 ├── presentation/                  # rozszerzenie q7 (ADR-0006, ADR-0008)
 │   ├── QuantLab.Api/               # ASP.NET Core minimal API, IResultsStore (DuckDB.NET)
 │   ├── QuantLab.Api.Tests/         # xUnit v3: kontrakt na syntetycznym magazynie, test środowiska DuckDB
-│   ├── web/                        # Vite + React 18 + TypeScript: rejestr hipotez, dowody, rejestr transakcji
+│   ├── web/                        # Vite + React 19 + TypeScript: rejestr hipotez, dowody, rejestr transakcji
 │   ├── fixtures/results/           # syntetyczny magazyn wyników (generowany przez tests/test_results_fixture.py)
 │   └── design-system/              # QuantForge: tokeny, komponenty React 18
+├── config/holdout/                 # zamrożone definicje hipotez i zapisy otwarć holdoutów
+├── results/                        # magazyn wyników (gitignored, ceny w rejestrze transakcji)
+├── reports/                        # tear-sheety (gitignored)
 ├── data/
 │   ├── raw/                       # pobrane dane publiczne (gitignored)
 │   └── cache/                     # cache HTTP (gitignored)
-├── notebooks/                      # eksploracja per hipoteza
 ├── tests/                          # lustro src/
 └── docs/
 ```
@@ -135,12 +139,16 @@ presentation (.NET + React, rozszerzenie q7)
 - Golden-master dla silnika backtestu: syntetyczne serie ze znanym z góry wynikiem (np. stały trend → policzalny z góry Sharpe).
 - `tests/test_environment.py` sprawdza importy zależności natywnych (maszyna bez AVX2) — patrz [CLAUDE.md](../CLAUDE.md).
 
-## Zależności opcjonalne (kandydaci)
+## Zależności
 
-Każda pozycja wymaga testu importu na tej maszynie przed dodaniem.
+Każda nowa zależność natywna wymaga testu importu na tej maszynie przed dodaniem (`tests/test_environment.py`). Pakiet nie ma zależności opcjonalnych (`extras`); wszystko, czego używa silnik, jest w `dependencies` w `pyproject.toml`.
 
-| Extra | Kandydaci | Warstwa |
-|---|---|---|
-| (bazowe) | `numpy`, `pandas`, `duckdb` | core, backtest |
-| `stats` | `statsmodels`, `scipy` | validation (kointegracja, testy), risk |
-| `ui` | (poza pakietem Python) .NET 10, React | presentation (q7) |
+| Zależność | Warstwa |
+|---|---|
+| `numpy`, `pandas`, `pyarrow` | core, backtest, reporting |
+| `duckdb` | core.storage, magazyn wyników |
+| `statsmodels` | validation i strategia pairs (kointegracja, testy) |
+| `pydantic`, `pyyaml` | definicje hipotez, uniwersa, kontrakty |
+| `requests` | adaptery źródeł danych |
+| `typer` | CLI |
+| .NET 10, React (poza pakietem Python) | presentation (q7), patrz [PRESENTATION.md](PRESENTATION.md) |
