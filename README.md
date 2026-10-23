@@ -37,6 +37,10 @@ Rozszerzenia (`q2`–`q14`) mają gotowy kod. Osiem kolejnych hipotez zamrożono
 
 Gotowe są też: drugi silnik z egzekucją zleceń i parytetem z wektorowym (`q2`), PSR, deflated Sharpe i PBO z rejestrem prób liczonym z historii gita (`q6`), dobór parametru z siatki z CPCV (`q8`), portfel strategii z regułami alokacji ryzyka (`q9`), plan przebiegów lokalnych `quantlab plan` (`q10`), skalowanie pozycji do docelowej zmienności (`q11`), rozgrzewka liczona w sesjach rynku i zwroty ponad gotówkę (`q12`), opis wyniku składany z szablonów z policzonych liczb i szkic wpisu do dziennika `quantlab narrate` (`q13`), kontrola danych przed każdym przebiegiem i otwarciem holdoutu (`q14`) oraz warstwa prezentacji (`q7`): API ASP.NET Core i aplikacja React nad magazynem wyników. Szczegóły w [docs/ROADMAP.md](docs/ROADMAP.md).
 
+## Dokumentacja
+
+Indeks całej dokumentacji z ścieżkami czytania: [docs/README.md](docs/README.md). Dla programisty: [przewodnik](docs/DEVELOPER-GUIDE.md), [referencja komend](docs/CLI-REFERENCE.md), [magazyn wyników](docs/RESULTS-STORE.md), [warstwa prezentacji](docs/PRESENTATION.md), [testy i CI](docs/TESTING-AND-CI.md), [słownik pojęć](docs/GLOSSARY.md).
+
 ## Uruchomienie
 
 Pełna instrukcja krok po kroku, z instalacją na Windows i rozwiązywaniem problemów: [docs/INSTRUKCJA.md](docs/INSTRUKCJA.md).
