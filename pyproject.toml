@@ -17,7 +17,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "requests>=2.34.2",
     "statsmodels>=0.15.0",
-    "typer>=0.27.3",
+    "typer>=0.28.0",
 ]
 
 [project.scripts]
@@ -29,8 +29,8 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
-    "pytest>=9.1.1",
-    "ruff>=0.17.0",
+    "pytest>=9.2.0",
+    "ruff>=0.17.4",
 ]
 
 [tool.ruff]
